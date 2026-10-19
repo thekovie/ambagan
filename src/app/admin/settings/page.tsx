@@ -1,14 +1,30 @@
 import type { Metadata } from "next";
+import { getEnv } from "@/env";
 import { requireAdmin } from "@/server/auth/session";
+import { backupDirFor, listBackups } from "@/server/backup/backup";
 import { getDb } from "@/server/db/client";
+import { listJobRuns } from "@/server/jobs/runner";
+import { BACKUP_JOB } from "@/server/jobs/schedule";
 import { listPaymentMethods } from "@/server/payments/methods";
+import { BackupsPanel } from "./backups-panel";
 import { PaymentMethodForm } from "./payment-method-form";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
   await requireAdmin();
-  const methods = listPaymentMethods(getDb(), {});
+  const db = getDb();
+  const env = getEnv();
+  const methods = listPaymentMethods(db, {});
+  const backupDir = backupDirFor(env);
+  // An unreadable backup folder must not take the whole settings page down: say so in the panel instead.
+  let backups: ReturnType<typeof listBackups> = [];
+  let backupListError: string | undefined;
+  try {
+    backups = listBackups(backupDir);
+  } catch {
+    backupListError = "The backup folder can't be read. Check its permissions.";
+  }
 
   return (
     <div className="flex flex-col gap-12">
@@ -45,6 +61,8 @@ export default async function AdminSettingsPage() {
           ))}
         </div>
       </section>
+
+      <BackupsPanel backups={backups} listError={backupListError} runs={listJobRuns(db, BACKUP_JOB, 1)} dir={backupDir} keep={env.BACKUP_KEEP} />
     </div>
   );
 }

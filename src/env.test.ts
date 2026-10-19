@@ -35,4 +35,11 @@ describe("parseEnv", () => {
     });
     expect(env.smtp).toMatchObject({ host: "smtp.example.com", port: 587, secure: false });
   });
+
+  it("keeps 14 backups by default and rejects nonsense", () => {
+    expect(parseEnv({ ...base }).BACKUP_KEEP).toBe(14);
+    expect(parseEnv({ ...base, BACKUP_KEEP: "30" }).BACKUP_KEEP).toBe(30);
+    expect(() => parseEnv({ ...base, BACKUP_KEEP: "0" })).toThrow(/BACKUP_KEEP/);
+    expect(() => parseEnv({ ...base, BACKUP_KEEP: "many" })).toThrow(/BACKUP_KEEP/);
+  });
 });

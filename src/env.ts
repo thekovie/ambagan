@@ -5,6 +5,10 @@ const schema = z.object({
   DATABASE_PATH: z.string().min(1).default("./data/ambagan.db"),
   /** Persistent directory for admin-uploaded images (payment QR codes). */
   ASSETS_DIR: z.string().min(1).default("./data/assets"),
+  /** Where backups go. Default: a `backups` folder next to the database. For real safety, point it at another disk. */
+  BACKUP_DIR: z.string().min(1).optional(),
+  /** How many backups to keep (the newest ones). */
+  BACKUP_KEEP: z.coerce.number().int().min(1).max(365).default(14),
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
   APP_URL: z.url(),
   ADMIN_EMAIL: z.email(),

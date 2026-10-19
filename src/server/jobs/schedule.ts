@@ -1,5 +1,7 @@
 /** Name under which the daily run is recorded in `job_run`. */
 export const DAILY_JOB = "daily-reconcile";
+/** Name under which the daily backup is recorded in `job_run`. */
+export const BACKUP_JOB = "daily-backup";
 
 /** The daily run starts at the first tick on or after this hour, Manila time. */
 export const RECONCILE_HOUR_MANILA = 8;
