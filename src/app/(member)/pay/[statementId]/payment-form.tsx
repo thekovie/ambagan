@@ -117,7 +117,14 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor={id("app")}>Paid from</Label>
-          <NativeSelect id={id("app")} name="sendingAppChoice" value={fields.app} onChange={set("app")} aria-invalid={bad("sendingApp")}>
+          <NativeSelect
+            id={id("app")}
+            name="sendingAppChoice"
+            value={fields.app}
+            onChange={set("app")}
+            aria-invalid={bad("sendingApp")}
+            aria-describedby={describe("sendingApp")}
+          >
             {APPS.map((app) => (
               <option key={app} value={app}>
                 {app === "Other" ? "Another app or bank" : app}

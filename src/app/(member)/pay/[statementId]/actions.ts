@@ -44,7 +44,10 @@ export async function submitPaymentAction(_prev: PaymentFormState, formData: For
   if (!parsed.ok) {
     // The "Other" text box is where a missing app name should be reported.
     const errors = { ...parsed.errors };
-    if (choice === OTHER && errors.sendingApp) errors.sendingAppOther = errors.sendingApp;
+    if (choice === OTHER && errors.sendingApp) {
+      errors.sendingAppOther = errors.sendingApp;
+      delete errors.sendingApp; // one message, not two alerts
+    }
     return { errors };
   }
 
