@@ -38,3 +38,6 @@ Running record of decisions, issues, deviations and test results. Newest entries
 
 ### Tests
 - `tests/db-schema.test.ts`: 7 tests (cycle uniqueness, reference uniqueness, FK enforcement, restrict-delete, dedupe key, defaults, WAL + FK pragmas on a file DB). Total 11 passing.
+
+### Issues
+- **CI failure on PR #2:** `pnpm install --frozen-lockfile` aborted with `ERR_PNPM_IGNORED_BUILDS` because `esbuild` (pulled in by drizzle-kit) has an unreviewed build script. esbuild's postinstall is only a binary sanity check, so it is explicitly set to `false` in `allowBuilds` (better-sqlite3 is `true`).
