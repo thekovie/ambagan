@@ -17,7 +17,7 @@ Running record of decisions, issues, deviations and test results. Newest entries
 - **Compatibility finding:** `next-auth@5.0.0-beta.32` and `@auth/drizzle-adapter` peer-require `nodemailer ^7.0.7 || ^8.0.5`, while latest nodemailer is 10.x. Pin nodemailer to 8.x. Auth.js v5 is still published as `beta`; accepted risk, revisit if stable ships.
 
 ### Issues
-- `create-next-app` generates an `AGENTS.md` that `next dev` re-creates. It is gitignored (along with `CLAUDE.md`) to keep the repo free of tool-specific files.
+- `create-next-app` generates an `AGENTS.md` that `next dev` re-creates. It is gitignored to keep the repo free of tool-specific files.
 - `.gitignore` default `.env*` would have ignored `.env.example`; added `!.env.example`.
 - `vite-tsconfig-paths` is redundant with Vite's native `resolve.tsconfigPaths`; removed. Config is `vitest.config.mts` to avoid the CJS/ESM loader warning.
 - **CI failure on PR #1:** `tsc` failed with `Cannot find name 'LayoutProps'`. That global type comes from Next's generated route types (`.next/types`), which existed locally but not on a clean CI checkout. Fix: `typecheck` now runs `next typegen` first. Verified from a clean tree.
@@ -41,3 +41,31 @@ Running record of decisions, issues, deviations and test results. Newest entries
 
 ### Issues
 - **CI failure on PR #2:** `pnpm install --frozen-lockfile` aborted with `ERR_PNPM_IGNORED_BUILDS` because `esbuild` (pulled in by drizzle-kit) has an unreviewed build script. esbuild's postinstall is only a binary sanity check, so it is explicitly set to `false` in `allowBuilds` (better-sqlite3 is `true`).
+
+## 2026-10-19 — feat/design-system
+
+### Decisions
+- **Visual world: "tingi sachet rack".** Candidates were derived from the audience's world and one was assigned by dice roll; owner confirmed it. Each statement is a foil strip with a crimped seal and a perforated stub. Status is repeated in edge form (stub attached / half torn / gone / creased corner / struck) plus an icon-and-word capsule, so colour is never the only signal.
+- **Palette:** ink-violet ground (dark) or cool foil-white (light); foils magenta, cobalt, tangerine, lime. Magenta is reserved for the one action that needs doing now (pay/submit/overdue). Text on foils uses dedicated `--on-foil-*` tokens for AA contrast.
+- **Type:** Archivo variable (width axis) via `next/font/google`: narrow heavy for pesos and headings, normal width for text. Statement references use the system monospace.
+- **Theme:** class-based dark mode, set before first paint by a constant inline script (stored in `localStorage` key `theme`, falls back to system). Toggle uses `useSyncExternalStore`.
+- **Shells:** one `AppShell` with `member` (rail on desktop, bottom tabs on mobile) and `admin` (rail on desktop, scrolling tabs on mobile) variants. Auth wiring comes in the auth milestone.
+- **Pure enums module** (`src/lib/enums.ts`) so client components never import Drizzle via the schema file.
+- **Dev gallery** at `/kit` (404 in production) to verify every state in both themes.
+- `.impeccable/` (design tooling state) is gitignored; `PRODUCT.md` is committed.
+
+### Issues
+- Half-torn stub (rotated) overflowed the right edge on mobile: reduced rotation and clipped horizontal overflow on `<main>`.
+- Outline button on the cobalt sachet had weak contrast: inherits the sachet's foreground colour there.
+- Browser screenshots can only be saved inside the project workspace, so captures go to `.impeccable/review/`.
+
+### Tests
+- `tests/money-status.test.ts`: money formatting/parsing (no float drift, rejects over-precise input) and status labels/actions. Total 17 passing.
+- Detector (design detector) over changed UI: no findings. Verified in browser: no horizontal overflow, all interactive targets >= 44px, dark and light themes.
+
+### Finish review (design system)
+- First review: disposition *fix*, eight material fixes (OVERDUE had no visible action on its own magenta field; hard-offset button shadow; hero stretched into a full-width banner on desktop; primary action not full width on mobile; no visible tear; header truncation at narrow widths; collapsed word gaps in the condensed display face; rack had no hanging device). All applied in one batch.
+- Verdict pass: 6 resolved, 2 partial. Partial = missing evidence, not known defects: the mobile hero buttons were not recaptured, and the tear was verified numerically in the browser (stub rotated about 7deg at 500ms, opacity 0 and hidden at 1.9s) rather than as an image.
+- Not inspected: 360px and 390px real widths (the browser reported 489 CSS px), light-theme rack.
+- Known cosmetic items carried forward: the desktop hero column is empty below the hero until the dashboard adds its activity panel (feat/member-dashboard); the dark rack rail was made more visible after the review; sachet vocabulary in the app chrome (rail, tabs) is still stock capsules.
+- Reviewer-flagged hang-hole vs. crease collision was fixed (hole moved right) after the captured frame; not re-captured.
