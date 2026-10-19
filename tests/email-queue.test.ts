@@ -13,6 +13,7 @@ import {
   markEmailSent,
   MAX_ATTEMPTS,
   processQueue,
+  pruneEmails,
   releaseBackoff,
   recordDirectEmail,
   resendEmail,
@@ -222,6 +223,24 @@ describe("releaseBackoff (admin 'send now' after fixing SMTP)", () => {
     expect(claimDueEmails(db, at(5000), 10).map((r) => r.id)).toEqual([waiting]);
     expect(rowOf(done).status).toBe("SENT");
     expect(rowOf(inFlight).status).toBe("SENDING");
+  });
+});
+
+describe("pruneEmails (retention)", () => {
+  it("deletes finished messages older than the cutoff and keeps everything else", () => {
+    const day = 24 * 3600_000;
+    const old = queue("DUE_TODAY", "D:old", { now: at(-100 * day) });
+    claimDueEmails(db, at(-100 * day), 10);
+    markEmailSent(db, old, at(-100 * day));
+    const oldFailed = queue("DUE_TODAY", "D:oldf", { now: at(-95 * day) });
+    db.update(s.emailLogs).set({ status: "FAILED" }).where(eq(s.emailLogs.id, oldFailed)).run();
+    const oldPending = queue("DUE_TODAY", "D:oldp", { now: at(-99 * day) });
+    const recent = queue("DUE_TODAY", "D:new", { now: at(-10 * day) });
+    claimDueEmails(db, at(-10 * day), 10);
+    markEmailSent(db, recent, at(-10 * day));
+
+    expect(pruneEmails(db, T0, 90)).toBe(2);
+    expect(db.select().from(s.emailLogs).all().map((r) => r.id).sort()).toEqual([oldPending, recent].sort());
   });
 });
 

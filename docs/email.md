@@ -21,8 +21,8 @@ After deploying, open **Admin → Emails** and press **Send me a test email**. I
 
 | Type | To | Sent when |
 |---|---|---|
-| `SOA_GENERATED` | member | a new statement is issued (scheduler milestone) |
-| `DUE_TOMORROW`, `DUE_TODAY`, `OVERDUE` | member | reminders, never for paid or under-verification statements (scheduler milestone) |
+| `SOA_GENERATED` | member | a new statement is issued (the daily job, see billing.md) |
+| `DUE_TOMORROW`, `DUE_TODAY`, `OVERDUE` | member | reminders, never for paid or under-verification statements (the daily job, see billing.md) |
 | `PAYMENT_RECEIVED` | member | they reported a payment |
 | `ADMIN_VERIFY_REQUEST` | every active admin | a payment needs checking |
 | `PAYMENT_APPROVED`, `PAYMENT_DECLINED` | member | the admin decided (a decline includes the reason) |
@@ -56,5 +56,5 @@ Notification emails are React Email components (`src/server/email/notification-e
 ## Known limits
 
 - Real SMTP delivery was verified against a local TLS SMTP sink only, not a hosted provider.
-- `email_log` is never pruned yet (it holds addresses, subjects and decline reasons). The scheduler milestone adds retention.
-- Retries happen when something triggers a send run (an action, the admin button, and the scheduler once it exists).
+- Finished `email_log` rows are pruned after 90 days by the daily job (they hold addresses, subjects and decline reasons).
+- Retries happen when something triggers a send run (an action, the admin button, and the one-minute scheduler tick).

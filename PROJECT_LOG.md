@@ -305,3 +305,24 @@ Independent review: no critical/high, approved with changes. Fixed before merge:
 - **A message queued during a send run is no longer skipped:** `runEmailQueue` waits for the in-flight run and then runs its own.
 - Recording an outcome is separate from sending, so a database hiccup can't turn an accepted message into a retry or stop the batch; sign-in logging can't reject unhandled; a logging failure can't hide the invitation fallback link.
 - **Deferred to the scheduler milestone (documented):** nothing retries until a send run is triggered (actions, admin button, and the scheduler once it exists); `email_log` retention/pruning (rows hold addresses, subjects and decline reasons). **Accepted:** resending an old verify-request or to a since-deactivated member is an explicit admin action; the button is disabled while pending.
+
+## 2026-10-19 — feat/scheduler
+
+### Decisions
+- **In-process scheduler, no new dependency.** `src/instrumentation.ts` (Node runtime only, skipped during `next build`) starts a one-minute timer (`unref`'d, guarded against dev double-start). Each tick: run the daily job if it is 08:00 Manila or later and today's run hasn't succeeded, then send any due or retrying email. "08:00 or later" rather than "at 08:00" gives catch-up after downtime for free. Alternatives: `node-cron` (a dependency for what a timer does, and misses a run if the app is down at the exact minute), an external cron hitting an endpoint (violates "no external automation").
+- **`reconcile` is a chain of idempotent steps** (issue current Manila month for plans whose issue day arrived, `markOverdue`, queue new-statement and reminder emails, prune old email/job rows); safe to run late, twice or by hand. Reminders: day before, due day, then overdue at +1 day and weekly, max four; only for `UNPAID`/`OVERDUE` statements, so PAID, under-verification and cancelled ones get nothing and a declined payment resumes reminders. Dedupe keys per occurrence (`DUE_TODAY:<id>`, `OVERDUE:<id>:<daysLate>`).
+- **`job_run` as the idempotency record** (`runner.ts`): one immediate transaction decides and records the run; scheduled runs once per Manila day; a failed run is retried after 30 minutes; a manual run never overlaps another; a run still RUNNING after 30 minutes is treated as crashed. Failures are recorded and logged, never thrown (the timer must keep ticking).
+- **Admin panel** on Statements: schedule explanation, "Run it now", last five runs.
+
+### Code review and fixes
+Independent review: no critical/high, approved with changes. Fixed before merge:
+- A persistently failing job retried every minute all day and wrote a `job_run` row each time, with the error only in that row: now a 30-minute retry gap, errors logged to the server console, and job history pruned at 90 days.
+- Overdue notices repeated weekly forever and a first deploy could mail the old backlog: capped at four notices.
+- The "new statement" email was lost if the job missed more than two days: window widened to 7 days (dedupe keeps it once), and back-filled old months (older than last month) are not announced.
+- Symmetric stale-run boundary in `claim()`.
+- **Accepted / documented:** only the current Manila month is auto-issued (if the app is down for a plan's whole issue-day-to-month-end window, use Generate missing; auto back-fill could bill members for months they never owed); a run summary can say SUCCEEDED even if an email couldn't be queued (the error is logged, and rerunning fixes it through dedupe keys); admin-only job error text is shown as is.
+
+### Verification
+- 346 tests (daily job rules, Manila boundaries, reminder suppression, caps, runner states, retention); typecheck, lint, build.
+- Live: started the dev server against the scratch DB; the scheduler's first tick ran by itself ~15 s after start (`SCHEDULED`, `SUCCEEDED`); moved an overdue statement to a weekly-notice day, pressed "Run it now": an Overdue email was queued and received by the local SMTP sink.
+- **Not tested:** behaviour across a real day boundary on a long-running production process (the clock in this environment is fixed to a single day); the scheduler under `next start` was exercised by the reviewer on a clone (first tick wrote a run).
