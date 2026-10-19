@@ -218,3 +218,16 @@ Independent review: no critical/high; path traversal, content-type/XSS, header i
 - **Follow-up idea (not built):** members get no notice when payment details change; an admin-account takeover could swap the destination. Mitigations to consider later: a "payment details changed" email to members, and keeping the admin sign-in link short-lived (it is, 24 h, single use).
 - 171 tests passing.
 - Build warning found and fixed: the runtime-chosen asset paths made Turbopack trace the whole project into the output (it would bloat the Docker image). They are marked `turbopackIgnore` on purpose; the build is warning-free.
+
+## 2026-10-19 — feat/ocr-parsers
+
+### Decisions
+- **Pure, browser-safe parsers** (`src/lib/ocr/parse.ts`): raw OCR text in, candidate fields out, each with `high | medium | low | none` confidence, plus warnings and `needsReview`. No I/O, nothing is stored or sent. `file.ts` validates the chosen screenshot (PNG/JPEG/WebP, 1 byte to 10 MB) before OCR.
+- **Fail safe, never guess:** a labelled total beats everything (so a fee or account balance can't be taken as the payment); with no label, a single distinct amount is "medium" and several competing amounts yield *no* amount plus a warning; a missing reference stays missing. Receipts from an app we don't recognise are capped at "low" so numbers from, say, a grocery receipt are never pre-filled.
+- **OCR repair is narrow:** O/l/I are fixed to digits only inside numeric tokens (amounts, digit-grouped references, dates), and any repair drops confidence to "medium" so the member is nudged to check.
+- **Sending app** = the app that produced the receipt (GCash/Maya/MariBank); the destination is chosen separately by the member, matching the brief's "store these separately".
+- **Dates** are read in Manila time from month-first, day-first, ISO and unambiguous numeric formats (12-hour and 24-hour); impossible dates and ambiguous numeric orders (e.g. 10/11/2026) are refused rather than guessed.
+- Fixtures are **synthetic** (invented names/numbers) and only mimic each app's *shape*. **Limitation:** real-receipt accuracy is unmeasured. The parsers are heuristic and deliberately conservative; they need tuning against redacted real receipts from the group (GCash, Maya, MariBank), which I don't have.
+
+### Tests
+- `tests/ocr-parsers.test.ts` (21): each provider's clean receipt, a noisy GCash scan (O/0 confusion, balance distractor), thousands separators, missing reference, fee + total, ambiguous amounts, unrecognised and blank text, hostile 100k-character input, date formats in Manila time, file validation. 192 passing; typecheck, lint clean.
