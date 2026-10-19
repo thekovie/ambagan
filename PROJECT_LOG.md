@@ -24,3 +24,20 @@ Running record of decisions, issues, deviations and test results. Newest entries
 
 ### Tests
 - `src/env.test.ts`: 4 passing (dev without SMTP, short secret rejected, SMTP required in production, SMTP parsed).
+
+## 2026-10-19 — feat/db-schema
+
+### Decisions
+- **Schema** (`src/server/db/schema.ts`): users + Auth.js tables (adapter-compatible names/columns), invitation, subscription, membership, statement, payment_method, payment, email_log, audit_log, job_run, setting. Enum values exported as `const` tuples so zod/app code share them.
+- **Money** as integer minor units; **timestamps** as UTC ms integers; billing periods as `YYYY-MM` text. Display/due-date math in Asia/Manila happens in `src/server/billing` (next milestone).
+- **Statement snapshots:** `subscription_name`, `amount_minor`, `currency` copied onto each statement so fee changes never rewrite history. `outstanding_minor` tracked separately for the balance.
+- **History protection:** user/subscription/statement FKs are `ON DELETE RESTRICT`; deactivate instead of delete. Audit/email FKs use `SET NULL` so logs survive.
+- **Duplicates:** `statement(user, subscription, period)` unique index enforces one statement per cycle; `statement.reference` and `email_log.dedupe_key` unique. `payment.transaction_ref_norm` (indexed, not unique) powers duplicate-reference *warnings* because a declined payment may be legitimately resubmitted.
+- **Migrations:** drizzle-kit generated SQL committed in `drizzle/`; applied automatically on first `getDb()` (WAL, `foreign_keys=ON`, `busy_timeout=5000`).
+- **Native build:** `better-sqlite3` approved in `pnpm-workspace.yaml` (`allowBuilds`). Verified it loads on Node 26 locally; CI uses Node 22.
+
+### Tests
+- `tests/db-schema.test.ts`: 7 tests (cycle uniqueness, reference uniqueness, FK enforcement, restrict-delete, dedupe key, defaults, WAL + FK pragmas on a file DB). Total 11 passing.
+
+### Issues
+- **CI failure on PR #2:** `pnpm install --frozen-lockfile` aborted with `ERR_PNPM_IGNORED_BUILDS` because `esbuild` (pulled in by drizzle-kit) has an unreviewed build script. esbuild's postinstall is only a binary sanity check, so it is explicitly set to `false` in `allowBuilds` (better-sqlite3 is `true`).
