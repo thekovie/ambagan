@@ -69,3 +69,35 @@ Running record of decisions, issues, deviations and test results. Newest entries
 - Not inspected: 360px and 390px real widths (the browser reported 489 CSS px), light-theme rack.
 - Known cosmetic items carried forward: the desktop hero column is empty below the hero until the dashboard adds its activity panel (feat/member-dashboard); the dark rack rail was made more visible after the review; sachet vocabulary in the app chrome (rail, tabs) is still stock capsules.
 - Reviewer-flagged hang-hole vs. crease collision was fixed (hole moved right) after the captured frame; not re-captured.
+
+## 2026-10-19 — feat/auth
+
+### Decisions
+- **Auth.js v5 beta + Drizzle adapter + Nodemailer provider, database sessions.** Chosen over JWT sessions so deactivating a member revokes access immediately. Peer constraints pinned `nodemailer@^8`.
+- **No self-signup:** `checkSignIn` gates both the link request and the link redemption. Unknown/deactivated addresses see the identical "check your email" page but get no mail (no account enumeration). `ADMIN_EMAIL` bootstraps/promotes the first admin.
+- **Invitations:** random 256-bit token, SHA-256 stored, 7-day expiry, single use via a conditional update, a new invite revokes older pending ones. The invite page treats invalid/expired/deactivated identically.
+- **Lazy Auth.js config** so env/DB are never touched at build time.
+- **Authorization lives on the server:** `requireUser`/`requireAdmin` in layouts and pages (actions must call them too); non-admins get 404 on `/admin/*`. `src/proxy.ts` (Next 16's renamed middleware) is only a redirect shortcut.
+- **Rate limiting:** in-memory fixed window (5/address, 20/IP per 15 min). Known ceiling: single process.
+- **Auth pages** reuse the sachet system (cobalt foil panel with crimped edge + form column).
+- Login/invitation emails are plain inline-HTML for now; they move to React Email + the queue in feat/email-queue. The dev fallback prints the link to the server console.
+
+### Issues
+- Scaffold had enabled `cacheComponents` and `partialPrefetching`; with them every session read raised "Next.js encountered the unstable value crypto.getRandomValues() while prerendering". The app is fully per-user and dynamic, so both flags were removed (and `serverExternalPackages: ["better-sqlite3"]` added). Re-ran the whole flow afterwards: 0 prerender errors.
+- `ReturnType<typeof auth>` resolves to the middleware overload with a lazy config; the session user type now comes from the augmented `Session`.
+- pnpm reported an unmet peer (`@types/node` for vitest): bumped `@types/node` to `^22` to match the Node 22 target.
+- Mobile has no sign-out yet: the account footer lives in the desktop rail. It moves into the Settings page (member-dashboard milestone).
+
+### Tests
+- `tests/auth-domain.test.ts` (16) and `tests/auth-email.test.ts` (4): 37 tests total, all passing; typecheck, lint, production build clean.
+- Manual run against a dev server and a scratch DB: admin bootstrap -> `/admin/dashboard` 200; stranger -> no mail, `/dashboard` redirects to login; member -> `/dashboard` 200, `/admin/dashboard` 404; member deactivated -> live session redirected to login, new link not sent; reused link -> `/login/error?error=Verification`; invite page valid/invalid states, accept sends exactly one mail, reopen shows "Already accepted".
+- Not tested: real SMTP delivery (no server configured), the Auth.js browser flow beyond the paths above, automated end-to-end tests (planned for the e2e milestone).
+
+### Security review (auth) and fixes
+Independent review of the staged diff found no critical issues and these to fix, all done:
+- **HIGH, link origin from request headers:** with `trustHost` and no `AUTH_URL`, a forged Host/X-Forwarded-Host could make the emailed link point at an attacker's site. `AUTH_URL` is now set from `APP_URL`. Verified: request to `localhost:3100` with `APP_URL=http://pinned.example:3100` produced a link on `pinned.example`.
+- **HIGH, limits bypass via the Auth.js route:** `POST /api/auth/*` now returns 404; sign-in/out only through server actions. Verified 404.
+- **MEDIUM:** response-time account enumeration (mail send no longer awaited); spoofable client IP (last `X-Forwarded-For` entry, shared helper, tested); unbounded rate-limit map (bounded with O(1) eviction, tested); deactivated user with a live cookie looped between /login and /dashboard (now treated as signed out, verified with curl following redirects).
+- **LOW:** production guard on the dev mail fallback; `server-only` on server modules; baseline security headers (verified in a response); documented limits.
+- **Accepted and documented:** per-address lockout abuse (M5), sign-in link consumed by scanners (L2), sticky `ADMIN_EMAIL` promotion (L3), invite consumed before mail send (L6).
+- The earlier manual curl script used the POST route that is now closed, so the final verification used the real form/server action plus direct DB state changes. Unit tests: 42 passing.
