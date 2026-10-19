@@ -23,9 +23,26 @@ export function periodOf(date: Date, timeZone: string = APP_TIMEZONE): string {
   return `${part("year")}-${part("month")}`;
 }
 
+/** The calendar day in Manila as "YYYY-MM-DD". */
+export function manilaDateKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whole days from one "YYYY-MM-DD" key to another (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
+}
+
 function split(period: string): [number, number] {
   const [year, month] = period.split("-").map(Number);
   return [year, month];
+}
+
+export function previousPeriod(period: string): string {
+  const [year, month] = split(period);
+  return month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`;
 }
 
 export function nextPeriod(period: string): string {

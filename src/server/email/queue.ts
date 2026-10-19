@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, gt, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, lt, lte } from "drizzle-orm";
 import type { EmailStatus, EmailType } from "@/lib/enums";
 import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
@@ -147,6 +147,15 @@ export function releaseBackoff(db: Db, now: Date): number {
     .update(emailLogs)
     .set({ nextAttemptAt: now })
     .where(and(eq(emailLogs.status, "PENDING"), gt(emailLogs.nextAttemptAt, now)))
+    .run().changes;
+}
+
+/** Retention: finished messages hold addresses, subjects and decline reasons, so they are not kept forever. */
+export function pruneEmails(db: Db, now: Date, olderThanDays: number): number {
+  const cutoff = new Date(now.getTime() - olderThanDays * 24 * 60 * 60 * 1000);
+  return db
+    .delete(emailLogs)
+    .where(and(inArray(emailLogs.status, ["SENT", "FAILED"]), lt(emailLogs.createdAt, cutoff)))
     .run().changes;
 }
 

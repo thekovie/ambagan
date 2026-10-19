@@ -7,6 +7,7 @@ import { generateStatements } from "@/server/billing/generate";
 import { RECENT_PERIOD_COUNT, recentPeriods } from "@/server/billing/period";
 import { cancelStatement, markOverdue } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
+import { runDailyJob } from "@/server/jobs/daily";
 import { listSubscriptions } from "@/server/subscriptions/service";
 
 export interface GenerateState {
@@ -76,4 +77,21 @@ export async function cancelStatementAction(_prev: CancelState, formData: FormDa
   if (!result.ok) return { error: CANCEL_ERRORS[result.error] };
   revalidatePath("/admin/statements");
   return {};
+}
+
+export interface DailyRunState {
+  message?: string;
+  error?: string;
+}
+
+/** Runs the daily job now: issue what is due, mark overdue, queue reminders. Safe to repeat. */
+export async function runDailyJobAction(): Promise<DailyRunState> {
+  await requireAdmin();
+  const result = await runDailyJob("MANUAL");
+  revalidatePath("/admin/statements");
+  revalidatePath("/admin/notifications");
+  if (!result.ran) return { error: "A run is already in progress. Try again in a minute." };
+  if ("error" in result) return { error: `The run failed: ${result.error}` };
+  const { created, markedOverdue, queued } = result.summary;
+  return { message: `Done. Created ${created}, marked ${markedOverdue} overdue, queued ${queued} email${queued === 1 ? "" : "s"}.` };
 }

@@ -23,12 +23,12 @@ function queueFor(
   dedupeKey: string,
   statementId: string | null,
   now: Date,
-): void {
+): boolean {
   // The email is a side effect of a payment change that shares its transaction: nothing here may throw,
   // or a formatting bug would make a real payment impossible to approve. Skip the email and say so.
   try {
     const full: NotificationPayload = { name: to.name ?? "", ...payload() };
-    enqueueEmail(db, {
+    return enqueueEmail(db, {
       type,
       toEmail: to.email,
       subject: copyFor(type, full).subject,
@@ -37,9 +37,10 @@ function queueFor(
       userId: to.id,
       statementId,
       now,
-    });
+    }).queued;
   } catch (error) {
     console.error(`Could not queue ${type} email`, error instanceof Error ? error.message : error);
+    return false;
   }
 }
 
@@ -131,4 +132,27 @@ export function queueTestEmail(db: Db, to: Recipient, now: Date): string {
   });
   if (!queued.queued) throw new Error("Test email was not queued");
   return queued.id;
+}
+
+/**
+ * A statement notice from the daily job: new statement or a reminder. `dedupeKey` says which occurrence this is,
+ * so running the job twice in a day never sends it twice. Deactivated members are skipped. Returns whether a new
+ * message was queued.
+ */
+export function notifyStatementEvent(
+  db: Db,
+  args: { type: "SOA_GENERATED" | "DUE_TOMORROW" | "DUE_TODAY" | "OVERDUE"; statement: Statement; dedupeKey: string; now: Date },
+): boolean {
+  const { type, statement, dedupeKey, now } = args;
+  const member = activeUser(db, statement.userId);
+  if (!member) return false;
+  return queueFor(
+    db,
+    type,
+    member,
+    () => ({ ...statementPayload(statement, statement.outstandingMinor), path: `${STATEMENTS_PATH}/${statement.id}` }),
+    dedupeKey,
+    statement.id,
+    now,
+  );
 }

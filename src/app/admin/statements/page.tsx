@@ -14,8 +14,11 @@ import { requireAdmin } from "@/server/auth/session";
 import { periodLabel, RECENT_PERIOD_COUNT, recentPeriods } from "@/server/billing/period";
 import { listStatements } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
+import { listJobRuns } from "@/server/jobs/runner";
+import { DAILY_JOB } from "@/server/jobs/schedule";
 import { listSubscriptions } from "@/server/subscriptions/service";
 import { CancelStatement } from "./cancel-statement";
+import { DailyRunPanel } from "./daily-run-panel";
 import { GenerateForm } from "./generate-form";
 
 export const metadata: Metadata = { title: "Statements" };
@@ -45,6 +48,8 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
           duplicates or changes statements that already exist.
         </p>
       </header>
+
+      <DailyRunPanel runs={listJobRuns(db, DAILY_JOB, 5)} />
 
       <section aria-labelledby="generate" className="flex max-w-2xl flex-col gap-4">
         <h2 id="generate" className="font-display text-3xl">
