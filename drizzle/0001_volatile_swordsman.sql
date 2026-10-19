@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `payment_one_pending_per_statement` ON `payment` (`statement_id`) WHERE "payment"."status" = 'PENDING';--> statement-breakpoint
+CREATE UNIQUE INDEX `payment_reference_in_use` ON `payment` (`transaction_ref_norm`) WHERE "payment"."status" != 'DECLINED';

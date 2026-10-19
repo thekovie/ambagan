@@ -231,3 +231,18 @@ Independent review: no critical/high; path traversal, content-type/XSS, header i
 
 ### Tests
 - `tests/ocr-parsers.test.ts` (21): each provider's clean receipt, a noisy GCash scan (O/0 confusion, balance distractor), thousands separators, missing reference, fee + total, ambiguous amounts, unrecognised and blank text, hostile 100k-character input, date formats in Manila time, file validation. 192 passing; typecheck, lint clean.
+
+## 2026-10-19 — feat/payment-submission
+
+### Decisions
+- **A submission is a claim, not a payment.** `submitPayment` records a PENDING payment and moves the statement to UNDER_VERIFICATION; `outstanding_minor` is untouched until an admin approves (next milestone). Only the structured fields the member confirmed are stored: destination (our account), **sending app (their app/bank, stored separately)**, amount, reference, transaction time, optional note. No receipt image, no raw OCR text.
+- **Database-level duplicate protection** (new migration `0001`): partial unique indexes allow at most **one PENDING payment per statement** and a transaction reference **only once among non-declined payments** (references compared normalised: case, spaces and punctuation ignored). A decline releases the reference, so a member can resubmit corrected details; the declined original is preserved. The service checks first for friendly errors; the indexes make double-clicks and races safe. Tests cover both layers.
+- **One immediate transaction** covers ownership check (another member's statement is "not found"), payable check (UNPAID/OVERDUE only), active destination, duplicate reference, the insert, the status change and the audit entry.
+- **Amount mismatch is allowed but flagged** (to the member before sending, and in the result for the admin view): the brief's "full payment for approval" is enforced at verification time.
+- **Validation:** amount > 0 and <= PHP 1,000,000; reference 6+ alphanumerics (letters, digits, spaces, dashes); transaction time read as Manila local time, at most 24 h in the future (phone clock skew) and within 180 days; app 1-40 chars; note <= 300.
+- **UI:** `/pay/[statementId]` (1. where to send, with QR; 2. a controlled form so a receipt scan can fill it next) and `/payments` (history with status pill, decline reason and a "Report it again" link). The form keeps everything typed after an error.
+
+### Tests
+- `tests/payments.test.ts` (35): form parsing and rejection table, reference normalisation, happy path, ownership, non-payable states, inactive destination, duplicate references in several spellings, resubmission after decline, the DB-level indexes, history query. Plus a datetime-local helper test. 225 passing; typecheck, lint, build clean.
+- Browser against a scratch DB: validation error keeps typed values and shows the amount hint; valid submission redirects to history with a banner; recorded as PENDING with the correct UTC time and the statement under verification; second visit explains the statement isn't waiting; other member gets 404.
+- A test I wrote that claimed to check rollback only re-tested "not found"; it was removed rather than kept as a misleading test.
