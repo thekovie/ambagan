@@ -19,6 +19,8 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
     "@base-ui/react": "^1.9.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.1",
     "@tesseract.js-data/eng": "^1.0.0",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",

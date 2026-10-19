@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
+import { kickEmailQueue } from "@/server/email/worker";
 import { parsePaymentForm } from "@/server/payments/form";
 import { submitPayment } from "@/server/payments/submit";
 
@@ -57,6 +58,7 @@ export async function submitPaymentAction(_prev: PaymentFormState, formData: For
     return { error: ERRORS[result.error] };
   }
 
+  kickEmailQueue();
   revalidatePath("/", "layout");
   redirect("/payments?sent=1");
 }

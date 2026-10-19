@@ -9,6 +9,8 @@ export interface OutgoingMail {
   html: string;
 }
 
+const SMTP_TIMEOUT_MS = 15_000;
+
 let transporter: Transporter | undefined;
 
 function getTransporter(smtp: NonNullable<ReturnType<typeof getEnv>["smtp"]>): Transporter {
@@ -18,6 +20,10 @@ function getTransporter(smtp: NonNullable<ReturnType<typeof getEnv>["smtp"]>): T
     secure: smtp.secure,
     // Port 587 style servers upgrade with STARTTLS; refuse to fall back to plaintext.
     requireTLS: !smtp.secure,
+    // A black-holed server must fail fast: the defaults wait minutes and would stall the whole send run.
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     auth: smtp.user ? { user: smtp.user, pass: smtp.password } : undefined,
   }));
 }

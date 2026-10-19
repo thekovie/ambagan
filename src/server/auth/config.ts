@@ -6,6 +6,7 @@ import { getEnv } from "@/env";
 import { getDb } from "@/server/db/client";
 import { accounts, sessions, users, verificationTokens } from "@/server/db/schema";
 import { loginEmail } from "@/server/email/auth-templates";
+import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
 import { checkSignIn } from "./access";
 
@@ -39,10 +40,23 @@ function buildConfig(): NextAuthConfig {
           // No account enumeration: unknown or deactivated addresses get the same "check your email" page, minus the email.
           if (!checkSignIn(db, identifier, env.ADMIN_EMAIL).ok) return;
           // Not awaited: SMTP latency (or failure) must not reveal that the address exists.
-          // Failures are logged for the admin; the notification queue adds retries later.
-          void sendMail({ to: identifier, ...loginEmail({ url }) }).catch((error: unknown) => {
-            console.error("Sign-in email failed to send", error instanceof Error ? error.message : error);
-          });
+          // Outcomes are logged for the admin; a failed sign-in link is simply requested again.
+          const mail = loginEmail({ url });
+          const log = (error?: string) => {
+            try {
+              recordDirectEmail(db, { type: "LOGIN", toEmail: identifier, subject: mail.subject, error });
+            } catch (logError) {
+              console.error("Could not log a sign-in email", logError instanceof Error ? logError.message : logError);
+            }
+          };
+          void sendMail({ to: identifier, ...mail }).then(
+            () => log(),
+            (error: unknown) => {
+              const message = error instanceof Error ? error.message : String(error);
+              console.error("Sign-in email failed to send", message);
+              log(message);
+            },
+          );
         },
       }),
     ],

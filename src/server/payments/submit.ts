@@ -1,5 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
+import { notifyPaymentSubmitted } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
 import { paymentMethods, payments, statements } from "@/server/db/schema";
 import { normalizeReference, type PaymentInput } from "./form";
@@ -40,7 +41,7 @@ export function submitPayment(db: Db, args: { userId: string; input: PaymentInpu
     if (statement.status !== "UNPAID" && statement.status !== "OVERDUE") return { ok: false, error: "NOT_PAYABLE" };
 
     const destination = t
-      .select({ id: paymentMethods.id })
+      .select({ id: paymentMethods.id, label: paymentMethods.label })
       .from(paymentMethods)
       .where(and(eq(paymentMethods.id, input.destinationMethodId), eq(paymentMethods.isActive, true)))
       .get();
@@ -80,6 +81,8 @@ export function submitPayment(db: Db, args: { userId: string; input: PaymentInpu
       entityId: payment.id,
       metadata: { statementId: statement.id, reference: statement.reference, amountMinor: input.amountMinor },
     });
+    // Written in this transaction: if it rolls back there is no email, and an SMTP outage can never undo a payment report.
+    notifyPaymentSubmitted(t, { payment, statement, destinationLabel: destination.label, now });
     return { ok: true, payment, amountMatches: input.amountMinor === statement.outstandingMinor };
   }, { behavior: "immediate" });
 }

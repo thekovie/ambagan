@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { PaymentStatus } from "@/lib/enums";
 import { recordAudit } from "@/server/audit";
+import { notifyPaymentDecided } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
 import { paymentMethods, payments, statements, users } from "@/server/db/schema";
 import type { Payment } from "./submit";
@@ -92,6 +93,7 @@ export function approvePayment(
         adjustment: mismatch ? note : null,
       },
     });
+    notifyPaymentDecided(t, { type: "PAYMENT_APPROVED", payment: approved, statement, now });
     return { ok: true, changed: true, payment: approved };
   }, { behavior: "immediate" });
 }
@@ -146,6 +148,7 @@ export function declinePayment(
       entityId: payment.id,
       metadata: { statementId: statement.id, reference: statement.reference, reason },
     });
+    notifyPaymentDecided(t, { type: "PAYMENT_DECLINED", payment: declined, statement, reason, now });
     return { ok: true, changed: true, payment: declined };
   }, { behavior: "immediate" });
 }
