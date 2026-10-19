@@ -1,0 +1,25 @@
+# Project Log — ambagan
+
+Running record of decisions, issues, deviations and test results. Newest entries last within each date. Update in every PR.
+
+## 2026-10-19 — Kickoff
+
+### Decisions
+- **Name / location:** `ambagan` (Filipino: pooling money to split a shared cost). Private GitHub repo `thekovie/ambagan`, local path `~/Documents/GitHubRepos/ambagan`.
+- **Workflow:** one branch per feature, PR into `main`, merge only after `typecheck`, `lint`, `test`, `build` pass. Conventional commits. No co-author trailers or tool attributions anywhere (commits, PRs, code, docs). Commit identity: global git identity.
+- **UI direction:** brief asked for minimal/neutral SaaS; owner asked for a standout look. Owner chose *fully expressive*. Kept as hard floors: WCAG 2.2 AA, light/dark, status not conveyed by color alone.
+- **Scheduler:** in-process (`instrumentation.ts` + cron) with DB-backed `job_runs` for idempotency, so the app stays a single service.
+- **Package manager:** pnpm. Node pinned to 22 LTS (`.nvmrc`); dev machine runs Node 26.
+
+### Environment audit (Phase 0)
+- No existing project; greenfield. Node v26.11.1, pnpm 12.11.2, Docker 29.4.0, `gh` authenticated as `thekovie`.
+- Versions at scaffold time: next 16.4.2, react 19.3.0, tailwindcss 4.3.3, zod 4.6.7, vitest 5.0.5, drizzle-orm 0.45.4, better-sqlite3 13.0.3 (engines node >=22), next-auth@beta 5.0.0-beta.32, tesseract.js 7.0.0.
+- **Compatibility finding:** `next-auth@5.0.0-beta.32` and `@auth/drizzle-adapter` peer-require `nodemailer ^7.0.7 || ^8.0.5`, while latest nodemailer is 10.x. Pin nodemailer to 8.x. Auth.js v5 is still published as `beta`; accepted risk, revisit if stable ships.
+
+### Issues
+- `create-next-app` generates an `AGENTS.md` that `next dev` re-creates. It is gitignored (along with `CLAUDE.md`) to keep the repo free of tool-specific files.
+- `.gitignore` default `.env*` would have ignored `.env.example`; added `!.env.example`.
+- `vite-tsconfig-paths` is redundant with Vite's native `resolve.tsconfigPaths`; removed. Config is `vitest.config.mts` to avoid the CJS/ESM loader warning.
+
+### Tests
+- `src/env.test.ts`: 4 passing (dev without SMTP, short secret rejected, SMTP required in production, SMTP parsed).
