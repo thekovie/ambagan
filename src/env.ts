@@ -3,6 +3,8 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_PATH: z.string().min(1).default("./data/ambagan.db"),
+  /** Persistent directory for admin-uploaded images (payment QR codes). */
+  ASSETS_DIR: z.string().min(1).default("./data/assets"),
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
   APP_URL: z.url(),
   ADMIN_EMAIL: z.email(),

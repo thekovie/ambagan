@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // Every route behind sign-in is per-user and dynamic, so the app does not use
   // cacheComponents / partial prerendering (it would force Suspense around each session read).
   serverExternalPackages: ["better-sqlite3"],
+  // Payment QR uploads go through a Server Action (default cap is 1 MB; the app caps images at 1.5 MB).
+  experimental: { serverActions: { bodySizeLimit: "2mb" } },
   // A CSP with nonces is added with the deployment work; these cover framing and referrer leaks now.
   async headers() {
     return [
