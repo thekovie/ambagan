@@ -1,15 +1,133 @@
+import { ArrowRight, ReceiptText } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
+import { Sachet } from "@/components/sachet";
+import { buttonVariants } from "@/components/ui/button";
+import type { StatementStatus } from "@/lib/enums";
+import { formatMinor } from "@/lib/money";
+import { STATUS_META } from "@/lib/status";
+import { sachetProps } from "@/lib/statement-view";
 import { requireAdmin } from "@/server/auth/session";
+import { periodLabel } from "@/server/billing/period";
+import { getAdminOverview } from "@/server/billing/overview";
+import { getDb } from "@/server/db/client";
 
-export const metadata: Metadata = { title: "Admin overview" };
+export const metadata: Metadata = { title: "Overview" };
 
-// Placeholder: the overview lands in feat/admin-overview.
+const SEGMENT_COLORS: Record<StatementStatus, string> = {
+  PAID: "bg-foil-lime",
+  UNDER_VERIFICATION: "bg-foil-tangerine",
+  UNPAID: "bg-foil-cobalt",
+  OVERDUE: "bg-foil-magenta",
+  CANCELLED: "bg-muted",
+};
+const LEGEND_ORDER: StatementStatus[] = ["PAID", "UNDER_VERIFICATION", "UNPAID", "OVERDUE"];
+
 export default async function AdminDashboardPage() {
   await requireAdmin();
+  const now = new Date();
+  const overview = getAdminOverview(getDb(), now);
+  const { cycle, tickets } = overview;
+  const month = periodLabel(overview.period);
+  const currency = tickets[0]?.statement.currency ?? "PHP";
+
+  const counts = new Map<StatementStatus, number>();
+  for (const t of tickets) counts.set(t.status, (counts.get(t.status) ?? 0) + 1);
+  const breakdown = LEGEND_ORDER.filter((s) => counts.has(s)).map((s) => `${counts.get(s)} ${STATUS_META[s].label.toLowerCase()}`);
+
+  const attention: { href: string; label: string; value: string; urgent: boolean }[] = [
+    { href: "/admin/payments", label: "Payments to verify", value: String(overview.pendingVerification), urgent: overview.pendingVerification > 0 },
+    { href: "/admin/statements?status=OVERDUE", label: "Overdue statements", value: String(overview.overdueCount), urgent: overview.overdueCount > 0 },
+    { href: "/admin/statements", label: "Still owed, all months", value: formatMinor(overview.outstandingMinor, currency), urgent: false },
+    { href: "/admin/members", label: "Active members", value: String(overview.activeMembers), urgent: false },
+  ];
+
   return (
-    <div>
-      <h1 className="font-display text-5xl md:text-6xl">Overview</h1>
-      <p className="mt-3 text-muted-foreground">Collections, balances and the verification queue will show up here.</p>
+    <div className="flex flex-col gap-12">
+      <header>
+        <h1 className="font-display text-5xl md:text-6xl">Overview</h1>
+        <p className="mt-3 text-muted-foreground">{month}</p>
+      </header>
+
+      {cycle.count === 0 ? (
+        <EmptyState
+          icon={<ReceiptText />}
+          title={`Nothing issued for ${month} yet`}
+          description="Once this month's statements exist you'll see who has paid at a glance."
+          action={
+            <Link href="/admin/statements" className={buttonVariants({ variant: "default" })}>
+              Generate statements <ArrowRight data-icon="inline-end" />
+            </Link>
+          }
+        />
+      ) : (
+        <section aria-labelledby="collected" className="flex max-w-3xl flex-col gap-4">
+          <h2 id="collected" className="sr-only">
+            Collections for {month}
+          </h2>
+          <p className="font-display text-[clamp(2.75rem,8vw,5rem)]">
+            {formatMinor(cycle.collectedMinor, currency)}
+            <span className="text-muted-foreground"> of {formatMinor(cycle.chargedMinor, currency)}</span>
+          </p>
+          <p className="text-muted-foreground">
+            collected for {month} · {cycle.paidCount} of {cycle.count} paid
+          </p>
+          <div
+            role="img"
+            aria-label={`${month}: ${breakdown.join(", ")}`}
+            className="flex h-4 gap-1 overflow-hidden rounded-full"
+          >
+            {tickets.map((t) => (
+              <span key={t.statement.id} className={`flex-1 ${SEGMENT_COLORS[t.status]}`} />
+            ))}
+          </div>
+          <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold">
+            {LEGEND_ORDER.filter((s) => counts.has(s)).map((s) => (
+              <li key={s} className="flex items-center gap-2">
+                <span aria-hidden="true" className={`size-3 rounded-full ${SEGMENT_COLORS[s]}`} />
+                {counts.get(s)} {STATUS_META[s].label.toLowerCase()}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section aria-labelledby="needs" className="flex max-w-2xl flex-col gap-2">
+        <h2 id="needs" className="font-display text-3xl">
+          At a glance
+        </h2>
+        <ul className="divide-y divide-border">
+          {attention.map((row) => (
+            <li key={row.label}>
+              <Link href={row.href} className="flex min-h-14 items-center justify-between gap-4 py-2 hover:bg-muted/60">
+                <span className="font-semibold">{row.label}</span>
+                <span className="flex items-center gap-2">
+                  <span className={row.urgent ? "font-display rounded-full bg-foil-magenta px-3 py-1 text-2xl text-on-foil-magenta" : "font-display text-2xl"}>
+                    {row.value}
+                  </span>
+                  <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {tickets.length > 0 ? (
+        <section aria-labelledby="rack" className="flex flex-col gap-5">
+          <h2 id="rack" className="font-display text-3xl">
+            {month} rack
+          </h2>
+          <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {tickets.map((t) => (
+              <li key={t.statement.id}>
+                <Sachet compact {...sachetProps(t.statement, now)} subscriptionName={t.memberName} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }
