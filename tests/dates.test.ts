@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatDate, formatDateTime, greeting } from "@/lib/dates";
+
+describe("greeting (Manila hour)", () => {
+  it("follows the hour in Manila, not the device or UTC", () => {
+    expect(greeting(new Date("2026-10-19T21:30:00Z"))).toBe("Good morning"); // 05:30 Manila
+    expect(greeting(new Date("2026-10-19T04:00:00Z"))).toBe("Good afternoon"); // 12:00 Manila
+    expect(greeting(new Date("2026-10-19T10:00:00Z"))).toBe("Good evening"); // 18:00 Manila
+    expect(greeting(new Date("2026-10-19T16:30:00Z"))).toBe("Good evening"); // 00:30 Manila
+  });
+});
 import { dueDateOf, issueDateOf } from "@/server/billing/dates";
 
 describe("issueDateOf / dueDateOf (Asia/Manila, UTC+8, no DST)", () => {

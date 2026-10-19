@@ -16,6 +16,16 @@ const dateTime = new Intl.DateTimeFormat("en-US", {
 // Newer ICU versions put a narrow no-break space before AM/PM; keep output plain and predictable.
 const plain = (text: string) => text.replace(/ /g, " ");
 
+const hourInManila = new Intl.DateTimeFormat("en-US", { timeZone: TIMEZONE, hour: "numeric", hourCycle: "h23" });
+
+/** "Good morning" / "Good afternoon" / "Good evening" by the hour in Manila. */
+export function greeting(date: Date): string {
+  const hour = Number(hourInManila.format(date));
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 /** "Sat, Oct 10" */
 export const formatDate = (date: Date): string => plain(short.format(date));
 

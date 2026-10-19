@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { findInvitation } from "@/server/auth/invitations";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
+import { updateOwnName } from "@/server/members/profile";
 import { addMember, listMembers, resendInvitation, setMemberActive } from "@/server/members/service";
 import { createTestDb } from "./helpers/db";
 
@@ -141,6 +142,22 @@ describe("resendInvitation", () => {
     if (!first.ok) throw new Error("setup");
     setMemberActive(db, { userId: first.user.id, active: false, actorId: admin.id });
     expect(resendInvitation(db, { userId: first.user.id, actorId: admin.id, now: NOW })).toEqual({ ok: false, error: "INACTIVE" });
+  });
+});
+
+describe("updateOwnName", () => {
+  it("trims, stores and audits the change", () => {
+    expect(updateOwnName(db, { userId: admin.id, name: "  Boss Lady  " })).toEqual({ ok: true });
+    expect(db.select().from(s.users).where(eq(s.users.id, admin.id)).get()?.name).toBe("Boss Lady");
+    const log = db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "member.renamed")).get();
+    expect(log).toMatchObject({ actorId: admin.id, entityId: admin.id });
+  });
+
+  it("rejects empty and over-long names and unknown users", () => {
+    expect(updateOwnName(db, { userId: admin.id, name: "   " })).toEqual({ ok: false, error: "INVALID_NAME" });
+    expect(updateOwnName(db, { userId: admin.id, name: "x".repeat(81) })).toEqual({ ok: false, error: "INVALID_NAME" });
+    expect(updateOwnName(db, { userId: "nope", name: "Ana" })).toEqual({ ok: false, error: "NOT_FOUND" });
+    expect(db.select().from(s.users).where(eq(s.users.id, admin.id)).get()?.name).toBe("Boss");
   });
 });
 
