@@ -8,6 +8,13 @@
       "when": 1792401308603,
       "tag": "0000_unusual_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792406981988,
+      "tag": "0001_volatile_swordsman",
+      "breakpoints": true
     }
   ]
 }

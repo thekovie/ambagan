@@ -196,6 +196,12 @@ export const payments = sqliteTable(
     index("payment_statement_idx").on(t.statementId),
     index("payment_ref_idx").on(t.transactionRefNorm),
     index("payment_status_idx").on(t.status, t.submittedAt),
+    // Enforced by the database, not just the service, so a double-click or a race can't slip through:
+    // a statement has at most one payment waiting for the admin...
+    uniqueIndex("payment_one_pending_per_statement").on(t.statementId).where(sql`${t.status} = 'PENDING'`),
+    // ...and a transaction reference can be in use only once. Declined payments release their
+    // reference so the member can resubmit corrected details.
+    uniqueIndex("payment_reference_in_use").on(t.transactionRefNorm).where(sql`${t.status} != 'DECLINED'`),
   ],
 );
 

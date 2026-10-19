@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDateTime, greeting } from "@/lib/dates";
+import { formatDate, formatDateTime, greeting, toLocalInputValue } from "@/lib/dates";
+
+describe("toLocalInputValue", () => {
+  it("formats an instant as a datetime-local value in Manila time", () => {
+    expect(toLocalInputValue(new Date("2026-10-04T08:25:00Z"))).toBe("2026-10-04T16:25");
+    expect(toLocalInputValue(new Date("2026-12-31T16:30:00Z"))).toBe("2027-01-01T00:30");
+  });
+});
 
 describe("greeting (Manila hour)", () => {
   it("follows the hour in Manila, not the device or UTC", () => {
