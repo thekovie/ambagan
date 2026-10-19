@@ -39,3 +39,16 @@ export function getDb(): Db {
   }
   return globalForDb.__ambaganDb;
 }
+
+/** Folds the write-ahead log into the main file and closes the handle (graceful shutdown). */
+export function closeDb(db: Db): void {
+  db.$client.pragma("wal_checkpoint(TRUNCATE)");
+  db.$client.close();
+}
+
+/** Closes the process-wide database if it was opened. */
+export function closeSharedDb(): void {
+  if (!globalForDb.__ambaganDb) return;
+  closeDb(globalForDb.__ambaganDb);
+  globalForDb.__ambaganDb = undefined;
+}

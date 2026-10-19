@@ -3,6 +3,8 @@ on:
   pull_request:
   push:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -22,3 +24,26 @@ jobs:
           AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only
           APP_URL: http://localhost:3000
           ADMIN_EMAIL: ci@example.com
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t ambagan:ci .
+      - name: Start it and wait for the health check
+        run: |
+          docker run -d --name ambagan -p 3000:3000 \
+            -e AUTH_SECRET=ci-only-secret-ci-only-secret-ci-only \
+            -e APP_URL=http://localhost:3000 \
+            -e ADMIN_EMAIL=ci@example.com \
+            -e SMTP_HOST=localhost -e SMTP_FROM_EMAIL=ci@example.com \
+            ambagan:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health; then
+              curl -sI http://localhost:3000/login | grep -i "content-security-policy:.*'nonce-"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ambagan
+          exit 1

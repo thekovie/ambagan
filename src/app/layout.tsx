@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 
@@ -26,11 +27,13 @@ export const viewport: Viewport = {
 // Constant string (no user input): sets the theme class before first paint to avoid a flash.
 const THEME_INIT = `try{var t=localStorage.getItem("theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch(e){}`;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Set by src/proxy.ts for the Content-Security-Policy: without it the browser refuses this inline script.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" className={`${archivo.variable} h-full`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
