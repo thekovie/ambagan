@@ -6,6 +6,7 @@ import { getEnv } from "@/env";
 import { requireAdmin } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { invitationEmail } from "@/server/email/auth-templates";
+import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
 import { addMember, resendInvitation, setMemberActive } from "@/server/members/service";
 
@@ -35,14 +36,22 @@ const ERRORS = {
 
 async function deliverInvite(user: { email: string; name: string | null }, token: string): Promise<InviteResult> {
   const url = `${getEnv().APP_URL}/invite/${token}`;
-  let emailSent = true;
+  const mail = invitationEmail({ name: user.name, url });
+  let error: string | undefined;
   try {
-    await sendMail({ to: user.email, ...invitationEmail({ name: user.name, url }) });
-  } catch (error) {
-    emailSent = false;
-    console.error("Invitation email failed to send", error instanceof Error ? error.message : error);
+    await sendMail({ to: user.email, ...mail });
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : String(cause);
+    console.error("Invitation email failed to send", error);
   }
-  return { email: user.email, url, emailSent };
+  // The log never holds the link: it is a one-time secret.
+  try {
+    recordDirectEmail(getDb(), { type: "INVITATION", toEmail: user.email, subject: mail.subject, error });
+  } catch (logError) {
+    // Never lose the fallback link over a logging problem.
+    console.error("Could not log an invitation email", logError instanceof Error ? logError.message : logError);
+  }
+  return { email: user.email, url, emailSent: !error };
 }
 
 const addSchema = z.object({

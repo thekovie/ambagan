@@ -281,3 +281,27 @@ Review found no critical/high issues and approved; fixed before merge:
 ### Tests
 - `tests/verification.test.ts` (27) and extended `tests/payments.test.ts`: 258 passing; typecheck, lint, build clean.
 - Browser, two sessions: admin queue shows the report; approve (two-step) -> payment APPROVED, statement PAID with balance 0, audit entries; a second report declined with a reason (blank reason blocked by native validation) -> member sees the reason and "Report it again".
+
+## 2026-10-19 — feat/email-queue
+
+### Decisions
+- **Outbox in the same transaction.** Payment notifications (`PAYMENT_RECEIVED`, `ADMIN_VERIFY_REQUEST`, `PAYMENT_APPROVED`, `PAYMENT_DECLINED`) are written to `email_log` inside the submit/approve/decline transaction. A rollback leaves no email; an SMTP outage leaves the payment change standing (brief: "SMTP failure never rolls back billing"). Sending happens after commit, fire-and-forget (`kickEmailQueue`).
+- **Queue semantics** (`src/server/email/queue.ts`): unique `dedupe_key` (a double-click or job re-run can't queue twice); claim in one immediate transaction with a 10-minute lease (a crashed sender's message becomes claimable again); 5 attempts with 1 min / 5 min / 30 min / 2 h backoff; the last error is kept, truncated to 500 characters. Status is `SENT` (accepted by SMTP), never "delivered": SMTP gives no receipts.
+- **Sign-in and invitation mail stay direct sends, not queued.** Alternatives: queue them (a working one-time link would sit in the database until sent, and the inviting admin couldn't see the outcome immediately); queue and scrub after send (more code, same exposure window). Chosen: send directly, log the outcome without the link (`recordDirectEmail`). They can't be resent from the log; the admin sends a new invitation. The invitation UI keeps its immediate "share the link yourself" fallback.
+- **React Email for notifications**, one copy table (`notification-copy.ts`) rendered by a single component (`notification-email.tsx`) to HTML + plain text; payloads hold pre-formatted strings and an app-relative path, joined to `APP_URL` at render time. Deviation from the brief's "10 React Email templates": login/invitation keep their small hand-written HTML (they predate the queue and have nothing dynamic); the other 9 types are React Email.
+- **Test email goes only to the admin's own address** (so the button can't be used as a relay) and reports what the mail server answered. "Send waiting emails now" also clears retry delays so it is useful right after fixing SMTP.
+- Deactivated members are not emailed. Copy restored on the member page: "we'll email you the result" is now true.
+
+### Verification
+- 313 unit tests; typecheck, lint, production build clean.
+- Live, against a local TLS SMTP sink (nodemailer -> implicit TLS, `NODE_TLS_REJECT_UNAUTHORIZED=0` for the self-signed cert): test email rendered and received; member report -> member confirmation + admin verify request; approval -> member confirmation; sink stopped -> `ECONNREFUSED` shown, row back to Waiting; sink restarted -> "Send waiting emails now" sent it. Page checked at 1440 and 390 px.
+- **Not tested:** a real SMTP provider (STARTTLS on 587, provider auth, spam placement).
+
+### Code review and fixes
+Independent review: no critical/high, approved with changes. Fixed before merge:
+- **A crashing sender could loop forever:** claiming now marks a message `FAILED` ("The sender stopped before finishing") once it has been claimed `MAX_ATTEMPTS` times without an outcome, instead of reclaiming it as attempt 6, 7, ... (test added).
+- **SMTP timeouts** (15 s connect/greeting/socket) so a black-holed server can't hold a send run, and the admin buttons, for minutes.
+- **Notification code can't break the change that triggered it:** payload/subject building and the insert are guarded and logged; a formatting bug skips the email instead of rolling back an approval (test with an invalid date).
+- **A message queued during a send run is no longer skipped:** `runEmailQueue` waits for the in-flight run and then runs its own.
+- Recording an outcome is separate from sending, so a database hiccup can't turn an accepted message into a retry or stop the batch; sign-in logging can't reject unhandled; a logging failure can't hide the invitation fallback link.
+- **Deferred to the scheduler milestone (documented):** nothing retries until a send run is triggered (actions, admin button, and the scheduler once it exists); `email_log` retention/pruning (rows hold addresses, subjects and decline reasons). **Accepted:** resending an old verify-request or to a since-deactivated member is an explicit admin action; the button is disabled while pending.

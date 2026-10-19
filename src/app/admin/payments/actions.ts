@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { formatMinor } from "@/lib/money";
 import { requireAdmin } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
+import { kickEmailQueue } from "@/server/email/worker";
 import { approvePayment, declinePayment } from "@/server/payments/verify";
 
 export interface ReviewState {
@@ -21,6 +22,7 @@ const ERRORS = {
 } as const;
 
 function refresh() {
+  kickEmailQueue();
   revalidatePath("/admin/payments");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/statements");

@@ -29,7 +29,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       {sent === "1" ? (
         <p role="status" className="flex items-start gap-3 rounded-xl bg-secondary p-4 font-semibold">
           <CircleCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          Sent. The admin will check that the money arrived. Check back here for the result.
+          Sent. The admin will check that the money arrived and we&apos;ll email you the result.
         </p>
       ) : null}
 
