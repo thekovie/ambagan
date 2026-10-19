@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { nextPeriod, periodLabel, periodOf, periodStub } from "@/server/billing/period";
+import { nextPeriod, periodLabel, periodOf, periodStub, recentPeriods } from "@/server/billing/period";
+
+describe("recentPeriods", () => {
+  it("lists the current Manila period first, then earlier ones across year boundaries", () => {
+    // 16:30Z on Jan 31 is already Feb 1 in Manila: UTC would say January.
+    const now = new Date("2026-01-31T16:30:00Z");
+    expect(recentPeriods(now, 4)).toEqual(["2026-02", "2026-01", "2025-12", "2025-11"]);
+  });
+});
 
 describe("periodOf (Asia/Manila)", () => {
   it("uses the Manila calendar month, not UTC", () => {

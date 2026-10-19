@@ -132,3 +132,35 @@ Independent review: approved, no critical/high findings; items fixed before merg
 - Defence in depth: plan updates write an explicit field list; default plan seed uses `ON CONFLICT DO NOTHING`.
 - Tests strengthened: a real rollback test (forced FK failure after the user insert), a prefix test that can fail, a clearer last-admin test, expired/accepted invites, fee cap, comma rules. Total 88 passing.
 - Accepted: stale error text can linger in a row after a later success on the other form; no automated test of the server actions' `requireAdmin` calls (covered by the layout gate and code review; planned for the e2e milestone).
+
+## 2026-10-19 — feat/billing-soa
+
+### Decisions
+- **Generation is a single transaction and idempotent by construction:** `INSERT ... ON CONFLICT (user, plan, period) DO NOTHING` on the existing unique index. Reruns, overlapping runs and cancelled cycles can never create or alter a statement. Only the requested period is generated (no automatic backfill), consistent with the reactivation guard from the members milestone.
+- **Snapshots:** name, amount and currency are copied onto each statement at generation. Verified by tests that change the plan afterwards.
+- **Issue date = actual generation time** (an honest record when an admin generates late); **due = last millisecond of the due day in Manila**.
+- **References:** `PREFIX-YYYYMM-XXXXXX`, 31-character alphabet without 0/O/1/I/L, `crypto.randomInt`; collisions are redrawn (tested with a forced collision).
+- **Overdue:** the persisted flip (`markOverdue`) runs after manual generation and later in the daily job. The UI also derives `effectiveStatus` so nothing reads "Unpaid" after its due day. Under-verification statements are never marked overdue.
+- **Cancel:** UNPAID/OVERDUE only, reason required, balance zeroed, audit entry with previous status, status re-checked inside the UPDATE (two admins can't both win), cycle slot stays used.
+- **Access:** statement ownership is part of the query (other member's id -> 404). Admin page and actions re-check the role.
+- **UI:** member `/statements` (hung rack of strips) and `/statements/[id]` (strip, details, payment instructions, print layout); admin `/admin/statements` (generate missing, filters, cancel with reason + confirm). Overdue strips use the inverse action button (magenta foil would vanish on a magenta strip).
+
+### Issues
+- A test used the real clock and failed once "today" passed its fixture's due date; tests that depend on time now pass `now` explicitly.
+- Print: shell elements hidden with `print:` variants; not exercised in a real print dialog (only the classes were verified).
+
+### Tests
+- `tests/billing.test.ts` (27), `tests/dates.test.ts`, `tests/statement-view.test.ts`, extended `tests/period.test.ts`: 121 tests passing; typecheck, lint, build clean.
+- Browser/curl against a scratch DB: generate from the admin form (1 created, overdue because it is past the 10th), rerun (nothing created), member list/detail rendering, owner 200 / other member 404 / unknown id 404 / member on admin page 404, cancel with the two-step confirm (balance 0, reason stored, both audit entries written).
+
+### Code review (billing) and fixes
+Independent review found no way to double-bill, overwrite or lose a statement, and no critical/high issues. Fixed before merge:
+- **Back-fill used today's plan values silently:** issuing a past month now shows a warning (current fee, dated today, probably overdue) and needs a second press; the action only accepts the 12 offered months and active plans.
+- **Admin's cancellation reason was visible to members** (it can mention other people): members now see "Cancelled by admin"; the reason stays in the admin list and audit log. The form says so. Reason capped at 200 characters server-side.
+- **Admin status filter disagreed with the displayed status:** "Overdue"/"Unpaid" filters now apply the same due-day rule as `effectiveStatus` (tested). List capped at 500 rows.
+- **Copy promised automation that does not exist yet:** admin and member copy reworded (the scheduler lands in feat/scheduler).
+- Generate action: errors are caught and reported ("nothing was changed", the run is one transaction); unknown/inactive plan is rejected instead of reporting "nothing to create".
+- Accessibility: the statements list link keeps its natural accessible name (status, amount, date) instead of an overriding aria-label; "How to pay" only shows on unpaid/overdue statements.
+- Robustness: reference-collision detection also checks the SQLite error code; generation and cancellation use immediate transactions so a future second writer (job runner) waits on the lock instead of failing mid-transaction. A weak period test now uses an instant where UTC and Manila differ.
+- Still open (accepted): focus is not managed after a successful cancel (the row disappears); `/pay/:id` and `/payments` links 404 until the payment milestones; print layout only checked by classes, not in a real print preview.
+- Tests: 124 passing.
