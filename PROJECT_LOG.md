@@ -101,3 +101,34 @@ Independent review of the staged diff found no critical issues and these to fix,
 - **LOW:** production guard on the dev mail fallback; `server-only` on server modules; baseline security headers (verified in a response); documented limits.
 - **Accepted and documented:** per-address lockout abuse (M5), sign-in link consumed by scanners (L2), sticky `ADMIN_EMAIL` promotion (L3), invite consumed before mail send (L6).
 - The earlier manual curl script used the POST route that is now closed, so the final verification used the real form/server action plus direct DB state changes. Unit tests: 42 passing.
+
+## 2026-10-19 — feat/members-subscriptions
+
+### Decisions
+- **Members service** (`src/server/members/service.ts`): `addMember` creates user + optional membership (starts this Manila period) + invitation + audit in one transaction; duplicate emails (case-insensitive) rejected. `setMemberActive` revokes sessions and pauses/restores memberships in one transaction; an admin can't deactivate themselves or the last active admin. `resendInvitation` revokes older links. Expected failures are returned as `{ ok: false, error }` values, not thrown.
+- **Admin-visible invite link:** after adding or re-inviting, the admin sees the invite link with a copy button. If SMTP fails the admin can hand it over by chat, so a mail outage never blocks onboarding.
+- **Subscriptions service:** Spotify (SPOT, PHP 50.00, issue day 1, due day 10) is seeded on first DB open only when no plan exists. Edits apply to statements issued afterwards; statements already carry their own name/amount/currency snapshot (tested). `refPrefix` is fixed after creation (separate create/update form parsers). Days limited to 1-28 so every month has them; due day can't precede issue day.
+- **Billing periods** (`src/server/billing/period.ts`): `YYYY-MM` computed in Asia/Manila, not UTC (tested around the month boundary).
+- **Audit log** entries for member added/activated/deactivated/invite resent and subscription created/updated (with before/after of changed fields).
+- **UI:** `/admin/members` and `/admin/subscriptions`. Destructive step uses a two-step confirm button instead of a modal. Native `<select>`/checkbox for phone-friendly pickers. New primitives: `Textarea`, `NativeSelect`, `ConfirmButton`, `CopyField`.
+
+### Issues
+- **Bug found by driving the UI:** the first version of `ConfirmButton` deactivated a member on the first press. React flushed the state change inside the click, switching the button's `type` to `submit` before the browser decided whether to submit. Fixed by keeping `type="submit"` and cancelling the first click with `preventDefault`. Re-verified: first press arms ("Sure? Deactivate"), second confirms, it disarms after 4 s.
+- A zod refine tuple spread failed type-checking (readonly path); split into a plain predicate and error object.
+
+### Tests
+- `tests/members.test.ts`, `tests/subscriptions.test.ts`, `tests/period.test.ts`: 80 tests in total passing; typecheck, lint, production build clean.
+- Manually verified in a browser against a scratch DB: add member (invite emailed to the dev console, link shown), duplicate guard, two-step deactivate then reactivate, plan fee edit persisted with an audit entry showing from/to.
+- Not tested: real SMTP delivery; non-admin access to these pages is covered by the layout gate verified in the auth milestone.
+
+### Code review (members and plans) and fixes
+Independent review: approved, no critical/high findings; items fixed before merge:
+- **Forms lost input after a server error** (React 19 resets uncontrolled forms after every action, including failed ones). Actions now echo the submitted values and fields read them through `defaultValue`. Verified in the browser: a rejected fee and a typed instruction both stay in place.
+- **Duplicate DOM ids** across the per-plan forms made `aria-describedby` point at another plan's error: ids now come from `useId()`; issue/due selects also expose their errors. Verified: no duplicate ids on the page.
+- **Fee bounds and parsing:** fee capped at ₱1,000,000; `parsePesosToMinor` now refuses commas that aren't thousands separators (`50,50` used to become ₱5,050) and values that don't fit exactly.
+- **Server accepted enrolment in an inactive plan** (only the page filtered): new `SUBSCRIPTION_INACTIVE` error.
+- **Billing guard for reactivation:** reactivating moves each membership's first billable period up to the current period (SQLite `max()` on `YYYY-MM`), so paused months are never back-billed. **Constraint for the billing milestone:** the generator bills only periods >= `startPeriod` and never backfills automatically.
+- Accessibility: permanently mounted live regions for results, per-person hidden names on repeated row buttons, `ConfirmButton` disarms on blur (6 s), copy confirmation is announced.
+- Defence in depth: plan updates write an explicit field list; default plan seed uses `ON CONFLICT DO NOTHING`.
+- Tests strengthened: a real rollback test (forced FK failure after the user insert), a prefix test that can fail, a clearer last-admin test, expired/accepted invites, fee cap, comma rules. Total 88 passing.
+- Accepted: stale error text can linger in a row after a later success on the other form; no automated test of the server actions' `requireAdmin` calls (covered by the layout gate and code review; planned for the e2e milestone).
