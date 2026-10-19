@@ -16,6 +16,9 @@ services:
       - "127.0.0.1:3000:3000"
     volumes:
       - ambagan-data:/data
+      # Optional but recommended: keep backups in a host folder you copy off the machine (docs/backup-restore.md).
+      # Also set BACKUP_DIR=/backups in .env, and `chown 1000:1000` the folder.
+      # - /srv/ambagan-backups:/backups
     stop_grace_period: 20s
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

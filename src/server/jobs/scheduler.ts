@@ -1,3 +1,4 @@
+import { runBackupJob } from "@/server/backup/run";
 import { runEmailQueue } from "@/server/email/worker";
 import { runDailyJob } from "./daily";
 import { shouldRunDaily } from "./schedule";
@@ -11,13 +12,20 @@ declare global {
 
 let ticking = false;
 
-/** One pass: the daily job if it is due (the runner makes it once a day), then any email that is due or retrying. */
+/**
+ * One pass: the daily backup, then the daily job (each at most once a day, enforced by the runner), then any email
+ * that is due or retrying. The backup goes first so there is a snapshot from before the day's changes (a hand-started
+ * backup earlier the same day counts as that snapshot).
+ */
 async function tick(): Promise<void> {
   if (ticking) return;
   ticking = true;
   try {
     const now = new Date();
-    if (shouldRunDaily(now)) await runDailyJob("SCHEDULED", now);
+    if (shouldRunDaily(now)) {
+      await runBackupJob("SCHEDULED", now);
+      await runDailyJob("SCHEDULED", now);
+    }
     await runEmailQueue();
   } catch (error) {
     console.error("Scheduler tick failed", error instanceof Error ? error.message : error);

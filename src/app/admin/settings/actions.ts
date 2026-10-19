@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assetsDir, deleteImage, saveImage } from "@/server/assets/store";
 import { requireAdmin } from "@/server/auth/session";
+import { getEnv } from "@/env";
+import { MANUAL_BACKUP_COOLDOWN_MS, backupDirFor, backupTooRecent, listBackups } from "@/server/backup/backup";
+import { runBackupJob } from "@/server/backup/run";
 import { getDb } from "@/server/db/client";
 import { savePaymentMethod, type QrChange } from "@/server/payments/methods";
 
@@ -105,4 +108,23 @@ export async function savePaymentMethodAction(_prev: MethodFormState, formData: 
   if (result.previous) deleteImage(dir, result.previous);
   revalidatePath("/admin/settings");
   return { saved: true };
+}
+
+export interface BackupState {
+  message?: string;
+  error?: string;
+}
+
+/** Takes a backup right now. The copy is verified before it counts, and old ones are rotated as usual. */
+export async function backUpNowAction(): Promise<BackupState> {
+  await requireAdmin();
+  // Every backup counts toward rotation: without a cooldown, repeated clicks would push out the daily history.
+  if (backupTooRecent(listBackups(backupDirFor(getEnv())), new Date(), MANUAL_BACKUP_COOLDOWN_MS)) {
+    return { error: "A backup was taken a moment ago. Wait a few minutes before taking another." };
+  }
+  const result = await runBackupJob("MANUAL");
+  revalidatePath("/admin/settings");
+  if (!result.ran) return { error: "A backup is already running. Try again in a minute." };
+  if ("error" in result) return { error: `The backup failed: ${result.error}` };
+  return { message: `Backed up (${result.summary.name}).` };
 }

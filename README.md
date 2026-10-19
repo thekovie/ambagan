@@ -11,7 +11,7 @@ cp .env.example .env     # set AUTH_SECRET (openssl rand -base64 32), ADMIN_EMAI
 docker compose up -d --build
 ```
 
-One container, one volume, no other services. See [docs/deployment.md](docs/deployment.md) for the reverse proxy, security headers, updating and troubleshooting.
+One container, one volume, no other services. See [docs/deployment.md](docs/deployment.md) for the reverse proxy, security headers, updating and troubleshooting, and [docs/backup-restore.md](docs/backup-restore.md) for daily backups and restoring.
 
 ## Development
 

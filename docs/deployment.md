@@ -35,6 +35,10 @@ The container **refuses to start** (exit code 1, reason in `docker compose logs`
 - Limits: 512 MiB memory (idle use is about a tenth of that), no extra swap, 256 processes, a 64 MB `noexec` `/tmp`.
 - `.env` holds secrets and is visible via `docker inspect`: `chmod 600 .env` and keep it out of backups you share.
 
+## Backups
+
+The app backs up the database and QR images itself every day and keeps the latest 14; `scripts/restore.sh` restores one. Read [backup-restore.md](backup-restore.md), especially "Get a copy off the machine": backups on the same disk don't protect against losing the server.
+
 ## Reverse proxy and TLS
 
 Any TLS-terminating proxy works. The requirements:
@@ -80,7 +84,7 @@ git pull
 docker compose up -d --build   # migrations run automatically at start
 ```
 
-The database lives on the `ambagan-data` volume, so rebuilding or recreating the container keeps it (verified: identical data after `docker compose down` and `up`). **`docker compose down -v` deletes the volume.** Take a backup first.
+The database lives on the `ambagan-data` volume, so rebuilding or recreating the container keeps it (verified: identical data after `docker compose down` and `up`). **`docker compose down -v` deletes the volume.** Take a backup first (**Admin → Settings → Back up now**).
 
 ## Troubleshooting
 
