@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# OCR engine and language data copied from node_modules by scripts/copy-ocr-assets.mjs
+/public/ocr/
+
 # local data (SQLite, backups, uploaded QR assets)
 /data/
 
