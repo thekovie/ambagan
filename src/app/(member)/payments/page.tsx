@@ -15,7 +15,9 @@ export const metadata: Metadata = { title: "Payment history" };
 export default async function PaymentsPage({ searchParams }: PageProps<"/payments">) {
   const user = await requireUser();
   const { sent } = await searchParams;
-  const rows = listPaymentsForUser(getDb(), user.id);
+  const rows = listPaymentsForUser(getDb(), user.id); // newest first
+  const latestPaymentFor = new Map<string, string>();
+  for (const row of rows) if (!latestPaymentFor.has(row.statementId)) latestPaymentFor.set(row.statementId, row.id);
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -27,7 +29,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
       {sent === "1" ? (
         <p role="status" className="flex items-start gap-3 rounded-xl bg-secondary p-4 font-semibold">
           <CircleCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          Sent. The admin will check that the money arrived and we&apos;ll email you the result.
+          Sent. The admin will check that the money arrived. Check back here for the result.
         </p>
       ) : null}
 
@@ -59,10 +61,16 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
               <p className="text-sm text-muted-foreground">Reported {formatDateTime(row.submittedAt)}</p>
               {row.status === "DECLINED" && row.declineReason ? (
                 <p className="text-sm font-semibold">
-                  Reason: {row.declineReason}.{" "}
-                  <Link href={`/pay/${row.statementId}`} className="underline underline-offset-4">
-                    Report it again
-                  </Link>
+                  Reason: {row.declineReason.replace(/[.\s]+$/, "")}.
+                  {/* Only the latest report for a statement can usefully be re-sent. */}
+                  {latestPaymentFor.get(row.statementId) === row.id ? (
+                    <>
+                      {" "}
+                      <Link href={`/pay/${row.statementId}`} className="underline underline-offset-4">
+                        Report it again
+                      </Link>
+                    </>
+                  ) : null}
                 </p>
               ) : null}
             </li>

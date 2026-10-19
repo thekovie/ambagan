@@ -98,6 +98,10 @@ describe("parsePaymentForm", () => {
     [{ notes: "x".repeat(301) }, "notes"],
     [{ transactionDate: "" }, "transactionDate"],
     [{ transactionDate: "yesterday" }, "transactionDate"],
+    // JavaScript rolls these forward (Sep 31 -> Oct 1, hour 24 -> next day) instead of rejecting them,
+    // and both land inside the accepted window, so only an explicit round-trip check catches them.
+    [{ transactionDate: "2026-09-31T10:00" }, "transactionDate"],
+    [{ transactionDate: "2026-10-04T24:00" }, "transactionDate"],
     [{ transactionDate: "2026-02-30T10:00" }, "transactionDate"],
     [{ transactionDate: "2026-10-07T12:00" }, "transactionDate"], // more than a day ahead of NOW
     [{ transactionDate: "2026-03-01T12:00" }, "transactionDate"], // more than 180 days before NOW
@@ -105,6 +109,11 @@ describe("parsePaymentForm", () => {
     const res = parsePaymentForm(payload("st1", override), NOW);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(Object.keys(res.errors)).toContain(field);
+  });
+
+  it("says the date doesn't exist (not 'too long ago') for a rolled-over day", () => {
+    const res = parsePaymentForm(payload("st1", { transactionDate: "2026-09-31T10:00" }), NOW);
+    expect(!res.ok && res.errors.transactionDate).toMatch(/doesn't exist/);
   });
 
   it("allows a few hours of clock skew into the future", () => {

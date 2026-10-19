@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toLocalInputValue } from "@/lib/dates";
 import { parsePesosToMinor } from "@/lib/money";
 
 /** References compare equal ignoring case, spaces and punctuation: "7034 512 840193" == "7034-512-840193". */
@@ -52,9 +53,12 @@ export function parsePaymentForm(raw: Record<string, unknown>, now = new Date())
   }
   const v = parsed.data;
 
-  // Manila has no daylight saving, so a literal +08:00 is exact. An impossible date (Feb 30) is Invalid Date.
+  // Manila has no daylight saving, so a literal +08:00 is exact. JavaScript silently rolls impossible
+  // dates forward (Sep 31 becomes Oct 1, hour 24 becomes the next day), so the value must survive a round trip.
   const transactionDate = new Date(`${v.transactionDate}:00+08:00`);
-  if (Number.isNaN(transactionDate.getTime())) return { ok: false, errors: { transactionDate: "That date doesn't exist" } };
+  if (Number.isNaN(transactionDate.getTime()) || toLocalInputValue(transactionDate) !== v.transactionDate) {
+    return { ok: false, errors: { transactionDate: "That date doesn't exist" } };
+  }
   if (transactionDate.getTime() > now.getTime() + MAX_FUTURE_MS) {
     return { ok: false, errors: { transactionDate: "That date is in the future" } };
   }
