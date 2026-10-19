@@ -12,7 +12,6 @@ describe("parseEnv", () => {
   it("accepts a minimal development environment without SMTP", () => {
     const env = parseEnv({ ...base, NODE_ENV: "development" });
     expect(env.smtp).toBeNull();
-    expect(env.TZ_APP).toBe("Asia/Manila");
   });
 
   it("rejects a short AUTH_SECRET", () => {

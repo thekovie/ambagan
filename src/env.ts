@@ -8,7 +8,6 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
   APP_URL: z.url(),
   ADMIN_EMAIL: z.email(),
-  TZ_APP: z.string().default("Asia/Manila"),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z.enum(["true", "false"]).default("false"),

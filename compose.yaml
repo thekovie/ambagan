@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    image: ambagan:latest
+    # A tiny init process forwards SIGTERM to Node and reaps children, so `docker stop` shuts down cleanly.
+    init: true
+    restart: unless-stopped
+    # Copy .env.example to .env and fill it in (AUTH_SECRET, ADMIN_EMAIL, APP_URL, SMTP_*).
+    env_file: .env
+    environment:
+      # Fixed by the image: the database and uploaded QR images live on the volume below.
+      DATABASE_PATH: /data/ambagan.db
+      ASSETS_DIR: /data/assets
+    ports:
+      # Loopback only: put a TLS reverse proxy (Caddy, nginx, Traefik) in front, see docs/deployment.md.
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ambagan-data:/data
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    # Defence in depth: the app only writes to /data (and a scratch /tmp).
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+
+volumes:
+  ambagan-data:

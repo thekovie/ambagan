@@ -1,12 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Self-contained server (.next/standalone) for the Docker image; the image copies static files and migrations next to it.
+  output: "standalone",
   // Every route behind sign-in is per-user and dynamic, so the app does not use
   // cacheComponents / partial prerendering (it would force Suspense around each session read).
   serverExternalPackages: ["better-sqlite3"],
   // Payment QR uploads go through a Server Action (default cap is 1 MB; the app caps images at 1.5 MB).
   experimental: { serverActions: { bodySizeLimit: "2mb" } },
-  // A CSP with nonces is added with the deployment work; these cover framing and referrer leaks now.
+  // The Content-Security-Policy (per-request nonce) is set in src/proxy.ts; these cover framing and referrer leaks.
   async headers() {
     return [
       {
@@ -19,6 +21,8 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
+          // Browsers ignore this over plain http; over https it keeps them on https.
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
