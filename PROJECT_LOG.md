@@ -181,3 +181,13 @@ Independent review found no way to double-bill, overwrite or lose a statement, a
 - `tests/dashboard.test.ts` (13): lead-statement rules, history, isolation between members, next-statement calculation (issue day, future start, paused/inactive/early-issued), activity ordering and limits. Plus greeting and rename tests. 140 passing; typecheck, lint, build clean.
 - Browser against a scratch DB: dashboard with overdue lead + cancelled + paid history, settings form (rejected blank name keeps input, saved name shows in the shell). Mobile: no horizontal overflow.
 - Not reviewed by a separate agent in this milestone (read-only pages plus one own-record action); the full code and security review happens at the end.
+
+## 2026-10-19 — feat/admin-overview
+
+### Decisions
+- **No tile wall.** The month is shown as one sentence ("₱X of ₱Y collected · n of m paid"), a segmented status bar (with a text legend, so never colour alone), an "At a glance" list of links that need the admin, and a rack of one ticket per member coloured by status, worst first.
+- **Figures** (`getAdminOverview`): charged = non-cancelled statements of the current Manila cycle; collected = *approved payments* against that cycle (not statement status), so paid-but-unrecorded money can't inflate it; outstanding = everything still owed across all months; overdue uses the same due-day rule members see; pending verification = payments waiting; active members = distinct users with an active membership on an active plan.
+- Links target pages arriving in later milestones (`/admin/payments`) or existing filtered views (`/admin/statements?status=OVERDUE`).
+
+### Tests
+- `tests/admin-overview.test.ts` (7): empty state, cycle-only charges/collections (cancelled and other months excluded), only approved payments collect, outstanding across months, overdue consistency, ticket order and name fallback, active-member rules. 147 passing; typecheck, lint, build clean. Browser-verified against a seeded scratch DB (the zero collection there is a seeding artifact: a PAID statement without a payment row).
