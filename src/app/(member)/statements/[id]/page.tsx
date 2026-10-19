@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,10 +5,10 @@ import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { PrintButton } from "@/components/print-button";
 import { Sachet } from "@/components/sachet";
-import { buttonVariants } from "@/components/ui/button";
+import { StatementAction } from "@/components/statement-action";
 import { formatLongDate } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
-import { STATUS_META, statusAction } from "@/lib/status";
+import { STATUS_META } from "@/lib/status";
 import { effectiveStatus, sachetProps } from "@/lib/statement-view";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/auth/session";
@@ -30,9 +29,6 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
 
   const plan = db.select().from(subscriptions).where(eq(subscriptions.id, statement.subscriptionId)).get();
   const shown = effectiveStatus(statement);
-  const action = statusAction(shown);
-  const target =
-    action.kind === "submit" ? `/pay/${statement.id}` : action.kind === "view" ? null : "/payments";
 
   const details: [string, string][] = [
     ["Reference", statement.reference],
@@ -63,18 +59,7 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
       </header>
 
       <Sachet className="max-w-2xl print:hidden" {...sachetProps(statement)}>
-        {target ? (
-          <Link
-            href={target}
-            className={cn(
-              // Magenta foil would vanish on an overdue (magenta) strip, so only unpaid strips get it.
-              buttonVariants({ variant: shown === "UNPAID" ? "foil" : "inverse", size: "lg" }),
-              "w-full sm:w-auto",
-            )}
-          >
-            {action.label} <ArrowRight data-icon="inline-end" />
-          </Link>
-        ) : null}
+        <StatementAction statement={statement} omitView />
       </Sachet>
 
       <section aria-labelledby="details" className="flex max-w-2xl flex-col gap-4">

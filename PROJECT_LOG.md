@@ -164,3 +164,20 @@ Independent review found no way to double-bill, overwrite or lose a statement, a
 - Robustness: reference-collision detection also checks the SQLite error code; generation and cancellation use immediate transactions so a future second writer (job runner) waits on the lock instead of failing mid-transaction. A weak period test now uses an instant where UTC and Manila differ.
 - Still open (accepted): focus is not managed after a successful cancel (the row disappears); `/pay/:id` and `/payments` links 404 until the payment milestones; print layout only checked by classes, not in a real print preview.
 - Tests: 124 passing.
+
+## 2026-10-19 — feat/member-dashboard
+
+### Decisions
+- **What "current" means** (`getMemberDashboard`): the oldest statement that needs payment leads (UNPAID/OVERDUE, using the displayed status so an unpaid statement past its due day counts), then ones already reported and waiting for the admin; everything else outstanding is listed as "Also waiting on you". When all is settled the latest non-cancelled statement leads. Up to four earlier statements (cancelled ones included) form the history rack. This keeps an older unpaid month from being hidden behind a newer one.
+- **"Coming up"** is computed from active memberships on active plans: this month if the plan's issue day is still ahead, otherwise next month, never before the membership's start period, skipping months already issued.
+- **Recent activity** merges statement-issued events with payment events (reported, approved, declined). Payment events work now (tested with inserted rows) and light up when the payment milestones land.
+- **One shared `StatementAction`** (dashboard and statement page): unpaid gets the magenta foil, every other state uses the strip's inverse colours.
+- **Settings:** members can edit only their display name (audited); email is read-only; sign-out button added (it was desktop-only before). Greeting follows the Manila hour.
+
+### Issues
+- Standalone text links were 17-20px tall; enlarged for WCAG 2.2 target size.
+
+### Tests
+- `tests/dashboard.test.ts` (13): lead-statement rules, history, isolation between members, next-statement calculation (issue day, future start, paused/inactive/early-issued), activity ordering and limits. Plus greeting and rename tests. 140 passing; typecheck, lint, build clean.
+- Browser against a scratch DB: dashboard with overdue lead + cancelled + paid history, settings form (rejected blank name keeps input, saved name shows in the shell). Mobile: no horizontal overflow.
+- Not reviewed by a separate agent in this milestone (read-only pages plus one own-record action); the full code and security review happens at the end.
