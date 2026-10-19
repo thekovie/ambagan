@@ -191,3 +191,30 @@ Independent review found no way to double-bill, overwrite or lose a statement, a
 
 ### Tests
 - `tests/admin-overview.test.ts` (7): empty state, cycle-only charges/collections (cancelled and other months excluded), only approved payments collect, outstanding across months, overdue consistency, ticket order and name fallback, active-member rules. 147 passing; typecheck, lint, build clean. Browser-verified against a seeded scratch DB (the zero collection there is a seeding artifact: a PAID statement without a payment row).
+
+## 2026-10-19 — feat/payment-methods
+
+### Decisions
+- **Three destinations seeded** (GCash, Maya, MariBank QR Ph), switched off until the admin fills them in. A method can only be switched on when it is *payable*: a recipient name plus an account number or a QR (enforced in the service, also when removing a QR).
+- **QR images are not static assets.** Stored in `ASSETS_DIR` (a persistent volume in Docker), never `public/`, with server-generated names (`<32 hex>.<ext>`, mode 0600). Served by `GET /api/payment-methods/:id/qr`, which requires an active signed-in user; members get active methods only, inactive ones are admin-only (tested via `getQrForViewer`). Responses are `private`, `nosniff`, with a safe generated filename; `?download=1` sets `attachment`.
+- **Upload validation by signature, not by claimed type:** PNG, JPEG, WebP only (SVG refused: it can carry script), 1.5 MB cap, empty rejected; file names checked against a strict pattern before any read or delete (path traversal tests). The Server Action body limit is raised to 2 MB for this.
+- Replaced/removed images are deleted only after the database no longer points at them. Audit entries record field names only, never the account details.
+- Members see the methods inside "How to pay" on unpaid/overdue statements: copyable account number, QR on a white backing (scannable in dark mode) and a "Save QR image" download.
+- Admin settings page `/admin/settings` hosts the payment-method forms.
+
+### Notes for deployment
+- `ASSETS_DIR` must be on persistent storage; Server Action closures/ids need a stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` across restarts and deploys (per the Next docs), and the reverse proxy must forward the original Host so the Server Action origin check passes. All three go into the Docker work.
+
+### Tests
+- `tests/assets.test.ts` (8) and `tests/payment-methods.test.ts` (13): signatures, SVG/PDF/HTML/RIFF-non-WebP refusal, size limits, random names, traversal names, replace/remove returning the old file, payable rules, viewer authorisation. 168 passing; typecheck, lint, build clean.
+- Live: SVG upload refused with a clear message (typed values kept); PNG saved (random name, 0600), no cookie 401, member 200 with attachment/nosniff/private headers, inactive method 404, bogus id 404; the member's statement page shows How to pay with the GCash details and QR.
+
+### Security review (QR upload/serving) and fixes
+Independent review: no critical/high; path traversal, content-type/XSS, header injection, authorisation on route and action all verified fine. Fixed:
+- **MEDIUM, partial save:** the QR swap and the details update were separate commits, so a rejected activation could leave the QR already replaced. They are now one transaction (`savePaymentMethod` with a `keep|remove|replace` QR change); payability is judged on the resulting state; the new file is deleted on any failure and the old one only after the commit. Test reproduces the reviewer's scenario.
+- **MEDIUM, stale cache:** `max-age=300` could keep a pulled QR visible for 5 minutes. Now `private, no-cache` with the stored (random, content-unique) filename as ETag, so a replaced/removed QR can't be served stale and an unchanged one is a 304 after the auth check. Added `Content-Security-Policy: default-src 'none'; sandbox`.
+- **LOW:** assets directory created 0700; a failed write removes the partial file and reports a friendly error; "image dimensions" accepted (admin-only uploader, no server-side decoding).
+- **Noted for deployment:** reverse-proxy body limit must be at least 2 MB (nginx defaults to 1 MB); files over 2 MB hit Next's generic 413 rather than the friendly message.
+- **Follow-up idea (not built):** members get no notice when payment details change; an admin-account takeover could swap the destination. Mitigations to consider later: a "payment details changed" email to members, and keeping the admin sign-in link short-lived (it is, 24 h, single use).
+- 171 tests passing.
+- Build warning found and fixed: the runtime-chosen asset paths made Turbopack trace the whole project into the output (it would bloat the Docker image). They are marked `turbopackIgnore` on purpose; the build is warning-free.

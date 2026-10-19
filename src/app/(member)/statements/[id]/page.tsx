@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
+import { PaymentMethodsList } from "@/components/payment-methods-list";
 import { PrintButton } from "@/components/print-button";
 import { Sachet } from "@/components/sachet";
 import { StatementAction } from "@/components/statement-action";
@@ -16,6 +17,7 @@ import { periodLabel } from "@/server/billing/period";
 import { getStatementForUser } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
 import { subscriptions } from "@/server/db/schema";
+import { listPaymentMethods } from "@/server/payments/methods";
 
 export const metadata: Metadata = { title: "Statement" };
 
@@ -29,6 +31,8 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
 
   const plan = db.select().from(subscriptions).where(eq(subscriptions.id, statement.subscriptionId)).get();
   const shown = effectiveStatus(statement);
+  const payable = shown === "UNPAID" || shown === "OVERDUE";
+  const methods = payable ? listPaymentMethods(db, { activeOnly: true }) : [];
 
   const details: [string, string][] = [
     ["Reference", statement.reference],
@@ -76,12 +80,13 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
         </dl>
       </section>
 
-      {plan?.paymentInstructions && (shown === "UNPAID" || shown === "OVERDUE") ? (
-        <section aria-labelledby="how-to-pay" className="flex max-w-2xl flex-col gap-3">
+      {payable && (plan?.paymentInstructions || methods.length > 0) ? (
+        <section aria-labelledby="how-to-pay" className="flex max-w-2xl flex-col gap-5 print:hidden">
           <h2 id="how-to-pay" className="font-display text-3xl">
             How to pay
           </h2>
-          <p className="whitespace-pre-line">{plan.paymentInstructions}</p>
+          {plan?.paymentInstructions ? <p className="whitespace-pre-line">{plan.paymentInstructions}</p> : null}
+          <PaymentMethodsList methods={methods} />
         </section>
       ) : null}
 
