@@ -3,6 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { seedDefaultSubscription } from "@/server/subscriptions/service";
 import * as schema from "./schema";
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database };
@@ -31,6 +32,7 @@ export function getDb(): Db {
   if (!globalForDb.__ambaganDb) {
     const db = openDb(process.env.DATABASE_PATH ?? "./data/ambagan.db");
     migrateDb(db);
+    seedDefaultSubscription(db);
     globalForDb.__ambaganDb = db;
   }
   return globalForDb.__ambaganDb;

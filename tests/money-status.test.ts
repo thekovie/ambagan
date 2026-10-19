@@ -29,6 +29,18 @@ describe("parsePesosToMinor", () => {
       expect(parsePesosToMinor(bad)).toBeNull();
     }
   });
+
+  it("only accepts commas as thousands separators (a decimal comma must not become a 100x fee)", () => {
+    expect(parsePesosToMinor("1,234")).toBe(123400);
+    expect(parsePesosToMinor("12,345,678.90")).toBe(1234567890);
+    for (const bad of ["50,50", "1,23", "1,2345", ",500", "1,,000"]) {
+      expect(parsePesosToMinor(bad)).toBeNull();
+    }
+  });
+
+  it("rejects amounts too large to store exactly", () => {
+    expect(parsePesosToMinor("99999999999999999999")).toBeNull();
+  });
 });
 
 describe("STATUS_META", () => {

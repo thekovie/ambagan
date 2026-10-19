@@ -11,11 +11,18 @@ export function formatMinor(amountMinor: number, currency: string): string {
   return fmt.format(amountMinor / 100);
 }
 
-/** Parses "50", "50.5", "₱1,234.56" to centavos; null when invalid or finer than 0.01. */
+const THOUSANDS = /^\d{1,3}(,\d{3})+(\.\d{1,2})?$/;
+
+/**
+ * Parses "50", "50.5", "₱1,234.56" to centavos. Null when invalid, finer than 0.01, too large to
+ * store exactly, or when a comma isn't a thousands separator ("50,50" is not 5050 pesos).
+ */
 export function parsePesosToMinor(input: string): number | null {
-  const cleaned = input.replace(/[₱,\s]/g, "");
-  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(cleaned);
+  const cleaned = input.replace(/[₱\s]/g, "");
+  if (cleaned.includes(",") && !THOUSANDS.test(cleaned)) return null;
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(cleaned.replace(/,/g, ""));
   if (!match) return null;
   const [, whole, frac = ""] = match;
-  return Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+  const minor = Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+  return Number.isSafeInteger(minor) ? minor : null;
 }

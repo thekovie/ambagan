@@ -1,0 +1,144 @@
+"use client";
+
+import { Ban, Check, MailPlus, RotateCcw } from "lucide-react";
+import { useActionState } from "react";
+import { ConfirmButton } from "@/components/confirm-button";
+import { CopyField } from "@/components/copy-field";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { resendInviteAction, setActiveAction, type MemberActionState } from "./actions";
+
+export interface MemberView {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "MEMBER" | "ADMIN";
+  isActive: boolean;
+  hasSignedIn: boolean;
+  plans: string[];
+  invite: "none" | "pending" | "expired" | "accepted";
+  isSelf: boolean;
+}
+
+// Avatar colour is picked from the four foils by name so each friend keeps one.
+const AVATARS = [
+  "bg-foil-magenta text-on-foil-magenta",
+  "bg-foil-cobalt text-[var(--on-foil-cobalt)]",
+  "bg-foil-tangerine text-ink",
+  "bg-foil-lime text-ink",
+];
+
+function avatarClass(seed: string) {
+  let sum = 0;
+  for (const ch of seed) sum += ch.charCodeAt(0);
+  return AVATARS[sum % AVATARS.length];
+}
+
+function inviteLabel(member: MemberView): string {
+  if (member.hasSignedIn) return "Signed in";
+  if (member.invite === "pending") return "Invite pending";
+  if (member.invite === "expired") return "Invite expired";
+  if (member.invite === "accepted") return "Accepted, not signed in yet";
+  return "Not invited yet";
+}
+
+export function MemberRow({ member }: { member: MemberView }) {
+  const [resend, resendAction, resending] = useActionState<MemberActionState, FormData>(resendInviteAction, {});
+  const [toggle, toggleAction] = useActionState<MemberActionState, FormData>(setActiveAction, {});
+  const display = member.name || member.email;
+  const needsInvite = member.isActive && !member.hasSignedIn;
+  const error = resend.error ?? toggle.error;
+
+  return (
+    <li className={cn("flex flex-col gap-4 py-5", !member.isActive && "opacity-80")}>
+      <div className="flex items-start gap-4">
+        <span
+          aria-hidden="true"
+          className={cn("font-display grid size-12 shrink-0 place-items-center rounded-full text-2xl", avatarClass(display))}
+        >
+          {display.charAt(0).toUpperCase()}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
+            <span className="truncate">{display}</span>
+            {member.role === "ADMIN" ? (
+              <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-bold text-background">Admin</span>
+            ) : null}
+            {member.isActive ? null : (
+              <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-input px-2 py-0.5 text-xs font-bold text-muted-foreground">
+                <Ban className="size-3" aria-hidden="true" /> Deactivated
+              </span>
+            )}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">{member.email}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="inline-flex items-center gap-1 font-semibold">
+              {member.hasSignedIn ? <Check className="size-3.5" aria-hidden="true" /> : null}
+              {inviteLabel(member)}
+            </span>
+            <span className="text-muted-foreground">
+              {member.plans.length > 0 ? member.plans.join(", ") : "No plan"}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 sm:pl-16">
+        {needsInvite ? (
+          <form action={resendAction}>
+            <input type="hidden" name="userId" value={member.id} />
+            <Button type="submit" variant="secondary" size="sm" disabled={resending}>
+              <MailPlus data-icon="inline-start" />
+              {resending ? "Sending…" : member.invite === "none" ? "Send invite" : "Resend invite"}
+              <span className="sr-only"> to {display}</span>
+            </Button>
+          </form>
+        ) : null}
+
+        {member.isSelf ? null : (
+          <form action={toggleAction}>
+            <input type="hidden" name="userId" value={member.id} />
+            <input type="hidden" name="active" value={member.isActive ? "false" : "true"} />
+            {member.isActive ? (
+              <ConfirmButton
+                variant="outline"
+                size="sm"
+                confirmLabel={
+                  <>
+                    Sure? Deactivate<span className="sr-only"> {display}</span>
+                  </>
+                }
+              >
+                Deactivate<span className="sr-only"> {display}</span>
+              </ConfirmButton>
+            ) : (
+              <Button type="submit" variant="outline" size="sm">
+                <RotateCcw data-icon="inline-start" /> Reactivate
+                <span className="sr-only"> {display}</span>
+              </Button>
+            )}
+          </form>
+        )}
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-sm font-semibold text-destructive sm:pl-16">
+          {error}
+        </p>
+      ) : null}
+      {/* Always mounted so the result is announced when it appears. */}
+      <div role="status" aria-live="polite" className="sm:ml-16">
+        {resend.invite ? (
+          <div className="flex flex-col gap-2 rounded-xl bg-secondary p-4">
+            <p className="text-sm font-bold">
+              {resend.invite.emailSent
+                ? `Invitation emailed to ${resend.invite.email}.`
+                : "Couldn't send the email. Share this link instead:"}
+            </p>
+            <CopyField value={resend.invite.url} label={`Invitation link for ${display}`} />
+          </div>
+        ) : null}
+      </div>
+    </li>
+  );
+}
