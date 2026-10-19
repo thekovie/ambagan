@@ -20,6 +20,7 @@ Running record of decisions, issues, deviations and test results. Newest entries
 - `create-next-app` generates an `AGENTS.md` that `next dev` re-creates. It is gitignored (along with `CLAUDE.md`) to keep the repo free of tool-specific files.
 - `.gitignore` default `.env*` would have ignored `.env.example`; added `!.env.example`.
 - `vite-tsconfig-paths` is redundant with Vite's native `resolve.tsconfigPaths`; removed. Config is `vitest.config.mts` to avoid the CJS/ESM loader warning.
+- **CI failure on PR #1:** `tsc` failed with `Cannot find name 'LayoutProps'`. That global type comes from Next's generated route types (`.next/types`), which existed locally but not on a clean CI checkout. Fix: `typecheck` now runs `next typegen` first. Verified from a clean tree.
 
 ### Tests
 - `src/env.test.ts`: 4 passing (dev without SMTP, short secret rejected, SMTP required in production, SMTP parsed).
