@@ -25,7 +25,7 @@ export function AppShell({ variant, footer, children }: AppShellProps) {
   const items = NAV[variant];
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[15.5rem_minmax(0,1fr)]">
+    <div className="min-h-dvh md:grid md:grid-cols-[15.5rem_minmax(0,1fr)] print:block">
       <a
         href="#main"
         className="sr-only z-50 rounded-full bg-foreground px-4 py-2 text-background focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
@@ -33,7 +33,7 @@ export function AppShell({ variant, footer, children }: AppShellProps) {
         Skip to content
       </a>
 
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-sidebar-border bg-sidebar p-5 md:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col gap-8 border-r border-sidebar-border bg-sidebar p-5 md:flex print:hidden">
         <Wordmark className="px-2 pt-1" />
         <nav aria-label={variant === "admin" ? "Admin" : "Main"} className="flex flex-col gap-1">
           {items.map(({ href, label, icon: Icon }) => {
@@ -63,7 +63,7 @@ export function AppShell({ variant, footer, children }: AppShellProps) {
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-4 md:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background px-4 md:hidden print:hidden">
           <Wordmark />
           <ThemeToggle />
         </header>
@@ -71,7 +71,7 @@ export function AppShell({ variant, footer, children }: AppShellProps) {
         {variant === "admin" ? (
           <nav
             aria-label="Admin"
-            className="flex gap-2 overflow-x-auto border-b border-border px-4 py-2 md:hidden [scrollbar-width:none]"
+            className="flex gap-2 overflow-x-auto border-b border-border px-4 py-2 md:hidden print:hidden [scrollbar-width:none]"
           >
             {items.map(({ href, label }) => {
               const active = isActive(pathname, href);
@@ -105,7 +105,7 @@ export function AppShell({ variant, footer, children }: AppShellProps) {
         {variant === "member" ? (
           <nav
             aria-label="Main"
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
           >
             <ul className="grid grid-cols-4">
               {items.map(({ href, label, icon: Icon }) => {

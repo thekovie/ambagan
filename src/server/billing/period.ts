@@ -33,6 +33,19 @@ export function nextPeriod(period: string): string {
   return month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 
+/** How many months (current + previous) the admin can issue or review statements for. */
+export const RECENT_PERIOD_COUNT = 12;
+
+/** The current period and the `count - 1` before it, newest first. */
+export function recentPeriods(now: Date, count: number): string[] {
+  const periods = [periodOf(now)];
+  while (periods.length < count) {
+    const [year, month] = split(periods[periods.length - 1]);
+    periods.push(month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`);
+  }
+  return periods;
+}
+
 /** "October 2026" */
 export function periodLabel(period: string): string {
   const [year, month] = split(period);
