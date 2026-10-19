@@ -1,13 +1,16 @@
 "use client";
 
-import { Send, TriangleAlert } from "lucide-react";
+import { ScanLine, Send, TriangleAlert } from "lucide-react";
 import { useActionState, useId, useState } from "react";
+import { ReceiptScanner } from "@/components/receipt-scanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMinor, parsePesosToMinor } from "@/lib/money";
+import { applyReceipt, detectedFields, type DetectedField } from "@/lib/ocr/apply";
+import type { ParsedReceipt } from "@/lib/ocr/parse";
 import { cn } from "@/lib/utils";
 import { submitPaymentAction, type PaymentFormState } from "./actions";
 
@@ -27,6 +30,16 @@ interface PaymentFormProps {
 }
 
 const APPS = ["GCash", "Maya", "MariBank", "GoTyme", "BPI", "BDO", "UnionBank", "Landbank", "Other"];
+
+/** Shown under a field the receipt scan filled in, until the member edits it. */
+function FromReceipt({ show }: { show: boolean }) {
+  return show ? (
+    <p className="flex items-center gap-2 text-sm font-semibold">
+      <ScanLine className="size-4 shrink-0" aria-hidden="true" />
+      Read from your receipt. Please check it.
+    </p>
+  ) : null;
+}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   return message ? (
@@ -54,8 +67,16 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
     date: defaultDate,
     notes: "",
   });
-  const set = (key: keyof typeof fields) => (event: { target: { value: string } }) =>
+  const [detected, setDetected] = useState<DetectedField[]>([]);
+  const set = (key: keyof typeof fields) => (event: { target: { value: string } }) => {
     setFields((current) => ({ ...current, [key]: event.target.value }));
+    // Once the member edits a scanned value it is theirs: drop the "please check" caption.
+    setDetected((current) => current.filter((field) => field !== key));
+  };
+  const onDetected = (parsed: ParsedReceipt) => {
+    setFields((current) => applyReceipt(current, parsed, APPS).fields);
+    setDetected(detectedFields(parsed, APPS));
+  };
 
   const typedMinor = parsePesosToMinor(fields.amount);
   const amountDiffers = typedMinor !== null && typedMinor !== outstandingMinor;
@@ -63,6 +84,8 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
   return (
     <form action={action} className="flex flex-col gap-7">
       <input type="hidden" name="statementId" value={statementId} />
+
+      <ReceiptScanner knownApps={APPS} onDetected={onDetected} />
 
       <fieldset className="flex flex-col gap-3" aria-describedby={describe("destinationMethodId")}>
         <legend className="mb-1 text-sm font-semibold">Where did you send it?</legend>
@@ -101,6 +124,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
               </option>
             ))}
           </NativeSelect>
+          <FromReceipt show={detected.includes("app")} />
           <FieldError id={`${id("sendingApp")}-error`} message={errors.sendingApp} />
         </div>
 
@@ -139,6 +163,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
               This differs from the {formatMinor(outstandingMinor, currency)} due. You can still send it; the admin will review.
             </p>
           ) : null}
+          <FromReceipt show={detected.includes("amount")} />
           <FieldError id={`${id("amountPesos")}-error`} message={errors.amountPesos} />
         </div>
 
@@ -153,6 +178,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
             aria-invalid={bad("transactionDate")}
             aria-describedby={describe("transactionDate")}
           />
+          <FromReceipt show={detected.includes("date")} />
           <FieldError id={`${id("transactionDate")}-error`} message={errors.transactionDate} />
         </div>
 
@@ -170,6 +196,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
             aria-invalid={bad("transactionRef")}
             aria-describedby={describe("transactionRef")}
           />
+          <FromReceipt show={detected.includes("reference")} />
           <FieldError id={`${id("transactionRef")}-error`} message={errors.transactionRef} />
         </div>
 

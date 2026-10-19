@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/ocr/:path*",
+        // Self-hosted OCR engine and language data: large, and only change with a dependency upgrade.
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000" }],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
