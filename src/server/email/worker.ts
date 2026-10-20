@@ -5,6 +5,7 @@ import { NOTIFICATION_TYPES, type NotificationPayload, type NotificationType } f
 import { renderNotification } from "./notification-email";
 import { processQueue, type DeliverOutcome, type ProcessResult, type QueuedEmail } from "./queue";
 import { skipReason } from "./relevance";
+import { resolveShareLink } from "@/server/share/email-link";
 import { sendMail } from "./transport";
 
 const isNotification = (type: string): type is NotificationType => (NOTIFICATION_TYPES as readonly string[]).includes(type);
@@ -15,7 +16,8 @@ async function deliver(email: QueuedEmail): Promise<DeliverOutcome> {
   const reason = skipReason(getDb(), email);
   if (reason) return { skip: reason };
   if (!isNotification(email.type)) throw new Error(`${email.type} mail is not sent from the queue`);
-  const { html, text } = await renderNotification(email.type, JSON.parse(email.payload) as NotificationPayload, getEnv().APP_URL);
+  const payload = resolveShareLink(getDb(), JSON.parse(email.payload) as NotificationPayload, email.statementId);
+  const { html, text } = await renderNotification(email.type, payload, getEnv().APP_URL);
   await sendMail({ to: email.toEmail, subject: email.subject, html, text });
 }
 

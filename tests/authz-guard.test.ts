@@ -69,3 +69,72 @@ describe("server actions authorize their caller", () => {
     }
   });
 });
+
+describe("private-link endpoints verify the link first", () => {
+  // Guests have no session, so the signed link is their credential: it must be checked before anything else happens.
+  const linkActionFiles = actionFiles(path.join(APP, "s"));
+  const linkRoutes = routeFiles(path.join(APP, "api", "s"));
+  const linkPages = filesNamed(path.join(APP, "s"), "page.tsx");
+
+  it("finds the files (so this guard can't pass by checking nothing)", () => {
+    expect(linkActionFiles.length).toBeGreaterThanOrEqual(1);
+    expect(linkRoutes.length).toBeGreaterThanOrEqual(1);
+    expect(linkPages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it.each(linkActionFiles.map((f) => [rel(f), f]))("%s: every exported action starts with requireShareAccess() and honours its answer", (_label, file) => {
+    const source = fs.readFileSync(file, "utf8");
+    expect(source.startsWith('"use server"')).toBe(true);
+    const actions = exportedActions(source);
+    expect(actions.length).toBeGreaterThan(0);
+    for (const { name, body } of actions) {
+      // Stricter than the other guards: nothing at all (not even reading the form) may run before the link is checked,
+      // and a failed check must stop the action.
+      expect(body, `${name} must start with requireShareAccess()`).toMatch(/^\{\s*const (\w+) = await requireShareAccess\([^)]*\);\s*if \(!\1\.ok\) return /);
+    }
+  });
+
+  it.each(linkRoutes.map((f) => [rel(f), f]))("%s: every handler checks the link right after reading its params and honours the answer", (_label, file) => {
+    const source = fs.readFileSync(file, "utf8");
+    const handlers = exportedActions(source);
+    expect(handlers.length, "no handlers found: is the route written as `export const GET = ...`?").toBeGreaterThan(0);
+    for (const { name, body } of handlers) {
+      expect(body, `${name} must call requireShareAccess() right after reading its params`).toMatch(
+        /await params;\s*const (\w+) = await requireShareAccess\([^)]*\);\s*if \(!\1\.ok\) return /,
+      );
+    }
+  });
+
+  it.each(linkPages.map((f) => [rel(f), f]))("%s: the page checks the link before loading anything", (_label, file) => {
+    const source = fs.readFileSync(file, "utf8");
+    expect(source).toContain("requireShareAccess(");
+    for (const loader of ["getShareLinkView(", "getDb()"]) {
+      if (source.includes(loader)) expect(source.indexOf("requireShareAccess("), `${loader} must come after the link check`).toBeLessThan(source.indexOf(loader));
+    }
+  });
+
+  it("allows no other kinds of file under a private link that could skip the check", () => {
+    const allowed = new Set(["page.tsx", "layout.tsx", "actions.ts", "route.ts"]);
+    for (const file of [...filesNamed(path.join(APP, "s"), /.*/), ...filesNamed(path.join(APP, "api", "s"), /.*/)]) {
+      expect(allowed.has(path.basename(file)), `${rel(file)} is not a file type this guard understands: extend it before adding it`).toBe(true);
+    }
+  });
+});
+
+function filesNamed(dir: string, name: string | RegExp): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return filesNamed(full, name);
+    return (typeof name === "string" ? entry.name === name : name.test(entry.name)) ? [full] : [];
+  });
+}
+
+function routeFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return routeFiles(full);
+    return entry.name === "route.ts" ? [full] : [];
+  });
+}

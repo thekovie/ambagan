@@ -23,6 +23,11 @@ export function createRateLimiter({ limit, windowMs, now = Date.now, maxKeys = D
 
   return {
     size: () => entries.size,
+    /** Whether `key` has used up its allowance in the current window. Asking does not count as an attempt. */
+    isLimited(key: string): boolean {
+      const entry = entries.get(key);
+      return Boolean(entry) && now() < entry!.resetAt && entry!.count >= limit;
+    },
     hit(key: string): { allowed: boolean; retryAfterMs: number } {
       const t = now();
       const entry = entries.get(key);

@@ -11,7 +11,7 @@ import { enqueueEmail } from "./queue";
 
 type Payment = typeof payments.$inferSelect;
 type Statement = typeof statements.$inferSelect;
-type Recipient = { id: string; email: string; name: string | null };
+type Recipient = { id: string; email: string; name: string | null; isGuest?: boolean };
 
 const STATEMENTS_PATH = "/statements";
 
@@ -60,9 +60,18 @@ function statementPayload(statement: Statement, amountMinor: number) {
   };
 }
 
+/**
+ * Guests have no account to sign in to, so their emails link to their private page instead of the signed-in ones.
+ * The queued message only says so (`shareLink`); the link itself is a credential and is made when the email is sent
+ * (see share/email-link.ts), never stored in the queue.
+ */
+function linkFor(statement: Statement, recipient: Recipient, signedInPath: string): { path?: string; shareLink?: string } {
+  return recipient.isGuest && statement.billId ? { shareLink: "1" } : { path: signedInPath };
+}
+
 const activeUser = (db: Db, id: string): Recipient | undefined =>
   db
-    .select({ id: users.id, email: users.email, name: users.name })
+    .select({ id: users.id, email: users.email, name: users.name, isGuest: users.isGuest })
     .from(users)
     .where(and(eq(users.id, id), eq(users.isActive, true)))
     .get();
@@ -80,10 +89,22 @@ export function notifyPaymentSubmitted(
   args: { payment: Payment; statement: Statement; destinationLabel: string; now: Date },
 ): void {
   const { payment, statement, destinationLabel, now } = args;
-  const member = db.select({ id: users.id, email: users.email, name: users.name }).from(users).where(eq(users.id, payment.userId)).get();
+  const member = db
+    .select({ id: users.id, email: users.email, name: users.name, isGuest: users.isGuest })
+    .from(users)
+    .where(eq(users.id, payment.userId))
+    .get();
 
   if (member) {
-    queueFor(db, "PAYMENT_RECEIVED", member, () => ({ ...statementPayload(statement, payment.amountMinor), path: "/payments" }), `PAYMENT_RECEIVED:${payment.id}`, statement.id, now);
+    queueFor(
+      db,
+      "PAYMENT_RECEIVED",
+      member,
+      () => ({ ...statementPayload(statement, payment.amountMinor), ...linkFor(statement, member, "/payments") }),
+      `PAYMENT_RECEIVED:${payment.id}`,
+      statement.id,
+      now,
+    );
   }
   for (const admin of activeAdmins(db)) {
     queueFor(
@@ -116,7 +137,11 @@ export function notifyPaymentDecided(
     db,
     type,
     member,
-    () => ({ ...statementPayload(statement, payment.amountMinor), path: `${STATEMENTS_PATH}/${statement.id}`, ...(reason ? { reason } : {}) }),
+    () => ({
+      ...statementPayload(statement, payment.amountMinor),
+      ...linkFor(statement, member, `${STATEMENTS_PATH}/${statement.id}`),
+      ...(reason ? { reason } : {}),
+    }),
     `${type}:${payment.id}`,
     statement.id,
     now,
@@ -155,7 +180,7 @@ export function notifyStatementEvent(
     db,
     type,
     member,
-    () => ({ ...statementPayload(statement, statement.outstandingMinor), path: `${STATEMENTS_PATH}/${statement.id}` }),
+    () => ({ ...statementPayload(statement, statement.outstandingMinor), ...linkFor(statement, member, `${STATEMENTS_PATH}/${statement.id}`) }),
     dedupeKey,
     statement.id,
     now,

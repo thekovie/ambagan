@@ -140,6 +140,21 @@ describe("rate limiter", () => {
   });
 });
 
+describe("rate limiter peeking", () => {
+  it("says whether a key is already blocked without counting the question as an attempt", () => {
+    let t = 0;
+    const rl = createRateLimiter({ limit: 2, windowMs: 1000, now: () => t });
+    expect(rl.isLimited("a")).toBe(false);
+    expect(rl.isLimited("a")).toBe(false); // asking never uses up the allowance
+    rl.hit("a");
+    expect(rl.isLimited("a")).toBe(false);
+    rl.hit("a");
+    expect(rl.isLimited("a")).toBe(true);
+    expect(rl.isLimited("b")).toBe(false);
+    t = 1001;
+    expect(rl.isLimited("a")).toBe(false); // a new window
+  });
+});
 describe("rate limiter memory bound", () => {
   it("never tracks more than maxKeys keys, evicting the oldest first", () => {
     const rl = createRateLimiter({ limit: 1, windowMs: 60_000, maxKeys: 2, now: () => 0 });
