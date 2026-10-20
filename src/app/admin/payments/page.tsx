@@ -33,7 +33,7 @@ export default async function AdminPaymentsPage() {
       </header>
 
       <section aria-labelledby="waiting" className="flex flex-col gap-2">
-        <h2 id="waiting" className="font-display text-3xl">
+        <h2 id="waiting" aria-live="polite" className="font-display text-3xl">
           Waiting for you ({pending.length})
         </h2>
         {pending.length === 0 ? (

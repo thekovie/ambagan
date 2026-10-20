@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextPeriod, periodLabel, periodOf, periodStub, recentPeriods } from "@/server/billing/period";
+import { firstBillablePeriod, nextPeriod, periodLabel, periodOf, periodStub, recentPeriods } from "@/server/billing/period";
 
 describe("recentPeriods", () => {
   it("lists the current Manila period first, then earlier ones across year boundaries", () => {
@@ -28,5 +28,21 @@ describe("labels", () => {
   it("formats the long label and three-letter stub", () => {
     expect(periodLabel("2026-10")).toBe("October 2026");
     expect(periodStub("2026-03")).toBe("MAR");
+  });
+});
+
+describe("firstBillablePeriod", () => {
+  const dueDay = 10;
+  it("is this month while the due day hasn't passed (the due day itself still counts)", () => {
+    expect(firstBillablePeriod(new Date("2026-10-05T04:00:00Z"), dueDay)).toBe("2026-10");
+    expect(firstBillablePeriod(new Date("2026-10-10T15:59:00Z"), dueDay)).toBe("2026-10"); // 23:59 on the 10th, Manila
+  });
+  it("is next month once the due day has passed, so nobody is billed for a month that is already late", () => {
+    expect(firstBillablePeriod(new Date("2026-10-10T16:00:00Z"), dueDay)).toBe("2026-11"); // 00:00 on the 11th, Manila
+    expect(firstBillablePeriod(new Date("2026-10-20T04:00:00Z"), dueDay)).toBe("2026-11");
+  });
+  it("rolls over the year, and uses the Manila day not the UTC day", () => {
+    expect(firstBillablePeriod(new Date("2026-12-20T04:00:00Z"), dueDay)).toBe("2027-01");
+    expect(firstBillablePeriod(new Date("2026-10-31T17:00:00Z"), dueDay)).toBe("2026-11"); // Nov 1 in Manila: still before the 10th
   });
 });

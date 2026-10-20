@@ -4,3 +4,10 @@ allowBuilds:
   better-sqlite3: true
   esbuild: false
   tesseract.js: false
+
+# next-auth declares nodemailer ^7 || ^8 as an optional peer. This app sends all mail through its own transport
+# (src/server/email/transport.ts) and never lets Auth.js send, so it uses the patched nodemailer 10 (the 8.x line
+# has open security advisories). Verified by the end-to-end journey, which sends real mail through a TLS SMTP server.
+peerDependencyRules:
+  allowedVersions:
+    nodemailer: "10"

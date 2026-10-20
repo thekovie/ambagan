@@ -28,7 +28,7 @@ const TYPE_LABELS: Record<string, string> = {
   PAYMENT_DECLINED: "Payment declined",
   TEST: "Test",
 };
-const STATUS_LABELS: Record<EmailStatus, string> = { PENDING: "Waiting", SENDING: "Sending", SENT: "Sent", FAILED: "Failed" };
+const STATUS_LABELS: Record<EmailStatus, string> = { PENDING: "Waiting", SENDING: "Sending", SENT: "Sent", FAILED: "Failed", SKIPPED: "Skipped" };
 
 /** The sign-in link and invitation are one-time secrets that are never stored, so they can't be resent. */
 const canResend = (type: string, status: string) =>
@@ -53,7 +53,7 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
       </header>
 
       <section aria-label="Email totals">
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {EMAIL_STATUSES.map((s) => (
             <div key={s} className="rounded-xl bg-secondary p-4">
               <dt className="text-sm font-semibold text-muted-foreground">{STATUS_LABELS[s]}</dt>

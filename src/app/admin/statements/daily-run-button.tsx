@@ -14,16 +14,11 @@ export function DailyRunButton() {
         <Play data-icon="inline-start" />
         {pending ? "Running…" : "Run it now"}
       </Button>
-      {state.error ? (
-        <p role="alert" className="text-sm font-semibold text-destructive">
-          {state.error}
-        </p>
-      ) : null}
-      {state.message ? (
-        <p role="status" className="text-sm font-semibold">
-          {state.message}
-        </p>
-      ) : null}
+      {/* Always mounted, so screen readers announce the text when it appears. */}
+      <div aria-live="polite" className="empty:hidden">
+        {state.error ? <p className="text-sm font-semibold text-destructive">{state.error}</p> : null}
+        {state.message ? <p className="text-sm font-semibold">{state.message}</p> : null}
+      </div>
     </form>
   );
 }

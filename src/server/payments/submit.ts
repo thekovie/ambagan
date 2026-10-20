@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
-import { notifyPaymentSubmitted } from "@/server/email/notify";
+import { notifyDuplicateAttempt, notifyPaymentSubmitted } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
 import { paymentMethods, payments, statements } from "@/server/db/schema";
 import { normalizeReference, type PaymentInput } from "./form";
@@ -49,11 +49,25 @@ export function submitPayment(db: Db, args: { userId: string; input: PaymentInpu
 
     const transactionRefNorm = normalizeReference(input.transactionRef);
     const inUse = t
-      .select({ id: payments.id })
+      .select()
       .from(payments)
       .where(and(eq(payments.transactionRefNorm, transactionRefNorm), ne(payments.status, "DECLINED")))
       .get();
-    if (inUse) return { ok: false, error: "DUPLICATE_REFERENCE" };
+    if (inUse) {
+      // First reporter wins, so a member reporting someone else's receipt would otherwise look like its owner. Tell the
+      // admins (once per pair) and keep a record. Written here, not rolled back: the refusal below commits it.
+      if (inUse.userId !== userId) {
+        recordAudit(t, {
+          actorId: userId,
+          action: "payment.duplicate_reference_blocked",
+          entityType: "payment",
+          entityId: inUse.id,
+          metadata: { statementId: statement.id, existingPaymentId: inUse.id },
+        });
+        notifyDuplicateAttempt(t, { existing: inUse, attemptedBy: userId, statement, transactionRef: input.transactionRef, now });
+      }
+      return { ok: false, error: "DUPLICATE_REFERENCE" };
+    }
 
     const payment = t
       .insert(payments)

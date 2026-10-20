@@ -20,3 +20,6 @@ docs
 tsconfig.tsbuildinfo
 npm-debug.log*
 **/.DS_Store
+e2e/.tmp
+test-results
+playwright-report

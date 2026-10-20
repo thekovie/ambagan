@@ -5,6 +5,7 @@ import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import { copyFor, NOTIFICATION_TYPES, type NotificationPayload } from "@/server/email/notification-copy";
 import { notifyPaymentDecided, queueTestEmail } from "@/server/email/notify";
+import { savePaymentMethod } from "@/server/payments/methods";
 import { renderNotification } from "@/server/email/notification-email";
 import { parsePaymentForm } from "@/server/payments/form";
 import { submitPayment } from "@/server/payments/submit";
@@ -24,6 +25,9 @@ const payload: NotificationPayload = {
   destination: "GCash",
   transactionRef: "7034 512 840193",
   reason: "I can't see this transfer in my GCash",
+  otherMemberName: "Ben Cruz",
+  changed: "account number",
+  actorName: "Boss",
 };
 
 describe("copyFor", () => {
@@ -45,6 +49,8 @@ describe("copyFor", () => {
     ["ADMIN_VERIFY_REQUEST", "Ana R. Reyes reported a payment of ₱75.50"],
     ["PAYMENT_APPROVED", "Payment confirmed: Spotify October 2026"],
     ["PAYMENT_DECLINED", "We couldn't confirm your Spotify October 2026 payment"],
+    ["ADMIN_DUPLICATE_ATTEMPT", "Ana R. Reyes tried to report a reference already reported by Ben Cruz"],
+    ["PAYMENT_DETAILS_CHANGED", "GCash payment details changed"],
     ["TEST", "ambagan test email"],
   ] as const)("%s subject", (type, subject) => {
     expect(copyFor(type, payload).subject).toBe(subject);
@@ -237,5 +243,66 @@ describe("queueTestEmail", () => {
     expect(first).not.toBe(second);
     expect(ofType("TEST")).toHaveLength(2);
     expect(ofType("TEST")[0]).toMatchObject({ toEmail: "boss@example.com", subject: "ambagan test email", userId: admin.id, statementId: null });
+  });
+});
+
+describe("someone reports a reference another member already reported", () => {
+  it("tells the admins who tried and who reported it first, once per pair, and records it", () => {
+    const ben = db.insert(s.users).values({ email: "ben@example.com", name: "Ben Cruz" }).returning().get();
+    const first = submit(ben.id, addStatement(ben.id).id, "SHARED 1111 2222");
+    expect(first.ok).toBe(true);
+    const before = ofType("ADMIN_DUPLICATE_ATTEMPT").length;
+
+    const attempt = submit(ana.id, addStatement(ana.id).id, "shared-1111-2222");
+    expect(attempt).toMatchObject({ ok: false, error: "DUPLICATE_REFERENCE" });
+    const alerts = ofType("ADMIN_DUPLICATE_ATTEMPT");
+    expect(alerts).toHaveLength(before + 1);
+    expect(alerts[0].toEmail).toBe("boss@example.com");
+    expect(JSON.parse(alerts[0].payload)).toMatchObject({ memberName: "Ana R. Reyes", otherMemberName: "Ben Cruz", path: "/admin/payments" });
+    expect(db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "payment.duplicate_reference_blocked")).all()).toHaveLength(1);
+
+    submit(ana.id, addStatement(ana.id, "2026-09").id, "SHARED 1111 2222"); // the same member tries again
+    expect(ofType("ADMIN_DUPLICATE_ATTEMPT")).toHaveLength(before + 1);
+  });
+
+  it("stays quiet when a member trips over their own earlier report", () => {
+    expect(submit(ana.id, addStatement(ana.id).id, "OWN 1111 2222").ok).toBe(true);
+    submit(ana.id, addStatement(ana.id, "2026-09").id, "own 1111 2222");
+    expect(ofType("ADMIN_DUPLICATE_ATTEMPT")).toHaveLength(0);
+  });
+});
+
+describe("changing where people send money tells them", () => {
+  const save = (over: Partial<Parameters<typeof savePaymentMethod>[2]>, actorId = admin.id) =>
+    savePaymentMethod(db, gcash.id, { label: "GCash", accountName: "Kovie D.", accountNumber: "0917", instructions: "", isActive: true, ...over }, { kind: "keep" }, actorId);
+
+  it("emails every other active member and admin when the account number changes, but not the person who changed it", () => {
+    const second = db.insert(s.users).values({ email: "second@example.com", name: "Second", role: "ADMIN" }).returning().get();
+    db.insert(s.users).values({ email: "gone@example.com", name: "Gone", isActive: false }).run();
+    expect(save({ accountNumber: "0999 000 1111" }).ok).toBe(true);
+
+    const sent = ofType("PAYMENT_DETAILS_CHANGED");
+    expect(sent.map((e) => e.toEmail).sort()).toEqual(["ana@example.com", "second@example.com"]);
+    expect(JSON.parse(sent[0].payload)).toMatchObject({ destination: "GCash", changed: "account number", actorName: "Boss" });
+    void second;
+  });
+
+  it("does not put the new number in the email (it says what changed, not the details)", () => {
+    save({ accountNumber: "0999 000 1111" });
+    expect(ofType("PAYMENT_DETAILS_CHANGED").every((e) => !e.payload.includes("0999"))).toBe(true);
+  });
+
+  it("is quiet for changes that don't affect where money goes, and for a method that stays switched off", () => {
+    save({ instructions: "Add your name in the notes" });
+    expect(ofType("PAYMENT_DETAILS_CHANGED")).toHaveLength(0);
+    db.update(s.paymentMethods).set({ isActive: false }).where(eq(s.paymentMethods.id, gcash.id)).run();
+    save({ accountNumber: "0999 000 1111", isActive: false });
+    expect(ofType("PAYMENT_DETAILS_CHANGED")).toHaveLength(0);
+  });
+
+  it("tells people when a method that was switched off is switched on", () => {
+    db.update(s.paymentMethods).set({ isActive: false }).where(eq(s.paymentMethods.id, gcash.id)).run();
+    save({ isActive: true });
+    expect(ofType("PAYMENT_DETAILS_CHANGED")).toHaveLength(1);
   });
 });

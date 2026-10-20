@@ -29,6 +29,19 @@ describe("addMember", () => {
     expect(findInvitation(db, res.invitation.token, NOW).status).toBe("valid");
   });
 
+  it("starts billing next month when the member joins after the plan's due day (no statement that is born overdue)", () => {
+    const late = new Date("2026-10-20T04:00:00Z"); // past the 10th, Manila
+    const res = addMember(db, { name: "Late Joiner", email: "late@example.com", subscriptionId: spotify.id, invitedBy: admin.id, now: late });
+    if (!res.ok) throw new Error("setup");
+    expect(db.select().from(s.memberships).where(eq(s.memberships.userId, res.user.id)).get()).toMatchObject({ startPeriod: "2026-11" });
+  });
+
+  it("stores a cleaned name: no line breaks or text-reordering characters", () => {
+    const res = addMember(db, { name: "Ana\u202E\nReyes", email: "ana2@example.com", subscriptionId: null, invitedBy: admin.id, now: NOW });
+    if (!res.ok) throw new Error("setup");
+    expect(res.user.name).toBe("Ana Reyes");
+  });
+
   it("records an audit entry", () => {
     const res = addMember(db, { name: "Ana", email: "ana@example.com", subscriptionId: null, invitedBy: admin.id, now: NOW });
     expect(res.ok).toBe(true);
@@ -119,6 +132,13 @@ describe("setMemberActive", () => {
     const later = new Date("2027-02-03T04:00:00Z"); // February in Manila
     setMemberActive(db, { userId: ana.id, active: true, actorId: admin.id, now: later });
     expect(db.select().from(s.memberships).get()).toMatchObject({ isActive: true, startPeriod: "2027-02" });
+  });
+
+  it("on reactivation after the due day, billing resumes next month", () => {
+    const ana = member();
+    setMemberActive(db, { userId: ana.id, active: false, actorId: admin.id });
+    setMemberActive(db, { userId: ana.id, active: true, actorId: admin.id, now: new Date("2027-02-20T04:00:00Z") });
+    expect(db.select().from(s.memberships).get()).toMatchObject({ startPeriod: "2027-03" });
   });
 
   it("reports unknown users", () => {

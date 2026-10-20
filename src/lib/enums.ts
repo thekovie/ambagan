@@ -14,10 +14,13 @@ export const EMAIL_TYPES = [
   "ADMIN_VERIFY_REQUEST",
   "PAYMENT_APPROVED",
   "PAYMENT_DECLINED",
+  "ADMIN_DUPLICATE_ATTEMPT",
+  "PAYMENT_DETAILS_CHANGED",
   "TEST",
 ] as const;
 // SENT = accepted by SMTP; we never claim DELIVERED (no delivery receipts).
-export const EMAIL_STATUSES = ["PENDING", "SENDING", "SENT", "FAILED"] as const;
+// SKIPPED = no longer worth sending by the time it came up (paid meanwhile, member deactivated): never sent.
+export const EMAIL_STATUSES = ["PENDING", "SENDING", "SENT", "FAILED", "SKIPPED"] as const;
 export const JOB_STATUSES = ["RUNNING", "SUCCEEDED", "FAILED"] as const;
 
 export type Role = (typeof ROLES)[number];

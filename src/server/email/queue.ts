@@ -99,6 +99,11 @@ export function markEmailSent(db: Db, id: string, now: Date): void {
   db.update(emailLogs).set({ status: "SENT", sentAt: now, lastError: null }).where(eq(emailLogs.id, id)).run();
 }
 
+/** The message was not sent because it stopped being relevant. Final: it is never retried. */
+export function markEmailSkipped(db: Db, id: string, reason: string): void {
+  db.update(emailLogs).set({ status: "SKIPPED", lastError: reason.slice(0, MAX_ERROR_LENGTH) }).where(eq(emailLogs.id, id)).run();
+}
+
 /** Schedules a retry with backoff, or marks the message FAILED once attempts are used up. */
 export function markEmailFailed(db: Db, id: string, error: string, now: Date): "retrying" | "failed" {
   const row = db.select().from(emailLogs).where(eq(emailLogs.id, id)).get();
@@ -155,7 +160,7 @@ export function pruneEmails(db: Db, now: Date, olderThanDays: number): number {
   const cutoff = new Date(now.getTime() - olderThanDays * 24 * 60 * 60 * 1000);
   return db
     .delete(emailLogs)
-    .where(and(inArray(emailLogs.status, ["SENT", "FAILED"]), lt(emailLogs.createdAt, cutoff)))
+    .where(and(inArray(emailLogs.status, ["SENT", "FAILED", "SKIPPED"]), lt(emailLogs.createdAt, cutoff)))
     .run().changes;
 }
 
@@ -163,7 +168,12 @@ export interface ProcessResult {
   sent: number;
   retrying: number;
   failed: number;
+  /** Messages that were no longer worth sending (see relevance.ts). */
+  skipped: number;
 }
+
+/** What a sender returns: nothing when the message was sent, or a reason to skip it instead. */
+export type DeliverOutcome = void | { skip: string };
 
 /**
  * Sends everything that is due through `deliver`. A failure is recorded and retried later; it
@@ -171,16 +181,18 @@ export interface ProcessResult {
  */
 export async function processQueue(
   db: Db,
-  deliver: (email: QueuedEmail) => Promise<void>,
+  deliver: (email: QueuedEmail) => Promise<DeliverOutcome>,
   options: { now?: Date; limit?: number } = {},
 ): Promise<ProcessResult> {
   const clock = () => options.now ?? new Date();
-  const result: ProcessResult = { sent: 0, retrying: 0, failed: 0 };
+  const result: ProcessResult = { sent: 0, retrying: 0, failed: 0, skipped: 0 };
 
   for (const email of claimDueEmails(db, clock(), options.limit ?? 20)) {
     let failure: string | undefined;
+    let skip: string | undefined;
     try {
-      await deliver(email);
+      const outcome = await deliver(email);
+      if (outcome && "skip" in outcome) skip = outcome.skip;
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     }
@@ -188,7 +200,10 @@ export async function processQueue(
     // Recording the outcome is separate from sending: a database hiccup here must not turn a message the
     // server already accepted into a retry, nor stop the rest of the batch.
     try {
-      if (failure === undefined) {
+      if (skip !== undefined) {
+        markEmailSkipped(db, email.id, skip);
+        result.skipped += 1;
+      } else if (failure === undefined) {
         markEmailSent(db, email.id, clock());
         result.sent += 1;
       } else {
@@ -241,7 +256,7 @@ export function listEmails(db: Db, options: { status?: EmailStatus; limit: numbe
 }
 
 export function emailCounts(db: Db): Record<EmailStatus, number> {
-  const counts: Record<EmailStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, FAILED: 0 };
+  const counts: Record<EmailStatus, number> = { PENDING: 0, SENDING: 0, SENT: 0, FAILED: 0, SKIPPED: 0 };
   for (const row of db.select({ status: emailLogs.status, n: count() }).from(emailLogs).groupBy(emailLogs.status).all()) {
     counts[row.status] = row.n;
   }

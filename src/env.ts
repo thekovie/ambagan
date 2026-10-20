@@ -45,6 +45,13 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_NAME, SMTP_FROM_EMAIL, SMTP_REPLY_TO, ...rest } =
     parsed.data;
 
+  // Links in emails and the Secure flag on cookies follow APP_URL, so production must be https (localhost may stay http).
+  if (rest.NODE_ENV === "production") {
+    const { protocol, hostname } = new URL(rest.APP_URL);
+    if (protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(hostname)) {
+      throw new Error("Invalid environment:\nAPP_URL must use https in production (plain http is only allowed for localhost)");
+    }
+  }
   if (rest.NODE_ENV === "production" && (!SMTP_HOST || !SMTP_FROM_EMAIL)) {
     throw new Error("Invalid environment:\nSMTP_HOST and SMTP_FROM_EMAIL are required in production");
   }

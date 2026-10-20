@@ -35,7 +35,7 @@ const schema = z.object({
     .trim()
     .min(1, "Enter the reference number from your receipt")
     .max(64, "That reference is too long")
-    .regex(/^[A-Za-z0-9][A-Za-z0-9 \-_.]*$/, "Use only letters, numbers, spaces and dashes")
+    .regex(/^[A-Za-z0-9][A-Za-z0-9 \-_.]*$/, "Use only letters, numbers, spaces, dashes, dots and underscores")
     .refine((value) => normalizeReference(value).length >= MIN_REFERENCE_LENGTH, "That reference looks too short"),
   // <input type="datetime-local"> value, read as Asia/Manila time.
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Enter the date and time of the payment"),

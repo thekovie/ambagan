@@ -1,8 +1,9 @@
-import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne } from "drizzle-orm";
+import { cleanDisplayName } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { normalizeEmail } from "@/server/auth/access";
 import { createInvitation } from "@/server/auth/invitations";
-import { periodOf } from "@/server/billing/period";
+import { firstBillablePeriod } from "@/server/billing/period";
 import type { Db } from "@/server/db/client";
 import { invitations, memberships, sessions, subscriptions, users } from "@/server/db/schema";
 
@@ -42,11 +43,11 @@ export function addMember(db: Db, input: AddMemberInput): AddMemberResult {
 
     const user = t
       .insert(users)
-      .values({ email, name: input.name.trim() || null })
+      .values({ email, name: cleanDisplayName(input.name) || null })
       .returning()
       .get();
     if (subscription) {
-      t.insert(memberships).values({ userId: user.id, subscriptionId: subscription.id, startPeriod: periodOf(now) }).run();
+      t.insert(memberships).values({ userId: user.id, subscriptionId: subscription.id, startPeriod: firstBillablePeriod(now, subscription.dueDay) }).run();
     }
     const invitation = createInvitation(t, { userId: user.id, invitedBy: input.invitedBy, now });
     recordAudit(t, {
@@ -92,11 +93,25 @@ export function setMemberActive(
 
     t.update(users).set({ isActive: active }).where(eq(users.id, userId)).run();
     if (!active) t.delete(sessions).where(eq(sessions.userId, userId)).run();
-    t.update(memberships)
-      // "YYYY-MM" strings compare correctly as text, so SQLite's max() picks the later period.
-      .set(active ? { isActive: true, startPeriod: sql`max(${memberships.startPeriod}, ${periodOf(now)})` } : { isActive: false })
-      .where(eq(memberships.userId, userId))
-      .run();
+    if (active) {
+      // Billing resumes from the first month that isn't already late, never retroactively. "YYYY-MM" strings compare
+      // correctly as text. Each plan has its own due day.
+      const enrolments = t
+        .select({ id: memberships.id, startPeriod: memberships.startPeriod, dueDay: subscriptions.dueDay })
+        .from(memberships)
+        .innerJoin(subscriptions, eq(subscriptions.id, memberships.subscriptionId))
+        .where(eq(memberships.userId, userId))
+        .all();
+      for (const enrolment of enrolments) {
+        const resume = firstBillablePeriod(now, enrolment.dueDay);
+        t.update(memberships)
+          .set({ isActive: true, startPeriod: enrolment.startPeriod > resume ? enrolment.startPeriod : resume })
+          .where(eq(memberships.id, enrolment.id))
+          .run();
+      }
+    } else {
+      t.update(memberships).set({ isActive: false }).where(eq(memberships.userId, userId)).run();
+    }
     recordAudit(t, {
       actorId,
       action: active ? "member.activated" : "member.deactivated",

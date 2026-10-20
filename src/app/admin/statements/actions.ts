@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { recordAudit } from "@/server/audit";
 import { requireAdmin } from "@/server/auth/session";
 import { generateStatements } from "@/server/billing/generate";
 import { RECENT_PERIOD_COUNT, recentPeriods } from "@/server/billing/period";
@@ -86,7 +87,8 @@ export interface DailyRunState {
 
 /** Runs the daily job now: issue what is due, mark overdue, queue reminders. Safe to repeat. */
 export async function runDailyJobAction(): Promise<DailyRunState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+  recordAudit(getDb(), { actorId: admin.id, action: "job.daily_run_started_by_hand", entityType: "job", entityId: "daily-reconcile" });
   const result = await runDailyJob("MANUAL");
   revalidatePath("/admin/statements");
   revalidatePath("/admin/notifications");

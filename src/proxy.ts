@@ -3,7 +3,7 @@ import { buildCsp } from "@/lib/csp";
 
 // Auth.js session cookie names (plain over http, __Secure- prefixed over https).
 const SESSION_COOKIES = ["authjs.session-token", "__Secure-authjs.session-token"];
-const SIGNED_IN_PREFIXES = ["/dashboard", "/statements", "/payments", "/settings", "/admin"];
+const SIGNED_IN_PREFIXES = ["/dashboard", "/statements", "/payments", "/pay", "/settings", "/admin"];
 
 function nonce(): string {
   return Buffer.from(crypto.randomUUID()).toString("base64");

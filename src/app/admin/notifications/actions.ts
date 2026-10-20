@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/server/auth/session";
+import { recordAudit } from "@/server/audit";
 import { getDb } from "@/server/db/client";
 import { emailLogs } from "@/server/db/schema";
 import { queueTestEmail } from "@/server/email/notify";
@@ -25,6 +26,7 @@ export async function sendTestEmailAction(): Promise<EmailActionState> {
   const admin = await requireAdmin();
   if (!admin.email) return { error: "Your account has no email address to send to." };
   const db = getDb();
+  recordAudit(db, { actorId: admin.id, action: "email.test_sent", entityType: "email_log" });
   const id = queueTestEmail(db, { id: admin.id, email: admin.email, name: admin.name ?? null }, new Date());
   await runEmailQueue();
   revalidatePath("/admin/notifications");
@@ -40,8 +42,9 @@ export async function sendQueuedNowAction(): Promise<EmailActionState> {
   releaseBackoff(getDb(), new Date());
   const result = await runEmailQueue();
   revalidatePath("/admin/notifications");
-  if (result.sent + result.retrying + result.failed === 0) return { message: "Nothing was waiting." };
-  return { message: `Sent ${result.sent}, will retry ${result.retrying}, gave up on ${result.failed}.` };
+  if (result.sent + result.retrying + result.failed + result.skipped === 0) return { message: "Nothing was waiting." };
+  const skipped = result.skipped > 0 ? `, skipped ${result.skipped} that no longer applied` : "";
+  return { message: `Sent ${result.sent}, will retry ${result.retrying}, gave up on ${result.failed}${skipped}.` };
 }
 
 /** Queues a fresh copy of a sent or failed notification; the original stays as history. */

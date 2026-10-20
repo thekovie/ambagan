@@ -10,6 +10,8 @@ export const NOTIFICATION_TYPES = [
   "ADMIN_VERIFY_REQUEST",
   "PAYMENT_APPROVED",
   "PAYMENT_DECLINED",
+  "ADMIN_DUPLICATE_ATTEMPT",
+  "PAYMENT_DETAILS_CHANGED",
   "TEST",
 ] as const satisfies readonly EmailType[];
 
@@ -36,6 +38,12 @@ export interface NotificationPayload {
   transactionRef?: string;
   /** Decline reason. */
   reason?: string;
+  /** Duplicate attempt: the member who reported the reference first. */
+  otherMemberName?: string;
+  /** Details change: what changed ("account number and QR code"), never the new values. */
+  changed?: string;
+  /** Details change: who changed it. */
+  actorName?: string;
 }
 
 export interface NotificationCopy {
@@ -142,6 +150,28 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
         ],
         facts,
         cta: { label: "Report it again", path: statementPath },
+      };
+    case "ADMIN_DUPLICATE_ATTEMPT":
+      return {
+        subject: `${p.memberName} tried to report a reference already reported by ${p.otherMemberName}`,
+        heading: "A reference was reported twice",
+        body: [
+          `${p.memberName} tried to report reference ${p.transactionRef} for ${what}, but ${p.otherMemberName} had already reported it.`,
+          "Only one of them can have sent that payment. When you verify it, check in your own account who it actually came from.",
+        ],
+        facts,
+        cta: { label: "Review payments", path: "/admin/payments" },
+      };
+    case "PAYMENT_DETAILS_CHANGED":
+      return {
+        subject: `${p.destination} payment details changed`,
+        heading: "Payment details changed",
+        body: [
+          `The ${p.changed} for ${p.destination} was changed by ${p.actorName}.`,
+          "Before you pay next time, check that the details shown in ambagan are right. If you weren't expecting this, tell the group admin.",
+        ],
+        facts: [],
+        cta: { label: "See where to pay", path: "/dashboard" },
       };
     case "TEST":
       return {
