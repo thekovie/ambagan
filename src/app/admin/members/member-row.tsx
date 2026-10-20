@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
 import { CopyField } from "@/components/copy-field";
 import { Button } from "@/components/ui/button";
+import { avatarClass } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 import { resendInviteAction, setActiveAction, type MemberActionState } from "./actions";
 
@@ -18,20 +19,6 @@ export interface MemberView {
   plans: string[];
   invite: "none" | "pending" | "expired" | "accepted";
   isSelf: boolean;
-}
-
-// Avatar colour is picked from the four foils by name so each friend keeps one.
-const AVATARS = [
-  "bg-foil-magenta text-on-foil-magenta",
-  "bg-foil-cobalt text-[var(--on-foil-cobalt)]",
-  "bg-foil-tangerine text-ink",
-  "bg-foil-lime text-ink",
-];
-
-function avatarClass(seed: string) {
-  let sum = 0;
-  for (const ch of seed) sum += ch.charCodeAt(0);
-  return AVATARS[sum % AVATARS.length];
 }
 
 function inviteLabel(member: MemberView): string {

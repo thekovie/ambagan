@@ -31,7 +31,7 @@ export function LoginForm() {
           </p>
         ) : null}
       </div>
-      <Button type="submit" variant="foil" size="lg" disabled={pending} className="w-full">
+      <Button type="submit" variant="candy" size="lg" disabled={pending} className="w-full">
         {pending ? "Sending…" : "Email me a link"}
         {pending ? null : <ArrowRight data-icon="inline-end" />}
       </Button>

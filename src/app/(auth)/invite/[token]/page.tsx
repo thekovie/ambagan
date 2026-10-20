@@ -23,7 +23,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
           </p>
         </div>
         <form action={acceptInvite.bind(null, token)}>
-          <Button type="submit" variant="foil" size="lg" className="w-full">
+          <Button type="submit" variant="candy" size="lg" className="w-full">
             Accept and email me a link
           </Button>
         </form>

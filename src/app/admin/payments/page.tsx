@@ -68,7 +68,7 @@ export default async function AdminPaymentsPage() {
                   </div>
 
                   {p.amountMatches ? null : (
-                    <p className="flex max-w-2xl items-start gap-2 rounded-xl bg-foil-tangerine p-3 text-sm font-bold text-ink">
+                    <p className="flex max-w-2xl items-start gap-2 rounded-xl bg-st-butter p-3 text-sm font-bold text-st-ink">
                       <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                       The amounts differ. You can only approve this by recording why you&apos;re accepting it.
                     </p>

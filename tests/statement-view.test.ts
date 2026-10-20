@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveStatus, sachetProps, statementDateLabel } from "@/lib/statement-view";
+import { effectiveStatus, stickerProps, statementDateLabel } from "@/lib/statement-view";
 
 const base = {
   reference: "SPOT-202610-A1B2C3",
@@ -37,18 +37,17 @@ describe("effectiveStatus", () => {
     }
   });
 
-  it("is applied by sachetProps so strips read correctly before the daily job runs", () => {
-    expect(sachetProps(base, justAfterDue)).toMatchObject({ status: "OVERDUE", dateLabel: "Was due Sat, Oct 10" });
+  it("is applied by stickerProps so stickers read correctly before the daily job runs", () => {
+    expect(stickerProps(base, justAfterDue)).toMatchObject({ status: "OVERDUE", dateLabel: "Was due Sat, Oct 10" });
   });
 });
 
-describe("sachetProps", () => {
-  it("maps a statement to the strip's display fields", () => {
-    expect(sachetProps(base, new Date("2026-10-05T00:00:00Z"))).toEqual({
+describe("stickerProps", () => {
+  it("maps a statement to the sticker's display fields", () => {
+    expect(stickerProps(base, new Date("2026-10-05T00:00:00Z"))).toEqual({
       status: "UNPAID",
       subscriptionName: "Spotify",
       periodLabel: "October 2026",
-      stubLabel: "OCT",
       amountMinor: 5000,
       currency: "PHP",
       dateLabel: "Due Sat, Oct 10",

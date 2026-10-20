@@ -2,12 +2,12 @@ import { ArrowRight, ReceiptText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { Sachet } from "@/components/sachet";
+import { Sticker } from "@/components/sticker";
 import { buttonVariants } from "@/components/ui/button";
 import type { StatementStatus } from "@/lib/enums";
 import { formatMinor } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
-import { sachetProps } from "@/lib/statement-view";
+import { stickerProps } from "@/lib/statement-view";
 import { requireAdmin } from "@/server/auth/session";
 import { periodLabel } from "@/server/billing/period";
 import { getAdminOverview } from "@/server/billing/overview";
@@ -16,10 +16,10 @@ import { getDb } from "@/server/db/client";
 export const metadata: Metadata = { title: "Overview" };
 
 const SEGMENT_COLORS: Record<StatementStatus, string> = {
-  PAID: "bg-foil-lime",
-  UNDER_VERIFICATION: "bg-foil-tangerine",
-  UNPAID: "bg-foil-cobalt",
-  OVERDUE: "bg-foil-magenta",
+  PAID: "bg-st-mint",
+  UNDER_VERIFICATION: "bg-st-butter",
+  UNPAID: "bg-st-sky",
+  OVERDUE: "bg-st-rose",
   CANCELLED: "bg-muted",
 };
 const LEGEND_ORDER: StatementStatus[] = ["PAID", "UNDER_VERIFICATION", "UNPAID", "OVERDUE"];
@@ -103,7 +103,7 @@ export default async function AdminDashboardPage() {
               <Link href={row.href} className="flex min-h-14 items-center justify-between gap-4 py-2 hover:bg-muted/60">
                 <span className="font-semibold">{row.label}</span>
                 <span className="flex items-center gap-2">
-                  <span className={row.urgent ? "font-display rounded-full bg-foil-magenta px-3 py-1 text-2xl text-on-foil-magenta" : "font-display text-2xl"}>
+                  <span className={row.urgent ? "font-display rounded-full bg-candy px-3 py-1 text-2xl text-on-candy" : "font-display text-2xl"}>
                     {row.value}
                   </span>
                   <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -115,14 +115,14 @@ export default async function AdminDashboardPage() {
       </section>
 
       {tickets.length > 0 ? (
-        <section aria-labelledby="rack" className="flex flex-col gap-5">
-          <h2 id="rack" className="font-display text-3xl">
-            {month} rack
+        <section aria-labelledby="month-stickers" className="flex flex-col gap-5">
+          <h2 id="month-stickers" className="font-display text-3xl">
+            {month} stickers
           </h2>
           <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {tickets.map((t) => (
               <li key={t.statement.id}>
-                <Sachet compact {...sachetProps(t.statement, now)} subscriptionName={t.memberName} />
+                <Sticker compact {...stickerProps(t.statement, now)} subscriptionName={t.memberName} />
               </li>
             ))}
           </ul>

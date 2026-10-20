@@ -33,7 +33,7 @@ export function BackupsPanel({ backups, listError, runs, dir, keep }: BackupsPan
         ambagan backs up the database and your QR images every day, checks each copy before trusting it, and keeps the
         latest {keep}. They are stored in <code className="font-mono text-foreground">{dir}</code>.
       </p>
-      <p className="flex items-start gap-2 rounded-xl bg-foil-tangerine p-3 text-sm font-bold text-ink">
+      <p className="flex items-start gap-2 rounded-xl bg-st-butter p-3 text-sm font-bold text-st-ink">
         <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <span>
           That is on the same machine as the live data, so it protects you from mistakes and bad updates, not from losing

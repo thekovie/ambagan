@@ -162,7 +162,7 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
             type="checkbox"
             name="isActive"
             defaultChecked={typed ? typed.isActive === "on" : (subscription?.isActive ?? true)}
-            className="size-5 rounded accent-foil-magenta"
+            className="size-5 rounded accent-candy"
           />
           Active: generate statements for this plan
         </label>

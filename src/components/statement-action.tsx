@@ -13,9 +13,9 @@ interface StatementActionProps {
 }
 
 /**
- * The one contextual action for a statement, shown inside its strip.
- * Unpaid gets the magenta "pay now" foil; every other state uses the strip's own inverse colours,
- * because magenta foil would vanish on an overdue (magenta) strip.
+ * The one contextual action for a statement, shown inside its sticker.
+ * Unpaid gets the candy "pay now" button; every other state uses the sticker's own ink colours,
+ * because the candy colour would blend into the rose corner tab on an overdue sticker.
  */
 export function StatementAction({ statement, omitView }: StatementActionProps) {
   const shown = effectiveStatus(statement);
@@ -28,7 +28,7 @@ export function StatementAction({ statement, omitView }: StatementActionProps) {
   return (
     <Link
       href={target}
-      className={cn(buttonVariants({ variant: shown === "UNPAID" ? "foil" : "inverse", size: "lg" }), "w-full sm:w-auto")}
+      className={cn(buttonVariants({ variant: shown === "UNPAID" ? "candy" : "onSticker", size: "lg" }), "w-full sm:w-auto")}
     >
       {action.label} <ArrowRight data-icon="inline-end" />
     </Link>

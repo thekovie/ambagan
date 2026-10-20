@@ -17,7 +17,7 @@ export default async function LoginErrorPage({ searchParams }: PageProps<"/login
 
   return (
     <div className="flex flex-col items-start gap-6">
-      <div className="grid size-14 place-items-center rounded-full bg-foil-magenta text-on-foil-magenta">
+      <div className="grid size-14 place-items-center rounded-full bg-st-rose text-st-ink">
         <TriangleAlert className="size-7" aria-hidden="true" />
       </div>
       <div>
