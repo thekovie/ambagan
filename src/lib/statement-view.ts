@@ -14,6 +14,8 @@ export interface StatementLike {
   currency: string;
   dueAt: Date;
   cancelledAt: Date | null;
+  /** Set for a share of an ambag bill; those read "Ambag" where a monthly statement shows its month. */
+  billId?: string | null;
 }
 
 /** What the sticker's date line says for each status. */
@@ -50,7 +52,7 @@ export function stickerProps(st: StatementLike, now = new Date()): StatementStic
   return {
     status,
     subscriptionName: st.subscriptionName,
-    periodLabel: periodLabel(st.period),
+    periodLabel: st.billId ? "Ambag" : periodLabel(st.period),
     amountMinor: st.amountMinor,
     currency: st.currency,
     dateLabel: statementDateLabel({ ...st, status }),

@@ -1,9 +1,9 @@
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, isNull, lte } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
 import { memberships, statements, subscriptions, users } from "@/server/db/schema";
 import { dueDateOf } from "./dates";
-import { generateReference, referenceSuffix } from "./reference";
+import { generateReference, isReferenceCollision, referenceSuffix } from "./reference";
 
 type Plan = typeof subscriptions.$inferSelect;
 
@@ -27,14 +27,25 @@ export interface GenerateResult {
   existing: number;
 }
 
-/** better-sqlite3 reports a duplicate reference as SQLITE_CONSTRAINT_UNIQUE naming the column. */
-function isReferenceCollision(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const code = (error as { code?: string }).code;
-  return (code === undefined || code === "SQLITE_CONSTRAINT_UNIQUE") && error.message.includes("statement.reference");
-}
-
 function insertStatement(t: Db, plan: Plan, userId: string, input: GenerateInput, now: Date): "created" | "existing" {
+  // One monthly statement per member, plan and cycle (cancelled ones count too): this is what makes generation
+  // idempotent. It is checked here rather than with ON CONFLICT because that unique index is partial (it ignores
+  // ambag statements) and SQLite cannot target a partial index from `on conflict do nothing`. The caller holds the
+  // write lock for the whole run, so nothing can slip in between this check and the insert; the index is the backstop.
+  const already = t
+    .select({ id: statements.id })
+    .from(statements)
+    .where(
+      and(
+        eq(statements.userId, userId),
+        eq(statements.subscriptionId, plan.id),
+        eq(statements.period, input.period),
+        isNull(statements.billId),
+      ),
+    )
+    .get();
+  if (already) return "existing";
+
   for (let attempt = 0; attempt < MAX_REFERENCE_ATTEMPTS; attempt++) {
     try {
       const row = t
@@ -52,8 +63,6 @@ function insertStatement(t: Db, plan: Plan, userId: string, input: GenerateInput
           issuedAt: now,
           dueAt: dueDateOf(input.period, plan.dueDay),
         })
-        // One statement per member, plan and cycle: this is what makes generation idempotent.
-        .onConflictDoNothing({ target: [statements.userId, statements.subscriptionId, statements.period] })
         .returning({ id: statements.id })
         .get();
       return row ? "created" : "existing";
@@ -80,8 +89,8 @@ export function generateStatements(db: Db, input: GenerateInput): GenerateResult
       .from(subscriptions)
       .where(
         input.subscriptionId
-          ? and(eq(subscriptions.isActive, true), eq(subscriptions.id, input.subscriptionId))
-          : eq(subscriptions.isActive, true),
+          ? and(eq(subscriptions.isActive, true), eq(subscriptions.kind, "RECURRING"), eq(subscriptions.id, input.subscriptionId))
+          : and(eq(subscriptions.isActive, true), eq(subscriptions.kind, "RECURRING")),
       )
       .all();
 

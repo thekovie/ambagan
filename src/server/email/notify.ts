@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { formatDate } from "@/lib/dates";
+import { isPlaceholderEmail } from "@/lib/guest";
 import { formatMinor } from "@/lib/money";
 import { periodLabel } from "@/server/billing/period";
 import type { Db } from "@/server/db/client";
@@ -24,6 +25,8 @@ function queueFor(
   statementId: string | null,
   now: Date,
 ): boolean {
+  // A guest with no email of their own has a placeholder address: nobody to write to (the admin shares their link).
+  if (isPlaceholderEmail(to.email)) return false;
   // The email is a side effect of a payment change that shares its transaction: nothing here may throw,
   // or a formatting bug would make a real payment impossible to approve. Skip the email and say so.
   try {
@@ -48,7 +51,9 @@ function queueFor(
 function statementPayload(statement: Statement, amountMinor: number) {
   return {
     subscription: statement.subscriptionName,
-    period: periodLabel(statement.period),
+    // An ambag has a title, not a month: the copy drops the "Month" row and says "your ambag for ..." instead.
+    period: statement.billId ? "" : periodLabel(statement.period),
+    ...(statement.billId ? { isBill: "1" } : {}),
     amount: formatMinor(amountMinor, statement.currency),
     dueDate: formatDate(statement.dueAt),
     reference: statement.reference,

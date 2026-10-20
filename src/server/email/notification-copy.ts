@@ -22,8 +22,10 @@ export interface NotificationPayload {
   /** Recipient's display name; empty when they have none. */
   name: string;
   subscription?: string;
-  /** "October 2026" */
+  /** "October 2026"; empty for an ambag, which has a title instead of a month. */
   period?: string;
+  /** "1" when the statement is someone's share of an ambag bill. */
+  isBill?: string;
   /** "₱75.50" */
   amount?: string;
   dueDate?: string;
@@ -56,9 +58,15 @@ export interface NotificationCopy {
 
 const subjectLine = (p: NotificationPayload) => [p.subscription, p.period].filter(Boolean).join(" ");
 
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** "your Spotify October 2026 share of ₱75.50" for a plan, "your ambag for Dinner (₱300.00)" for a bill. */
+const yourShare = (p: NotificationPayload) =>
+  p.isBill ? `your ambag for ${subjectLine(p)} (${p.amount})` : `your ${subjectLine(p)} share of ${p.amount}`;
+
 function factsOf(p: NotificationPayload): [string, string][] {
   const rows: [string, string | undefined][] = [
-    ["Plan", p.subscription],
+    [p.isBill ? "Ambag" : "Plan", p.subscription],
     ["Month", p.period],
     ["Amount", p.amount],
     ["Due", p.dueDate],
@@ -75,6 +83,15 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
 
   switch (type) {
     case "SOA_GENERATED":
+      if (p.isBill) {
+        return {
+          subject: `Your ambag for ${p.subscription}: ${p.amount}`,
+          heading: "Your ambag is ready",
+          body: [`Your share of ${p.subscription} is ${p.amount}, due ${p.dueDate}.`],
+          facts,
+          cta: { label: "See your share", path: statementPath },
+        };
+      }
       return {
         subject: `Your ${p.subscription} statement for ${p.period}: ${p.amount}`,
         heading: "Your statement is ready",
@@ -86,7 +103,7 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
       return {
         subject: `Due tomorrow: ${what} (${p.amount})`,
         heading: "Due tomorrow",
-        body: [`A friendly nudge: your ${what} share of ${p.amount} is due tomorrow, ${p.dueDate}.`],
+        body: [`A friendly nudge: ${yourShare(p)} is due tomorrow, ${p.dueDate}.`],
         facts,
         cta: { label: "Pay now", path: statementPath },
       };
@@ -94,7 +111,7 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
       return {
         subject: `Due today: ${what} (${p.amount})`,
         heading: "Due today",
-        body: [`Your ${what} share of ${p.amount} is due today.`],
+        body: [`${capitalize(yourShare(p))} is due today.`],
         facts,
         cta: { label: "Pay now", path: statementPath },
       };
@@ -103,7 +120,7 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
         subject: `Overdue: ${what} (${p.amount})`,
         heading: "This one is overdue",
         body: [
-          `Your ${what} share of ${p.amount} was due ${p.dueDate}.`,
+          `${capitalize(yourShare(p))} was due ${p.dueDate}.`,
           "Paid already? Report it so the admin can check and mark it done.",
         ],
         facts,

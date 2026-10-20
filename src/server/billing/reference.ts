@@ -11,6 +11,13 @@ export function referenceSuffix(): string {
   return suffix;
 }
 
+/** better-sqlite3 reports a duplicate reference as SQLITE_CONSTRAINT_UNIQUE naming the column. */
+export function isReferenceCollision(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code;
+  return (code === undefined || code === "SQLITE_CONSTRAINT_UNIQUE") && error.message.includes("statement.reference");
+}
+
 /** "SPOT-202610-K4M2Q8". Uniqueness is enforced by the database; callers retry on a collision. */
 export function generateReference(prefix: string, period: string, suffix: () => string = referenceSuffix): string {
   return `${prefix}-${period.replace("-", "")}-${suffix()}`;

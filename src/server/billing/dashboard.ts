@@ -74,18 +74,18 @@ function activityFor(db: Db, userId: string, all: Statement[], limit: number): A
   const items: ActivityItem[] = all.map((st) => ({
     at: st.issuedAt,
     kind: "statement_issued",
-    label: `Statement issued for ${periodLabel(st.period)}`,
+    label: st.billId ? `Ambag issued: ${st.subscriptionName}` : `Statement issued for ${periodLabel(st.period)}`,
     statementId: st.id,
   }));
 
   const rows = db
-    .select({ payment: payments, period: statements.period })
+    .select({ payment: payments, period: statements.period, billId: statements.billId, title: statements.subscriptionName })
     .from(payments)
     .innerJoin(statements, eq(statements.id, payments.statementId))
     .where(eq(payments.userId, userId))
     .all();
-  for (const { payment, period } of rows) {
-    const month = periodLabel(period);
+  for (const { payment, period, billId, title } of rows) {
+    const month = billId ? title : periodLabel(period);
     items.push({
       at: payment.submittedAt,
       kind: "payment_submitted",

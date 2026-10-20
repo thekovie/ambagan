@@ -87,6 +87,8 @@ docker compose up -d --build   # migrations run automatically at start
 
 The database lives on the `ambagan-data` volume, so rebuilding or recreating the container keeps it (verified: identical data after `docker compose down` and `up`). **`docker compose down -v` deletes the volume.** Take a backup first (**Admin → Settings → Back up now**).
 
+**Rolling back a version that changed the database.** Migrations only add to the schema and are never undone. An older image started on a newer database can fail (for example, the version before ambag bills cannot generate monthly statements once the bills migration has run, because its duplicate guard targets an index that no longer exists in that form). So rolling back means restoring the backup you took before the update (see [backup-restore.md](backup-restore.md)), then starting the older image. The migration that added ambag bills (`drizzle/0002_*.sql`) is additive only (one new table, a few new columns, and a replaced index), and a test (`tests/migration-0002.test.ts`) proves that data already in the database survives it unchanged.
+
 ## Troubleshooting
 
 | Symptom | Look at |

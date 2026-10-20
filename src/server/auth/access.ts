@@ -28,6 +28,9 @@ export function checkSignIn(db: Db, rawEmail: string, adminEmail: string): SignI
   }
   if (!user) return { ok: false, reason: "unknown" };
   if (!user.isActive) return { ok: false, reason: "inactive" };
+  // A guest pays through a private link and never signs in (even with a real email on file) until an admin invites
+  // them to join. Same answer as an unknown email, so the form reveals nothing.
+  if (user.isGuest) return { ok: false, reason: "unknown" };
 
   if (isAdminEmail && user.role !== "ADMIN") {
     user = db.update(users).set({ role: "ADMIN" }).where(eq(users.id, user.id)).returning().get();

@@ -518,3 +518,21 @@ The reviewer fuzzed 500k inputs (NaN, Infinity, huge numbers, `__proto__` ids, u
 
 ### Verification
 483 tests (45 new), typecheck, lint, production build, 98% line coverage on the engine. Local e2e was not run for this PR (the demo server was using its port); the engine is not imported by the app yet and CI runs the journey.
+
+## 2026-10-20 — Ambag, PR 2 of 6: the core (feat/ambag-core)
+
+### What changed
+The database and server side of ambag bills; nothing is user-visible yet (the builder arrives in PR 4).
+- **Migration `0002` (additive only):** new `bill` table; `statement.bill_id` and `statement.link_version`; `subscription.kind`; `user.is_guest`; the unique index `statement_cycle_uq` replaced by two partial unique indexes (one monthly statement per member, plan and month; one statement per person per bill). No table rebuild, no PRAGMA.
+- **Proof it is safe:** `tests/migration-0002.test.ts` upgrades a database that already holds statements, pending and approved payments and email history, and checks every old column is identical afterwards, foreign keys and integrity are clean, and the new rules hold. The same migration was also dry-run on a consistent copy of the demo database (8 statements, 4 payments): all rows identical.
+- **The trap, confirmed:** against the new partial index the daily statement generator's `onConflictDoNothing` fails at runtime (every billing test went red). Fixed with an explicit existence check inside the generator's locked transaction; the index stays as the backstop.
+- **`src/server/bills/`:** `createBill` (admin only, idempotent by the form's bill id, recomputes the split on the server, statements only for friends with something to pay, audit, "your ambag is ready" email using the same dedupe key as the daily job), `cancelBill` (all or nothing; blocked if anyone paid or reported paying), list/detail queries, and `getShareForStatement`, which returns only the asking person's own lines. A single hidden "one-off" plan (prefix `AMBAG`, reserved) backs every bill; it is never listed, edited or generated for.
+- **Around it:** overview tiles exclude bills and gain `ambagOpen`; activity labels, stickers ("Ambag" instead of a month) and email wording are bill-aware while monthly wording is unchanged (tested); placeholder guest addresses are never emailed.
+
+### Independent review and what changed
+No high findings; the review confirmed the migration is data-safe. Fixed: **bills now take a calendar due date and are due at the end of that day in Manila** (a raw timestamp could have made a bill read overdue on its own due day, or reject "due today"); **guests are actually refused at sign-in** (the schema comment promised it; a guest with a real email could have become a member session); resubmitting a cancelled bill is an error; the admin and participant checks are repeated under the write lock. Added tests: uneven totals add up exactly (statements plus the admin's share equal the bill), reference-collision retry and a failed bill rolling back completely (bill, statements, audit, emails), cancelling after partial cancellations or a payment, and no reminders for a cancelled bill.
+Not changed here, planned for PR 6: a few pages still say "Dinner · October 2026" or "Subscription" for a bill (member statement detail, history, admin lists).
+Rollback caveat documented in `docs/deployment.md`: an older image cannot generate monthly statements on a migrated database, so rollback means restoring the pre-update backup.
+
+### Verification
+524 tests (41 new here), typecheck, lint, production build. Local e2e was not run (the demo server held port 3100); CI runs it before merge.
