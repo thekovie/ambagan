@@ -448,3 +448,14 @@ A stale Turbopack dev cache served an old stylesheet and a bogus hydration warni
 
 ### Verification
 437 tests, typecheck, lint, production build, e2e journey (now includes a dock step: member Statements/History with `aria-current`, admin More → Members, account menu). Contrast script all pass; focus ring visible on dock items (3px); dock targets 48px; reduced-motion block and print rules reviewed.
+
+## 2026-10-20 — UI reroll "Sticker Book" (feat/sticker-member-auth, PR 2 of 4)
+
+### What changed
+Auth and member screens finished in the new look; no copy, routes or behaviour changed.
+- A two-step type scale replaces ~60 ad-hoc heading sizes: `text-display` (page titles, fluid 2–2.75rem) and `text-title` (section titles, 1.5rem). `font-display` weight eased from 700 to 650 ("the font looks too strong").
+- Statement details, how-to-pay, the two payment steps, history entries and the settings sections are soft `.sheet` cards instead of bare rows; history is a stack of cards. The print layout of the statement page is unchanged (sheets lose their shadow in print).
+- Verified in the browser at 390px: "₱12,500.00" fits the hero and compact stickers with no page overflow; Nunito's digits are equal-width (1111 and 0000 measure the same), so peso columns align.
+
+### Verification
+437 tests, typecheck, lint, production build, e2e journey. Screenshots (light and dark) reviewed for login, dashboard, statements, detail, pay, history and settings. The all-screens computed-contrast walk is done once in PR 3, when every screen is in the new look.

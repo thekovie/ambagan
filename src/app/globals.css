@@ -186,9 +186,19 @@
 /* One soft rounded voice. Headings and pesos are semibold, never shouty. */
 @utility font-display {
   font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.1;
+}
+
+/* Two heading sizes cover every screen: a page title and a section title. */
+@utility text-display {
+  font-size: clamp(2rem, 1.2rem + 3.5vw, 2.75rem);
+  line-height: 1.1;
+}
+@utility text-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
 }
 
 /* ---- Sheet: an ordinary soft card ---- */

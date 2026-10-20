@@ -13,7 +13,7 @@ export function AuthFrame({ children }: { children: ReactNode }) {
       <div className="relative w-full max-w-md">
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
           <Wordmark />
-          <p className="font-display text-3xl">split it, settle it.</p>
+          <p className="font-display text-title">split it, settle it.</p>
         </div>
         <div className="sheet p-6 sm:p-8">{children}</div>
       </div>

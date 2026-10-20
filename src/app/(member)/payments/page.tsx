@@ -22,7 +22,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Payment history</h1>
+        <h1 className="font-display text-display">Payment history</h1>
         <p className="mt-3 text-muted-foreground">Every payment you&apos;ve reported, and what the admin decided.</p>
       </header>
 
@@ -40,12 +40,12 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
           description="When you report a payment it shows up here with its status."
         />
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="flex flex-col gap-3">
           {rows.map((row) => (
-            <li key={row.id} className="flex flex-col gap-2 py-5">
+            <li key={row.id} className="sheet flex flex-col gap-2 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-display text-3xl">{formatMinor(row.amountMinor, row.currency)}</p>
+                  <p className="font-display text-title">{formatMinor(row.amountMinor, row.currency)}</p>
                   <Link
                     href={`/statements/${row.statementId}`}
                     className="font-semibold underline underline-offset-4"

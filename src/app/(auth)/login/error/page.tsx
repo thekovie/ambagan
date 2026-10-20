@@ -21,7 +21,7 @@ export default async function LoginErrorPage({ searchParams }: PageProps<"/login
         <TriangleAlert className="size-7" aria-hidden="true" />
       </div>
       <div>
-        <h1 className="font-display text-5xl">Couldn&apos;t sign you in</h1>
+        <h1 className="font-display text-display">Couldn&apos;t sign you in</h1>
         <p className="mt-3 text-muted-foreground">{message}</p>
       </div>
       <Button render={<Link href="/login" />}>Back to sign in</Button>

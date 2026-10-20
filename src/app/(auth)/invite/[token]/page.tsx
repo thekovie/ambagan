@@ -16,7 +16,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     return (
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="font-display text-5xl">{firstName ? `Hi ${firstName}, you're in` : "You're invited"}</h1>
+          <h1 className="font-display text-display">{firstName ? `Hi ${firstName}, you're in` : "You're invited"}</h1>
           <p className="mt-3 text-muted-foreground">
             This is where we track and settle our shared subscription. Tap below and we&apos;ll email a sign-in link to{" "}
             <strong className="text-foreground">{lookup.user.email}</strong>.
@@ -35,7 +35,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     return (
       <div className="flex flex-col items-start gap-6">
         <div>
-          <h1 className="font-display text-5xl">Already accepted</h1>
+          <h1 className="font-display text-display">Already accepted</h1>
           <p className="mt-3 text-muted-foreground">This invitation was already used. Sign in with your email instead.</p>
         </div>
         <Button render={<Link href="/login" />}>Go to sign in</Button>
@@ -47,7 +47,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
   return (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <h1 className="font-display text-5xl">Link not working</h1>
+        <h1 className="font-display text-display">Link not working</h1>
         <p className="mt-3 text-muted-foreground">
           This invitation has expired or isn&apos;t valid. Ask the admin to send you a fresh one.
         </p>
