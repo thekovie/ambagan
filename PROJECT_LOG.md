@@ -473,3 +473,20 @@ No high findings. The medium: the badge is computed when the layout renders, so 
 
 ### Verification
 438 tests (one new), typecheck, lint, production build, e2e (now asserts "Verify, 1 waiting" before approval and "Verify" after), `pnpm audit --prod` clean. Computed-contrast walk (every visible text element against its real background, light and dark) found no failures on Verify, Overview, Emails and Settings; the only hits were the dock's intentionally invisible collapsed labels. Screenshots reviewed at 390px for all seven screens and at 1440px for Overview and Verify.
+
+## 2026-10-20 — UI reroll "Sticker Book" (docs/sticker-design, PR 4 of 4)
+
+### What changed
+`DESIGN.md` rewritten from the shipped system (tokens, type scale, dock and menu behaviour, sticker states, shadows, do's and don'ts); `PRODUCT.md` brand line records the new direction. Values were checked against `src/app/globals.css`. `.impeccable/` is gitignored, so the design sidecar and surface brief live only on the maintainer's machine (both were regenerated earlier in the reroll).
+
+### The reroll in one place
+- **Why:** the owner found the Tingi Sachet Rack look too strong and not cute enough, and disliked sidebar menus.
+- **Result:** Sticker Book (pastel stickers, Nunito, candy action colour, floating dock, account menu, soft cards), shipped as four PRs (#20 foundation, #21 member and auth, #22 admin and the Verify count, this docs PR), each merged only after typecheck, lint, tests, build, e2e and CI. Tests went 433 → 438, the e2e journey gained a dock/More/sign-out step and a badge check.
+- **Alternatives considered and dropped:** a piggy-bank jar, chat bubbles, a softened sachet; hub-of-tiles and top-tab navigation; a rounder display face (Fredoka) as too cartoonish.
+- **Accessibility measured, not assumed:** 31 token pairs by script (one light field border fixed at 2.95:1), a computed-contrast walk of real pages in both themes, keyboard focus rings, 44px+ targets, dock fit at 360px, reduced-motion and print rules. Two independent reviews (shell + accessibility, admin data flow) found no high issues; their medium findings were fixed.
+- **Tooling issue worth knowing:** the Turbopack dev server sometimes keeps serving a stale stylesheet after edits (it also produced a bogus hydration warning). Clearing `.next/dev` and restarting fixes it; the production build is unaffected.
+
+### Deferred (recorded, not done)
+- `periodStub` in `server/billing/period.ts` and its test are now unused by the app (the sticker has no month stub); remove in a small follow-up.
+- Member nav says "Me" while the route and page title stay "Settings" (kept as decided).
+- The statement page has no 1440px two-column layout (`lg` grid) as first sketched; the single centred column reads well at every width.

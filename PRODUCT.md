@@ -25,7 +25,7 @@ Philippine peso (PHP), Asia/Manila time. Statements issue on the 1st, due the 10
 Invitation-only magic-link login. Statuses: Unpaid, Under verification, Paid, Overdue, Cancelled. Payment methods: GCash, Maya, MariBank QR Ph. Browser-only OCR; no screenshots or raw OCR text stored. Terms: SOA, statement reference (e.g. SPOT-202610-A1B2C3), payment destination vs sending app. Interface and email language: English, friendly-casual.
 
 ## Brand Commitments
-Display name "ambagan" (lowercase wordmark; Filipino for pooling money to split a shared cost). Tagline direction: split it, settle it. Owner wants a standout, expressive look, not a generic tracker or neutral SaaS dashboard.
+Display name "ambagan" (lowercase wordmark; Filipino for pooling money to split a shared cost). Tagline direction: split it, settle it. Owner wants a standout, expressive look, not a generic tracker or neutral SaaS dashboard. Direction after the owner's first review: cute but restrained ("a hint", no mascot, no confetti), a soft round typeface rather than a strong one, and no sidebar menus: navigation is a floating dock.
 
 ## Evidence on Hand
 No logo, photography, testimonials or user data yet. Do not fabricate any.
