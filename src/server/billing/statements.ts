@@ -24,9 +24,9 @@ export type CancelResult =
   | { ok: true }
   | { ok: false; error: "NOT_FOUND" | "REASON_REQUIRED" | "REASON_TOO_LONG" | "NOT_CANCELLABLE" };
 
-const MIN_REASON_LENGTH = 3;
-const MAX_REASON_LENGTH = 200;
-const CANCELLABLE: StatementStatus[] = ["UNPAID", "OVERDUE"];
+export const MIN_REASON_LENGTH = 3;
+export const MAX_REASON_LENGTH = 200;
+export const CANCELLABLE: StatementStatus[] = ["UNPAID", "OVERDUE"];
 
 /**
  * Cancels a statement nobody has paid or reported paying. The amount is kept for history,
@@ -36,36 +36,41 @@ export function cancelStatement(
   db: Db,
   input: { statementId: string; actorId: string; reason: string; now?: Date },
 ): CancelResult {
+  // "immediate": take the write lock up front, so a second writer waits (busy_timeout) instead of failing mid-transaction.
+  return db.transaction((tx) => cancelStatementIn(asDb(tx), input), { behavior: "immediate" });
+}
+
+/** The same cancellation for a caller that already holds the write transaction (cancelling a whole bill at once). */
+export function cancelStatementIn(
+  t: Db,
+  input: { statementId: string; actorId: string; reason: string; now?: Date },
+): CancelResult {
   const reason = input.reason.trim();
   const now = input.now ?? new Date();
 
-  // "immediate": take the write lock up front, so a second writer waits (busy_timeout) instead of failing mid-transaction.
-  return db.transaction((tx): CancelResult => {
-    const t = asDb(tx);
-    const current = t.select().from(statements).where(eq(statements.id, input.statementId)).get();
-    if (!current) return { ok: false, error: "NOT_FOUND" };
-    if (!CANCELLABLE.includes(current.status)) return { ok: false, error: "NOT_CANCELLABLE" };
-    if (reason.length < MIN_REASON_LENGTH) return { ok: false, error: "REASON_REQUIRED" };
-    if (reason.length > MAX_REASON_LENGTH) return { ok: false, error: "REASON_TOO_LONG" };
+  const current = t.select().from(statements).where(eq(statements.id, input.statementId)).get();
+  if (!current) return { ok: false, error: "NOT_FOUND" };
+  if (!CANCELLABLE.includes(current.status)) return { ok: false, error: "NOT_CANCELLABLE" };
+  if (reason.length < MIN_REASON_LENGTH) return { ok: false, error: "REASON_REQUIRED" };
+  if (reason.length > MAX_REASON_LENGTH) return { ok: false, error: "REASON_TOO_LONG" };
 
-    // The status check is repeated in the UPDATE so two admins can't both "win" a race.
-    const updated = t
-      .update(statements)
-      .set({ status: "CANCELLED", outstandingMinor: 0, cancelledAt: now, cancelReason: reason })
-      .where(and(eq(statements.id, current.id), inArray(statements.status, CANCELLABLE)))
-      .returning({ id: statements.id })
-      .get();
-    if (!updated) return { ok: false, error: "NOT_CANCELLABLE" };
+  // The status check is repeated in the UPDATE so two admins can't both "win" a race.
+  const updated = t
+    .update(statements)
+    .set({ status: "CANCELLED", outstandingMinor: 0, cancelledAt: now, cancelReason: reason })
+    .where(and(eq(statements.id, current.id), inArray(statements.status, CANCELLABLE)))
+    .returning({ id: statements.id })
+    .get();
+  if (!updated) return { ok: false, error: "NOT_CANCELLABLE" };
 
-    recordAudit(t, {
-      actorId: input.actorId,
-      action: "statement.cancelled",
-      entityType: "statement",
-      entityId: current.id,
-      metadata: { reason, previousStatus: current.status, reference: current.reference, amountMinor: current.amountMinor },
-    });
-    return { ok: true };
-  }, { behavior: "immediate" });
+  recordAudit(t, {
+    actorId: input.actorId,
+    action: "statement.cancelled",
+    entityType: "statement",
+    entityId: current.id,
+    metadata: { reason, previousStatus: current.status, reference: current.reference, amountMinor: current.amountMinor },
+  });
+  return { ok: true };
 }
 
 /** Ownership is part of the query: another member's statement id simply returns null. */

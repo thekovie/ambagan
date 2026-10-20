@@ -1,4 +1,4 @@
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
 import { memberships, subscriptions } from "@/server/db/schema";
@@ -22,9 +22,13 @@ export type CreateSubscriptionResult =
   | { ok: true; subscription: SubscriptionRow }
   | { ok: false; error: "PREFIX_TAKEN" };
 
+/** The reference prefix kept for ambag (one-off bill) statements: no monthly plan can claim it. */
+export const ONE_OFF_PREFIX = "AMBAG";
+
 export function createSubscription(db: Db, input: SubscriptionInput, actorId: string): CreateSubscriptionResult {
   return db.transaction((tx): CreateSubscriptionResult => {
     const t = asDb(tx);
+    if (input.refPrefix.toUpperCase() === ONE_OFF_PREFIX) return { ok: false, error: "PREFIX_TAKEN" };
     if (t.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.refPrefix, input.refPrefix)).get()) {
       return { ok: false, error: "PREFIX_TAKEN" };
     }
@@ -56,7 +60,8 @@ export function updateSubscription(
 ): UpdateSubscriptionResult {
   return db.transaction((tx): UpdateSubscriptionResult => {
     const t = asDb(tx);
-    const current = t.select().from(subscriptions).where(eq(subscriptions.id, id)).get();
+    // The hidden one-off plan behind ambag bills is not a plan anyone can edit.
+    const current = t.select().from(subscriptions).where(and(eq(subscriptions.id, id), eq(subscriptions.kind, "RECURRING"))).get();
     if (!current) return { ok: false, error: "NOT_FOUND" };
 
     const changes: Record<string, { from: unknown; to: unknown }> = {};
@@ -96,6 +101,7 @@ export function listSubscriptions(db: Db): SubscriptionListRow[] {
   return db
     .select()
     .from(subscriptions)
+    .where(eq(subscriptions.kind, "RECURRING"))
     .orderBy(asc(subscriptions.createdAt))
     .all()
     .map((sub) => ({ ...sub, activeMembers: counts.get(sub.id) ?? 0 }));

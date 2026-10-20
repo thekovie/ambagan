@@ -1,4 +1,4 @@
-import { and, count, countDistinct, eq, lt, ne, or, sql } from "drizzle-orm";
+import { and, count, countDistinct, eq, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { StatementStatus } from "@/lib/enums";
 import { effectiveStatus } from "@/lib/statement-view";
 import type { Db } from "@/server/db/client";
@@ -25,8 +25,10 @@ export interface AdminOverview {
     collectedMinor: number;
     paidCount: number;
   };
-  /** Still owed across every month. */
+  /** Still owed across every month (ambag bills included). */
   outstandingMinor: number;
+  /** Ambag statements still waiting for money or for the admin's check. */
+  ambagOpen: number;
   pendingVerification: number;
   overdueCount: number;
   /** One per member for this cycle, worst first. */
@@ -54,7 +56,7 @@ export function getAdminOverview(db: Db, now = new Date()): AdminOverview {
     .select({ statement: statements, name: users.name, email: users.email })
     .from(statements)
     .innerJoin(users, eq(users.id, statements.userId))
-    .where(and(eq(statements.period, period), ne(statements.status, "CANCELLED")))
+    .where(and(eq(statements.period, period), ne(statements.status, "CANCELLED"), isNull(statements.billId)))
     .all();
 
   const collectedMinor =
@@ -62,10 +64,17 @@ export function getAdminOverview(db: Db, now = new Date()): AdminOverview {
       .select({ total: sumOf(payments.amountMinor) })
       .from(payments)
       .innerJoin(statements, eq(statements.id, payments.statementId))
-      .where(and(eq(payments.status, "APPROVED"), eq(statements.period, period)))
+      .where(and(eq(payments.status, "APPROVED"), eq(statements.period, period), isNull(statements.billId)))
       .get()?.total ?? 0;
 
   const outstandingMinor = db.select({ total: sumOf(statements.outstandingMinor) }).from(statements).get()?.total ?? 0;
+
+  const ambagOpen =
+    db
+      .select({ n: count() })
+      .from(statements)
+      .where(and(isNotNull(statements.billId), inArray(statements.status, ["UNPAID", "OVERDUE", "UNDER_VERIFICATION"])))
+      .get()?.n ?? 0;
 
   const pendingVerification =
     db.select({ n: count() }).from(payments).where(eq(payments.status, "PENDING")).get()?.n ?? 0;
@@ -95,6 +104,7 @@ export function getAdminOverview(db: Db, now = new Date()): AdminOverview {
       paidCount: cycleRows.filter((r) => r.statement.status === "PAID").length,
     },
     outstandingMinor,
+    ambagOpen,
     pendingVerification,
     overdueCount,
     tickets,

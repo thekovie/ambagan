@@ -15,6 +15,13 @@
       "when": 1792406981988,
       "tag": "0001_volatile_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792476157092,
+      "tag": "0002_high_calypso",
+      "breakpoints": true
     }
   ]
 }

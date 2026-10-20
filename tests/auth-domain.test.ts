@@ -56,6 +56,12 @@ describe("checkSignIn (no self-signup)", () => {
     expect(checkSignIn(db, "gone@example.com", ADMIN)).toEqual({ ok: false, reason: "inactive" });
   });
 
+  it("never signs in a guest, even one with a real email address, and reveals nothing about why", () => {
+    addUser("tito@example.com", { name: "Tito", isGuest: true });
+    expect(checkSignIn(db, "tito@example.com", ADMIN)).toEqual({ ok: false, reason: "unknown" });
+    expect(checkSignIn(db, "stranger@example.com", ADMIN)).toEqual({ ok: false, reason: "unknown" });
+  });
+
   it("bootstraps the configured admin on first sign-in", () => {
     const res = checkSignIn(db, "BOSS@example.com", ADMIN);
     expect(res.ok && res.user.role).toBe("ADMIN");

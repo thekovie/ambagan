@@ -56,7 +56,7 @@ export function reconcile(db: Db, now: Date): ReconcileSummary {
   const dayOfMonth = Number(today.slice(8));
 
   let created = 0;
-  const plans = db.select().from(subscriptions).where(and(eq(subscriptions.isActive, true), lte(subscriptions.issueDay, dayOfMonth))).all();
+  const plans = db.select().from(subscriptions).where(and(eq(subscriptions.isActive, true), eq(subscriptions.kind, "RECURRING"), lte(subscriptions.issueDay, dayOfMonth))).all();
   for (const plan of plans) {
     created += generateStatements(db, { period, now, actorId: null, subscriptionId: plan.id }).created;
   }
