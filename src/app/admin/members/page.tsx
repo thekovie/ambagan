@@ -6,6 +6,7 @@ import { getDb } from "@/server/db/client";
 import { listMembers } from "@/server/members/service";
 import { listSubscriptions } from "@/server/subscriptions/service";
 import { AddMemberForm } from "./add-member-form";
+import { GuestsSection } from "./guests-section";
 import { MemberRow } from "./member-row";
 
 export const metadata: Metadata = { title: "Members" };
@@ -13,7 +14,9 @@ export const metadata: Metadata = { title: "Members" };
 export default async function MembersPage() {
   const admin = await requireAdmin();
   const db = getDb();
-  const members = listMembers(db);
+  const everyone = listMembers(db);
+  const members = everyone.filter((m) => !m.isGuest);
+  const guests = everyone.filter((m) => m.isGuest);
   const plans = listSubscriptions(db)
     .filter((p) => p.isActive)
     .map((p) => ({ id: p.id, name: p.name }));
@@ -49,6 +52,8 @@ export default async function MembersPage() {
           </ul>
         )}
       </section>
+
+      <GuestsSection guests={guests.map((g) => ({ ...g, isSelf: false }))} />
     </div>
   );
 }

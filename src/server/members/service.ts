@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, ne } from "drizzle-orm";
+import { isPlaceholderEmail } from "@/lib/guest";
 import { cleanDisplayName } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { normalizeEmail } from "@/server/auth/access";
@@ -124,7 +125,7 @@ export function setMemberActive(
 
 export type ResendResult =
   | { ok: true; user: UserRow; invitation: Invitation }
-  | { ok: false; error: "NOT_FOUND" | "INACTIVE" };
+  | { ok: false; error: "NOT_FOUND" | "INACTIVE" | "GUEST" };
 
 export function resendInvitation(db: Db, input: { userId: string; actorId: string; now?: Date }): ResendResult {
   return db.transaction((tx): ResendResult => {
@@ -132,6 +133,8 @@ export function resendInvitation(db: Db, input: { userId: string; actorId: strin
     const user = t.select().from(users).where(eq(users.id, input.userId)).get();
     if (!user) return { ok: false, error: "NOT_FOUND" };
     if (!user.isActive) return { ok: false, error: "INACTIVE" };
+    // A guest is refused at sign-in, so an invitation would be useless: "Invite to join" (promoteGuest) is the way.
+    if (user.isGuest) return { ok: false, error: "GUEST" };
     const invitation = createInvitation(t, { userId: user.id, invitedBy: input.actorId, now: input.now });
     recordAudit(t, { actorId: input.actorId, action: "member.invitation_resent", entityType: "user", entityId: user.id });
     return { ok: true, user, invitation };
@@ -144,6 +147,10 @@ export interface MemberRow {
   email: string;
   role: UserRow["role"];
   isActive: boolean;
+  /** A friend with no account who pays through a private link. */
+  isGuest: boolean;
+  /** False for a guest with only a placeholder address (nobody to email). */
+  hasRealEmail: boolean;
   hasSignedIn: boolean;
   plans: string[];
   invite: "none" | "pending" | "expired" | "accepted";
@@ -174,6 +181,8 @@ export function listMembers(db: Db, now = new Date()): MemberRow[] {
     email: p.email,
     role: p.role,
     isActive: p.isActive,
+    isGuest: p.isGuest,
+    hasRealEmail: !isPlaceholderEmail(p.email),
     hasSignedIn: p.emailVerified !== null,
     plans: plansByUser.get(p.id) ?? [],
     invite: inviteByUser.get(p.id) ?? "none",

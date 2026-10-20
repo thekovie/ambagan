@@ -1,4 +1,5 @@
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { isPlaceholderEmail } from "@/lib/guest";
 import type { SplitLine, SplitMethod } from "@/lib/split";
 import type { StatementStatus } from "@/lib/enums";
 import { effectiveStatus } from "@/lib/statement-view";
@@ -33,6 +34,32 @@ export function listBills(db: Db): BillListRow[] {
       outstandingMinor: own.reduce((sum, st) => sum + st.outstandingMinor, 0),
     };
   });
+}
+
+export interface Participant {
+  id: string;
+  name: string;
+  /** Null for a guest with only a placeholder address (nobody to email). */
+  email: string | null;
+  isGuest: boolean;
+  isAdmin: boolean;
+}
+
+/** Everyone who can be put in a bill: active members first, then guests, each group in the order they were added. */
+export function listParticipants(db: Db): Participant[] {
+  return db
+    .select()
+    .from(users)
+    .where(eq(users.isActive, true))
+    .orderBy(asc(users.isGuest), asc(users.createdAt), sql`${users}.rowid`)
+    .all()
+    .map((u) => ({
+      id: u.id,
+      name: u.name?.trim() || u.email,
+      email: isPlaceholderEmail(u.email) ? null : u.email,
+      isGuest: u.isGuest,
+      isAdmin: u.role === "ADMIN",
+    }));
 }
 
 export interface BillDetailRow extends StatementRow {

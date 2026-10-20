@@ -8,6 +8,7 @@ import { getDb } from "@/server/db/client";
 import { invitationEmail } from "@/server/email/auth-templates";
 import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
+import { promoteGuest } from "@/server/members/guests";
 import { addMember, resendInvitation, setMemberActive } from "@/server/members/service";
 
 export interface InviteResult {
@@ -30,6 +31,7 @@ const ERRORS = {
   SUBSCRIPTION_INACTIVE: "That plan is switched off. Turn it on in Plans, or pick another.",
   NOT_FOUND: "That member no longer exists.",
   INACTIVE: "Reactivate this member before sending an invite.",
+  GUEST: "This friend is a guest. Use Invite to join to make them a member.",
   SELF: "You can't deactivate your own account.",
   LAST_ADMIN: "There must always be at least one active admin.",
 } as const;
@@ -88,6 +90,30 @@ export async function resendInviteAction(_prev: MemberActionState, formData: For
   const userId = String(formData.get("userId") ?? "");
   const result = resendInvitation(getDb(), { userId, actorId: admin.id });
   if (!result.ok) return { error: ERRORS[result.error] };
+
+  const invite = await deliverInvite(result.user, result.invitation.token);
+  revalidatePath("/admin/members");
+  return { invite };
+}
+
+const PROMOTE_ERRORS = {
+  FORBIDDEN: "Only an admin can invite someone to join.",
+  NOT_A_GUEST: "That friend is already a member.",
+  INACTIVE: "Reactivate this friend before inviting them to join.",
+  EMAIL_REQUIRED: "Enter their email address so we can send the invitation.",
+  EMAIL_INVALID: "That doesn't look like an email address.",
+  EMAIL_TAKEN: "That email is already on the list.",
+} as const;
+
+/** "Invite to join": turns a guest into a member and sends their invitation (the same person, so their history stays). */
+export async function promoteGuestAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {
+  const admin = await requireAdmin();
+  const result = promoteGuest(getDb(), {
+    userId: String(formData.get("userId") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    actorId: admin.id,
+  });
+  if (!result.ok) return { error: PROMOTE_ERRORS[result.error] };
 
   const invite = await deliverInvite(result.user, result.invitation.token);
   revalidatePath("/admin/members");

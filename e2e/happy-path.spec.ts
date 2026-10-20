@@ -82,9 +82,11 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
 
   await test.step("the admin invites a member, who is emailed an invitation", async () => {
     await admin.goto("/admin/members");
-    await admin.getByLabel("Name").fill("Ana Reyes");
-    await admin.getByLabel("Email").fill(MEMBER);
-    await admin.getByRole("button", { name: "Add and send invite" }).click();
+    // The page also has a form for friends without an account, so aim at the member form's own section.
+    const addMember = admin.getByRole("region", { name: "Add a friend" });
+    await addMember.getByLabel("Name").fill("Ana Reyes");
+    await addMember.getByLabel("Email").fill(MEMBER);
+    await addMember.getByRole("button", { name: "Add and send invite" }).click();
     await expect(admin.getByText(`Invitation emailed to ${MEMBER}.`)).toBeVisible();
   });
 
@@ -175,6 +177,69 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(member.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
     await member.keyboard.press("Escape");
     await expect(member.getByRole("menuitem", { name: "Sign out" })).toBeHidden();
+  });
+
+  await test.step("an ambag: the admin splits a bill with a friend who has no account, who pays through a private link", async () => {
+    await admin.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await admin.goto("/admin/ambag/new");
+    await admin.getByLabel("What was it for?").fill("Karaoke night");
+    await admin.getByLabel("Total you paid (₱)").fill("600");
+    await admin.getByRole("checkbox", { name: "Ana Reyes" }).check();
+    await admin.getByText("Add a friend who has no account").click();
+    await admin.getByLabel("Name", { exact: true }).fill("Tito Boy");
+    await admin.getByRole("button", { name: "Add friend" }).click();
+    await expect(admin.getByRole("checkbox", { name: /Tito Boy/ })).toBeChecked();
+    // Admin, Ana and Tito split it equally: 200 each, and the form says so before anything is sent.
+    await expect(admin.getByText("Balanced: ₱600.00 split between 3").first()).toBeVisible();
+    await admin.getByRole("button", { name: "Create ambag" }).click();
+    await expect(admin.getByRole("heading", { level: 1, name: "Karaoke night" })).toBeVisible();
+    await expect(admin.getByText("Your own share").locator("..").getByText("₱200.00")).toBeVisible();
+
+    // The guest's link, copied the way the admin would.
+    await admin.getByRole("button", { name: "Copy link for Tito Boy" }).click();
+    const link = await admin.evaluate(() => navigator.clipboard.readText());
+    expect(link).toMatch(/\/s\/[0-9a-f-]{36}\.0\./);
+
+    // A different browser with no session: sees only their own share, nobody else's, and can pay.
+    const guest = await newPage(browser, violations);
+    await guest.goto(link);
+    await expect(guest.getByRole("heading", { level: 1, name: "Karaoke night" })).toBeVisible();
+    await expect(guest.getByText("₱200.00").first()).toBeVisible();
+    await expect(guest.locator("body")).not.toContainText("Ana");
+    await guest.getByLabel("Reference number").fill("TITO 1234 5678");
+    await guest.getByRole("button", { name: "Send for checking" }).click();
+    await expect(guest.getByText(/Sent\. The admin will check/)).toBeVisible();
+
+    // The admin verifies it like any other payment, and the guest's page then reads as settled.
+    await admin.goto("/admin/payments");
+    await expect(admin.getByText("Waiting for you (1)")).toBeVisible();
+    await expect(admin.getByText("Tito Boy").first()).toBeVisible();
+    await admin.getByRole("button", { name: /Money arrived: approve/ }).click();
+    await admin.getByRole("button", { name: /Sure\? Mark paid/ }).click();
+    await expect(admin.getByText("Waiting for you (0)")).toBeVisible();
+    await guest.reload();
+    await expect(guest.getByText(/All settled/)).toBeVisible();
+
+    // A tampered link is a plain 404, and replacing a link kills the old one at once.
+    const tampered = await guest.goto(`${link.slice(0, -1)}${link.endsWith("A") ? "B" : "A"}`);
+    expect(tampered?.status()).toBe(404);
+    await admin.goto("/admin/ambag");
+    await expect(admin.getByRole("heading", { level: 1, name: "Ambag" })).toBeVisible();
+    await admin.getByRole("link", { name: /Karaoke night/ }).click();
+    await admin.getByRole("button", { name: "New link for Tito Boy" }).click();
+    await admin.getByRole("button", { name: /Sure\? The old link stops working/ }).click();
+    await expect.poll(async () => (await guest.goto(link))?.status()).toBe(404);
+    await guest.context().close();
+
+    // Later, the guest asks for an account: "Invite to join" keeps them as the same person, and the result stays on screen
+    // even though their row moves from the guests list to the members list.
+    await admin.goto("/admin/members");
+    const guestsSection = admin.getByRole("region", { name: /Friends without an account/ });
+    await guestsSection.getByLabel("Email for Tito Boy").fill("tito@e2e.test");
+    await guestsSection.getByRole("button", { name: /Invite to join/ }).click();
+    await expect(admin.getByText(/Invitation emailed to tito@e2e\.test/)).toBeVisible();
+    await expect(admin.getByRole("region", { name: /^Everyone/ }).getByRole("listitem").filter({ hasText: "Tito Boy" })).toBeVisible();
+    await waitForMail("tito@e2e.test", /invited/i);
   });
 
   await test.step("the admin's email log shows what was sent", async () => {

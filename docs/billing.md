@@ -42,6 +42,17 @@ The admin list's status filters follow the same rule (an unpaid statement past i
 
 Only `UNPAID` or `OVERDUE` statements can be cancelled; a reason (3 to 200 characters) is required and stays admin-only (members just see "Cancelled by admin"); the admin UI uses a two-step confirm. The amount is kept, the balance becomes zero, `cancelled_at` / `cancel_reason` are stored, and an audit entry records who, why and the previous status. The cycle stays used, so it can never be regenerated. The status check is repeated inside the UPDATE so two admins cannot both succeed.
 
+## Ambag: one-off split bills (`src/server/bills`, `src/lib/split`)
+
+Besides the monthly plans, the admin can split a one-off bill (dinner, the internet, a gift) between friends: **Admin → More → Ambag → New ambag**. The admin fronted the money; each friend gets their own statement to pay the admin back, using the same pay, report and verify flow as everything else.
+
+- **Splitting** (`src/lib/split`, pure, integer centavos): equally, by shares (a couple counts as 2), by percentage (must total exactly 100%), by exact amounts (must total the bill), or itemised with shared extras (tax, service charge, tip, delivery, discount; added in a later release). Shares always add up to the total exactly; the odd centavo goes to a different person each time (a deterministic hash tie-break), never always the same one. The builder runs the same engine as the server for its live preview, and the server recomputes everything on save.
+- **What gets created** (`createBill`): the bill (with the split as entered and as computed), and one statement per friend with something to pay. The admin's own share is counted but not billed. Statements are ordinary statements (reference `AMBAG-YYYYMM-XXXXXX`, one per person per bill, due at the end of the chosen day in Manila) attached to a single hidden "one-off" plan, so payment, verification, overdue marking, reminders and cancelling all work unchanged. They are kept out of the monthly tiles on the overview, which counts them separately as "ambag open".
+- **Friends see only their own share.** A friend's statement shows the bill, the total, the split method and *their own* lines, never anyone else's name or amount (`getShareForStatement`).
+- **No account needed.** Friends without an account are *guests* (**Members → Friends without an account**, or added inline in the builder). Every person in a bill has a private link (see [authentication.md](authentication.md#private-share-links-friends-without-an-account)) that the admin copies from the bill page, with a ready-made chat message. Guests with an email also get the usual emails; a guest can later be invited to join, keeping their history.
+- **Editing and cancelling.** A bill is not edited once sent: cancel it (with a reason) and make a new one. Cancelling is all or nothing and is refused while anyone has paid or reported paying, so that money is dealt with first (Verify).
+- **Why the database looks the way it does:** statements require a plan and a month, so bill statements point at one hidden plan (`subscription.kind = 'ONE_OFF'`, never listed, edited or generated for) and `statement.bill_id` marks them; the old one-statement-per-member-plan-month index became two partial indexes so a friend can be in several bills a month. See [database.md](database.md).
+
 ## Access
 
 - Members read only their own statements: ownership is part of the query, so another member's id is a 404.
