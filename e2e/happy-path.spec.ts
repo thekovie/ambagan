@@ -242,6 +242,30 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await waitForMail("tito@e2e.test", /invited/i);
   });
 
+  await test.step("an itemised ambag: each person pays for what they had, with service and delivery shared", async () => {
+    await admin.goto("/admin/ambag/new");
+    await admin.getByLabel("What was it for?").fill("Pizza night");
+    await admin.getByRole("checkbox", { name: "Ana Reyes" }).check();
+    await admin.getByText("By items", { exact: true }).click();
+    await admin.getByLabel("Name of item 1").fill("Large pizza");
+    await admin.getByLabel("Price of Large pizza in pesos").fill("600");
+    await admin.getByRole("group", { name: /Who shared Large pizza/ }).getByRole("button", { name: "Everyone" }).click();
+    await admin.getByRole("button", { name: "Add an item" }).click();
+    await admin.getByLabel("Name of item 2").fill("Beer bucket");
+    await admin.getByLabel("Price of Beer bucket in pesos").fill("300");
+    await admin.getByRole("group", { name: /Who shared Beer bucket/ }).getByRole("button", { name: "Ana Reyes" }).click();
+    await admin.getByRole("group", { name: "Add a charge or discount" }).getByRole("button", { name: "Service charge" }).click();
+    // Items 900, service charge 10% = 90, so 990 in all; the receipt total is checked against it.
+    await admin.getByLabel("Total on the receipt (optional)").fill("1000");
+    await expect(admin.getByText(/The receipt says ₱1,000\.00 but the items and extras add up to ₱990\.00/).first()).toBeVisible();
+    await admin.getByLabel("Total on the receipt (optional)").fill("990");
+    await expect(admin.getByText("Balanced: ₱990.00 split between 2").first()).toBeVisible();
+    await admin.getByRole("button", { name: "Create ambag" }).click();
+    await expect(admin.getByRole("heading", { level: 1, name: "Pizza night" })).toBeVisible();
+    // Ana had half the pizza (300) and all the beer (300), plus 10% service: 660. The admin's share is 300 + 30 = 330.
+    await expect(admin.getByText("Your own share").locator("..").getByText("₱330.00")).toBeVisible();
+  });
+
   await test.step("the admin's email log shows what was sent", async () => {
     await admin.goto("/admin/notifications");
     await expect(admin.getByText(/Payment approved/).first()).toBeVisible();
