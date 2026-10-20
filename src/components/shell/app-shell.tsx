@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { AvatarMenu } from "@/components/shell/avatar-menu";
 import { Dock } from "@/components/shell/dock";
 import { HOME, type ShellVariant } from "@/components/shell/nav";
+import { PendingRefresh } from "@/components/shell/pending-refresh";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -50,6 +51,7 @@ export function AppShell({ variant, user, pendingCount, children }: AppShellProp
       </main>
 
       <Dock variant={variant} pendingCount={pendingCount} />
+      {variant === "admin" ? <PendingRefresh /> : null}
     </div>
   );
 }

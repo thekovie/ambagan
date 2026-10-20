@@ -459,3 +459,17 @@ Auth and member screens finished in the new look; no copy, routes or behaviour c
 
 ### Verification
 437 tests, typecheck, lint, production build, e2e journey. Screenshots (light and dark) reviewed for login, dashboard, statements, detail, pay, history and settings. The all-screens computed-contrast walk is done once in PR 3, when every screen is in the new look.
+
+## 2026-10-20 — UI reroll "Sticker Book" (feat/sticker-admin, PR 3 of 4)
+
+### What changed
+All seven admin screens in the new look, plus the live count on the dock's Verify item.
+- Sections and list rows are soft `.sheet` cards (members, plans, payment methods, backups, daily run, statements, emails). The verify queue is one card per payment with a butter header carrying the member's name; **Approve is the only candy button** in the queue. Email totals are pastel tiles, still labelled in words.
+- **Server touches (the only two):** `countPendingPayments(db)` in `server/payments/verify.ts` (one `count()` over `status = 'PENDING'`, covered by the existing status index; not the N+1 `listPendingPayments`) with a unit test; `refresh()` in the admin payment actions now calls `revalidatePath("/admin", "layout")` (a superset of the three paths it replaced) so the badge follows approve/decline.
+- The admin layout computes the count after `requireAdmin()`, so it is never computed or shown to a non-admin. The badge is `aria-hidden`; the link's name is "Verify, N waiting"; it shows "9+" above nine and sits on the icon's corner, clear of the label.
+
+### Independent review (admin data flow) and what changed
+No high findings. The medium: the badge is computed when the layout renders, so a member reporting a payment while the admin sits on another page would not move it until a reload. Fixed with a small client `PendingRefresh` in the admin shell that refreshes the server-rendered shell when the tab becomes visible and once a minute while it is (form fields keep their values). Checked in the browser: with nothing pending the badge was absent; after a payment was added behind the page's back and the tab-visible event fired, it showed "1" without a reload. Also re-indented the restructured verify card. Not changed: class order (`sheet p-5 … flex`) varies between files; harmless since `.sheet` sets no padding.
+
+### Verification
+438 tests (one new), typecheck, lint, production build, e2e (now asserts "Verify, 1 waiting" before approval and "Verify" after), `pnpm audit --prod` clean. Computed-contrast walk (every visible text element against its real background, light and dark) found no failures on Verify, Overview, Emails and Settings; the only hits were the dock's intentionally invisible collapsed labels. Screenshots reviewed at 390px for all seven screens and at 1440px for Overview and Verify.

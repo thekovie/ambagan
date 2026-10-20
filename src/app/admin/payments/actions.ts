@@ -23,9 +23,8 @@ const ERRORS = {
 
 function refresh() {
   kickEmailQueue();
-  revalidatePath("/admin/payments");
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/statements");
+  // The layout carries the dock's "waiting for you" count, so refresh it with the pages.
+  revalidatePath("/admin", "layout");
 }
 
 /** Confirms the money arrived. Re-authorises as an admin on every call. */

@@ -27,23 +27,23 @@ export default async function AdminSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Settings</h1>
+        <h1 className="font-display text-display">Settings</h1>
       </header>
 
       <section aria-labelledby="methods" className="flex max-w-3xl flex-col gap-2">
-        <h2 id="methods" className="font-display text-4xl">
+        <h2 id="methods" className="font-display text-title">
           Payment methods
         </h2>
         <p className="text-muted-foreground">
           Members pay these accounts outside the app, then report the payment here for you to verify. Only methods you
           switch on are shown to members.
         </p>
-        <div className="flex flex-col divide-y divide-border">
+        <div className="flex flex-col gap-6">
           {methods.map((method) => (
-            <section key={method.id} aria-labelledby={`method-${method.id}`} className="flex flex-col gap-5 py-8">
-              <h3 id={`method-${method.id}`} className="font-display text-3xl">
+            <section key={method.id} aria-labelledby={`method-${method.id}`} className="sheet p-5 sm:p-6 flex flex-col gap-5">
+              <h3 id={`method-${method.id}`} className="font-display text-title">
                 {method.label}
               </h3>
               <PaymentMethodForm

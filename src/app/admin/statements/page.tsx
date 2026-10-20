@@ -40,9 +40,9 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
     .map((p) => ({ value: p.id, label: p.name }));
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Statements</h1>
+        <h1 className="font-display text-display">Statements</h1>
         <p className="mt-3 text-muted-foreground">
           Issue a month&apos;s statements, fill in any that are missing, or cancel one. Running it again never creates
           duplicates or changes statements that already exist.
@@ -51,15 +51,15 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
 
       <DailyRunPanel runs={listJobRuns(db, DAILY_JOB, 5)} />
 
-      <section aria-labelledby="generate" className="flex max-w-2xl flex-col gap-4">
-        <h2 id="generate" className="font-display text-3xl">
+      <section aria-labelledby="generate" className="sheet p-5 sm:p-6 flex max-w-2xl flex-col gap-4">
+        <h2 id="generate" className="font-display text-title">
           Generate missing
         </h2>
         <GenerateForm periods={periods} plans={plans} />
       </section>
 
       <section aria-labelledby="all" className="flex flex-col gap-5">
-        <h2 id="all" className="font-display text-3xl">
+        <h2 id="all" className="font-display text-title">
           All statements ({rows.length})
         </h2>
 
@@ -98,11 +98,11 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
             description="Nothing here yet for that filter. Generate a month above, or clear the filters."
           />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="flex flex-col gap-3">
             {rows.map((row) => {
               const shown = effectiveStatus(row, now);
               return (
-                <li key={row.id} className="flex flex-col gap-3 py-5">
+                <li key={row.id} className="sheet flex flex-col gap-3 p-4 sm:p-5">
                   <div className="grid items-start gap-x-6 gap-y-2 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]">
                     <div className="min-w-0">
                       <p className="truncate font-bold">{row.memberName || row.memberEmail}</p>

@@ -9,6 +9,7 @@ import { submitPayment } from "@/server/payments/submit";
 import {
   approvePayment,
   declinePayment,
+  countPendingPayments,
   listPendingPayments,
   listReviewedPayments,
 } from "@/server/payments/verify";
@@ -294,6 +295,17 @@ describe("listPendingPayments", () => {
     const p = report(ana.id, addStatement(ana.id).id);
     approvePayment(db, { paymentId: p.id, adminId: admin.id, now: NOW });
     expect(listPendingPayments(db)).toEqual([]);
+  });
+});
+
+describe("countPendingPayments", () => {
+  it("counts only payments still waiting for the admin", () => {
+    expect(countPendingPayments(db)).toBe(0);
+    const a = report(ana.id, addStatement(ana.id).id);
+    report(ben.id, addStatement(ben.id).id);
+    expect(countPendingPayments(db)).toBe(2);
+    approvePayment(db, { paymentId: a.id, adminId: admin.id, now: NOW });
+    expect(countPendingPayments(db)).toBe(1);
   });
 });
 

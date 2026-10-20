@@ -37,7 +37,7 @@ export function MemberRow({ member }: { member: MemberView }) {
   const error = resend.error ?? toggle.error;
 
   return (
-    <li className={cn("flex flex-col gap-4 py-5", !member.isActive && "opacity-80")}>
+    <li className={cn("sheet flex flex-col gap-4 p-4 sm:p-5", !member.isActive && "opacity-80")}>
       <div className="flex items-start gap-4">
         <span
           aria-hidden="true"

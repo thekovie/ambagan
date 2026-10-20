@@ -25,8 +25,8 @@ export function BackupsPanel({ backups, listError, runs, dir, keep }: BackupsPan
   const lastFailed = lastRun?.status === "FAILED";
 
   return (
-    <section aria-labelledby="backups" className="flex max-w-3xl flex-col gap-4">
-      <h2 id="backups" className="font-display text-4xl">
+    <section aria-labelledby="backups" className="sheet p-5 sm:p-6 flex max-w-3xl flex-col gap-4">
+      <h2 id="backups" className="font-display text-title">
         Backups
       </h2>
       <p className="text-muted-foreground">

@@ -49,6 +49,7 @@ export function ReviewActions({ paymentId, memberName, amountMatches }: ReviewAc
         ) : null}
         <div>
           <ConfirmButton
+            variant="candy"
             confirmLabel={
               <>
                 Sure? Mark paid<span className="sr-only"> for {memberName}</span>

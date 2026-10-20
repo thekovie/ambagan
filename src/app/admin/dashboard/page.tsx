@@ -44,9 +44,9 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Overview</h1>
+        <h1 className="font-display text-display">Overview</h1>
         <p className="mt-3 text-muted-foreground">{month}</p>
       </header>
 
@@ -94,7 +94,7 @@ export default async function AdminDashboardPage() {
       )}
 
       <section aria-labelledby="needs" className="flex max-w-2xl flex-col gap-2">
-        <h2 id="needs" className="font-display text-3xl">
+        <h2 id="needs" className="font-display text-title">
           At a glance
         </h2>
         <ul className="divide-y divide-border">
@@ -116,7 +116,7 @@ export default async function AdminDashboardPage() {
 
       {tickets.length > 0 ? (
         <section aria-labelledby="month-stickers" className="flex flex-col gap-5">
-          <h2 id="month-stickers" className="font-display text-3xl">
+          <h2 id="month-stickers" className="font-display text-title">
             {month} stickers
           </h2>
           <ul className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
