@@ -536,3 +536,24 @@ Rollback caveat documented in `docs/deployment.md`: an older image cannot genera
 
 ### Verification
 524 tests (41 new here), typecheck, lint, production build. Local e2e was not run (the demo server held port 3100); CI runs it before merge.
+
+## 2026-10-21 — Ambag, PR 3 of 6: private share links (feat/ambag-share-links)
+
+### What changed
+Friends no longer need an account to see and pay their share. Each person's statement in a bill has a private link, `/s/<token>`, that shows their share and how it was worked out (only their own lines), the active payment accounts with QR, and a form to report their payment; the admin still verifies every payment against the real account.
+- **Token:** `statementId.version.signature` (HMAC-SHA256, key derived from `AUTH_SECRET` with HKDF), derived not stored; replacing a link bumps `statement.link_version` and the old URL dies at once. Valid until 90 days after the due date; read-only once paid or cancelled. Every failure is the same plain 404.
+- **Pages and routes:** `/s/[token]` (page, layout, action) and `/api/s/[token]/qr/[methodId]`. The member payment form and methods list were made reusable (action and QR path injected), and the form-reading code was extracted so members and guests share one implementation.
+- **Guests:** refused at sign-in; guests with a real address get emails that link to their private page; placeholder addresses are never emailed.
+- **Guard test:** every action, route and page under a private link must start with `requireShareAccess` and honour its answer; the test also fails for unknown file types under those folders. Proven by deliberately putting work before the check and watching it fail.
+- Checked live in a browser: a guest with no session opened a link on a phone, saw only their share, loaded the QR through the token route, reported a payment, and the admin got the verify request.
+
+### Independent security review and what changed
+No critical or high findings (no forgery, no cross-statement access, no guest sign-in bypass). Fixed:
+- **The failure limiter could lock a real friend out of a valid link** (many people share one mobile or office address). Valid links are now never counted or limited; only bad links count. A test proves a valid link works from an address that has used up its failures.
+- **Emailed links were stored in plaintext in the email queue** (a credential in the database and backups, and a stale link after replacement). Queued emails now carry only a flag, and the live link is made when the email is sent; a test proves replacing a link fixes queued and resent mail.
+- Tokens have one spelling per link (no `00` or `+0` aliases); non-string input cannot crash the action; the signing key is HKDF-derived; `Referrer-Policy` is `same-origin` (with `no-referrer`, a form post without JavaScript sends `Origin: null` and is rejected); the guard tests can no longer pass vacuously.
+- Documented for operators: cap `/s/*` request bodies and keep those paths out of access logs at the proxy; rotating `AUTH_SECRET` invalidates every link.
+- Deferred, deliberately: the admin screen to copy, replace and message links is PR 4 (`rotateShareLink` exists and is tested, but nothing calls it yet); a leaked link can only file one bogus report on one statement, which the admin declines; flagging "reported via private link" in the verify queue and deduplicating duplicate-reference audit rows are small follow-ups.
+
+### Verification
+560 tests (36 new here), typecheck, lint, production build, e2e journey.

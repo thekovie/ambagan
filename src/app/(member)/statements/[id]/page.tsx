@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
-import { PaymentMethodsList } from "@/components/payment-methods-list";
+import { PaymentMethodsList, methodCard } from "@/components/payment-methods-list";
 import { PrintButton } from "@/components/print-button";
 import { Sticker } from "@/components/sticker";
 import { StatementAction } from "@/components/statement-action";
@@ -86,7 +86,7 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
             How to pay
           </h2>
           {plan?.paymentInstructions ? <p className="whitespace-pre-line">{plan.paymentInstructions}</p> : null}
-          <PaymentMethodsList methods={methods} />
+          <PaymentMethodsList methods={methods.map(methodCard)} />
         </section>
       ) : null}
 

@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      {
+        // Private share links: the URL is the credential, so it must never reach a search engine, a cache or another site.
+        source: "/s/:path*",
+        headers: [
+          // same-origin (not no-referrer): the link never reaches another site, but a form post without JavaScript still carries a real Origin.
+          { key: "Referrer-Policy", value: "same-origin" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
     ];
   },
   turbopack: {

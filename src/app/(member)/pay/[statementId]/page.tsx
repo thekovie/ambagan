@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PaymentMethodsList } from "@/components/payment-methods-list";
+import { PaymentMethodsList, methodCard } from "@/components/payment-methods-list";
 import { Sticker } from "@/components/sticker";
 import { toLocalInputValue } from "@/lib/dates";
 import { effectiveStatus, stickerProps } from "@/lib/statement-view";
@@ -9,6 +9,7 @@ import { requireUser } from "@/server/auth/session";
 import { getStatementForUser } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
 import { listPaymentMethods } from "@/server/payments/methods";
+import { submitPaymentAction } from "./actions";
 import { PaymentForm } from "./payment-form";
 
 export const metadata: Metadata = { title: "Report a payment" };
@@ -54,7 +55,7 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
               1. Send the money
             </h2>
             <p className="text-muted-foreground">Pay from your own wallet or bank app using one of these, then come back here.</p>
-            <PaymentMethodsList methods={methods} />
+            <PaymentMethodsList methods={methods.map(methodCard)} />
           </section>
 
           <section aria-labelledby="report" className="sheet flex flex-col gap-4 p-5 sm:p-6">
@@ -65,6 +66,7 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
               statementId={statement.id}
               currency={statement.currency}
               outstandingMinor={statement.outstandingMinor}
+              action={submitPaymentAction}
               methods={methods.map((m) => ({ id: m.id, label: m.label, accountName: m.accountName }))}
               defaultDate={toLocalInputValue(new Date())}
             />

@@ -12,7 +12,7 @@ import { formatMinor, parsePesosToMinor } from "@/lib/money";
 import { applyReceipt, detectedFields, type DetectedField } from "@/lib/ocr/apply";
 import type { ParsedReceipt } from "@/lib/ocr/parse";
 import { cn } from "@/lib/utils";
-import { submitPaymentAction, type PaymentFormState } from "./actions";
+import type { PaymentFormState } from "@/server/payments/form-data";
 
 export interface MethodOption {
   id: string;
@@ -20,7 +20,11 @@ export interface MethodOption {
   accountName: string | null;
 }
 
+/** Reports the payment. Members and private-link holders pass their own (the link one ignores the statement id). */
+export type PaymentFormAction = (prev: PaymentFormState, formData: FormData) => Promise<PaymentFormState>;
+
 interface PaymentFormProps {
+  action: PaymentFormAction;
   statementId: string;
   currency: string;
   outstandingMinor: number;
@@ -49,8 +53,8 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   ) : null;
 }
 
-export function PaymentForm({ statementId, currency, outstandingMinor, methods, defaultDate }: PaymentFormProps) {
-  const [state, action, pending] = useActionState<PaymentFormState, FormData>(submitPaymentAction, {});
+export function PaymentForm({ action: submit, statementId, currency, outstandingMinor, methods, defaultDate }: PaymentFormProps) {
+  const [state, action, pending] = useActionState<PaymentFormState, FormData>(submit, {});
   const uid = useId();
   const id = (field: string) => `${uid}-${field}`;
   const errors = state.errors ?? {};

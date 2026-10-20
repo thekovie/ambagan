@@ -33,6 +33,8 @@ export interface NotificationPayload {
   reference?: string;
   /** App-relative link target, joined to APP_URL when rendered. */
   path?: string;
+  /** "1" when the reader has no account: the worker replaces `path` with their private link at send time. */
+  shareLink?: string;
   /** Admin mails: who reported the payment. */
   memberName?: string;
   /** Admin mails: which of our accounts they say they paid. */
@@ -135,7 +137,8 @@ export function copyFor(type: NotificationType, p: NotificationPayload): Notific
           "The admin will check that the money arrived in the account. We'll email you once it's confirmed.",
         ],
         facts,
-        cta: { label: "See payment history", path: "/payments" },
+        // A guest has no payment history to sign in to: their private link (the only /s/ path) is where they follow it.
+        cta: { label: "See payment history", path: p.path?.startsWith("/s/") ? p.path : "/payments" },
       };
     case "ADMIN_VERIFY_REQUEST":
       return {

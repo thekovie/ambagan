@@ -72,6 +72,10 @@ location / {
 }
 ```
 
+## Private share links at the proxy
+
+Private links (`/s/<token>` and `/api/s/<token>/...`) carry their credential in the URL. At the reverse proxy, (1) limit request bodies for `/s/*` to about 64 KB (the app's 2 MB limit is for admin QR uploads), and (2) leave those paths out of access logs. The app already sends `Referrer-Policy: same-origin`, `X-Robots-Tag: noindex` and `Cache-Control: no-store` for them. Rotating `AUTH_SECRET` signs everyone out and invalidates every private link.
+
 ## Security headers
 
 Every page gets `Strict-Transport-Security` (ignored over plain http) and a **Content-Security-Policy with a fresh nonce** (`src/proxy.ts`): scripts only run with that nonce, nothing loads from another origin, framing is denied, and forms may only post to the app itself. Two allowances are needed on purpose: `'wasm-unsafe-eval'` and `worker-src blob:`, so the receipt scanner (Tesseract running WebAssembly in a worker, entirely in the browser) works; and inline styles, because React sets style attributes. `upgrade-insecure-requests` is added only when `APP_URL` is `https`. The OCR files are served from the app itself, never a CDN. Also set: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`. QR images are served with their own sandboxing CSP and are not cached by shared caches.
