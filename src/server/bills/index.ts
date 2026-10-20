@@ -5,9 +5,11 @@ export {
   getBillDetail,
   getShareForStatement,
   listBills,
+  listParticipants,
   shareOf,
   type BillDetail,
   type BillDetailRow,
   type BillListRow,
+  type Participant,
   type ShareView,
 } from "./queries";

@@ -1,0 +1,257 @@
+"use client";
+
+import { HandCoins, TriangleAlert } from "lucide-react";
+import { useActionState, useCallback, useEffect, useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { formatMinor, parsePesosToMinor } from "@/lib/money";
+import { buildSplitInput, computeSplit, type DraftMethod } from "@/lib/split";
+import { cn } from "@/lib/utils";
+import type { Participant } from "@/server/bills";
+import { createBillAction, type CreateBillState } from "../actions";
+import { GuestForm, type AddedGuest } from "../guest-form";
+
+type Method = DraftMethod;
+
+const METHODS: { value: Method; label: string; hint: string }[] = [
+  { value: "EQUAL", label: "Equally", hint: "Everyone pays the same." },
+  { value: "SHARES", label: "By shares", hint: "A couple counts as 2 shares, someone eating light as 1." },
+  { value: "PERCENT", label: "By percent", hint: "Give each person a percentage. They must add up to 100%." },
+  { value: "EXACT", label: "Exact amounts", hint: "Type what each person owes. It must add up to the total." },
+];
+
+interface Row {
+  included: boolean;
+  shares: string;
+  percent: string;
+  amount: string;
+}
+
+const blank = (included: boolean): Row => ({ included, shares: "1", percent: "", amount: "" });
+
+/** The announcement for screen readers waits for typing to settle, so they hear the state and not every keystroke. */
+function useSettled<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+
+interface BillBuilderProps {
+  /** The signed-in admin: the one who paid, whose own share is counted but never billed. */
+  currentUserId: string;
+  /** Made by the server page, so a refresh gives a new bill and a double submit is the same one. Also the rounding seed. */
+  billId: string;
+  defaultDueDate: string;
+  people: Participant[];
+}
+
+export function BillBuilder({ currentUserId, billId, defaultDueDate, people: initialPeople }: BillBuilderProps) {
+  const [state, action, pending] = useActionState<CreateBillState, FormData>(createBillAction, {});
+  const uid = useId();
+  const formId = `${uid}-form`;
+
+  const [people, setPeople] = useState(initialPeople);
+  const [rows, setRows] = useState<Record<string, Row>>(() => Object.fromEntries(initialPeople.map((p) => [p.id, blank(p.id === currentUserId)])));
+  const [title, setTitle] = useState("");
+  const [note, setNote] = useState("");
+  const [dueDate, setDueDate] = useState(defaultDueDate);
+  const [totalText, setTotalText] = useState("");
+  const [method, setMethod] = useState<Method>("EQUAL");
+
+  const update = (id: string, patch: Partial<Row>) => setRows((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+  const setAll = (included: boolean) => setRows((current) => Object.fromEntries(Object.entries(current).map(([id, row]) => [id, { ...row, included }])));
+  const addGuest = useCallback((guest: AddedGuest) => {
+    setPeople((current) => [...current, { id: guest.id, name: guest.name, email: guest.email, isGuest: true, isAdmin: false }]);
+    setRows((current) => ({ ...current, [guest.id]: blank(true) }));
+  }, []);
+
+  const adminId = currentUserId;
+  const included = people.filter((p) => rows[p.id]?.included);
+
+  // The split as the server will see it, or why it cannot be built yet. Recomputed on every render: it is cheap
+  // (at most 50 people), and building it in one shared place keeps the preview and the saved bill identical.
+  const draft = buildSplitInput({
+    method,
+    totalText,
+    people: included.map((p) => ({ id: p.id, name: p.name, shares: rows[p.id].shares, percent: rows[p.id].percent, amount: rows[p.id].amount })),
+  });
+
+  const outcome = "input" in draft ? computeSplit(draft.input, billId) : null;
+  const amounts = new Map(outcome?.ok ? outcome.result.shares.map((s) => [s.userId, s.amountMinor]) : []);
+  const balance = outcome
+    ? outcome.ok
+      ? `Balanced: ${formatMinor(outcome.result.totalMinor, "PHP")} split between ${outcome.result.shares.filter((share) => share.amountMinor > 0).length}`
+      : outcome.issues[0].message
+    : "waiting" in draft
+      ? draft.waiting
+      : "";
+  const announced = useSettled(balance, 600);
+
+  const collecting = outcome?.ok ? outcome.result.shares.filter((s) => s.userId !== adminId && s.amountMinor > 0) : [];
+  const ownShare = outcome?.ok ? (outcome.result.shares.find((s) => s.userId === adminId)?.amountMinor ?? 0) : 0;
+  const ready = Boolean(outcome?.ok) && title.trim().length > 0 && dueDate.length > 0 && collecting.length > 0;
+  const methodHint = METHODS.find((m) => m.value === method)?.hint;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Only hidden fields live in the real form: the visible ones are outside it, so the guest form can sit among them. */}
+      <form id={formId} action={action}>
+        <input type="hidden" name="billId" value={billId} />
+        <input type="hidden" name="title" value={title} />
+        <input type="hidden" name="note" value={note} />
+        <input type="hidden" name="dueDate" value={dueDate} />
+        <input type="hidden" name="split" value={"input" in draft ? JSON.stringify(draft.input) : "{}"} />
+      </form>
+
+      <section aria-labelledby="bill" className="sheet flex flex-col gap-5 p-5 sm:p-6">
+        <h2 id="bill" className="font-display text-title">
+          The bill
+        </h2>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${uid}-title`}>What was it for?</Label>
+          <Input id={`${uid}-title`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} autoComplete="off" placeholder="Dinner at Gerry's" />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${uid}-total`}>Total you paid (₱)</Label>
+            <Input id={`${uid}-total`} value={totalText} onChange={(e) => setTotalText(e.target.value)} inputMode="decimal" autoComplete="off" placeholder="1,500.00" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${uid}-due`}>Everyone pays by</Label>
+            <Input id={`${uid}-due`} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${uid}-note`}>Note for everyone (optional)</Label>
+          <Textarea id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Salamat sa lahat!" />
+        </div>
+      </section>
+
+      <section aria-labelledby="who" className="sheet flex flex-col gap-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="who" className="font-display text-title">
+            Who&apos;s in?
+          </h2>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setAll(true)}>
+              Everyone
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setAll(false)}>
+              Nobody
+            </Button>
+          </div>
+        </div>
+        <ul className="flex flex-col">
+          {people.map((person) => (
+            <li key={person.id}>
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-2 hover:bg-secondary">
+                <input type="checkbox" className="size-5 accent-candy" checked={rows[person.id]?.included ?? false} onChange={(e) => update(person.id, { included: e.target.checked })} />
+                <span className="font-semibold">{person.name}</span>
+                {person.id === currentUserId ? <span className="rounded-full bg-st-lilac px-2.5 py-0.5 text-xs font-bold text-st-ink">You paid</span> : null}
+                {person.isGuest ? <span className="rounded-full bg-st-butter px-2.5 py-0.5 text-xs font-bold text-st-ink">Guest</span> : null}
+              </label>
+            </li>
+          ))}
+        </ul>
+        <GuestForm onAdded={addGuest} />
+      </section>
+
+      <section aria-labelledby="how" className="sheet flex flex-col gap-4 p-5 sm:p-6">
+        <h2 id="how" className="font-display text-title">
+          How to split it
+        </h2>
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="sr-only">Split method</legend>
+          {METHODS.map((m) => (
+            <label key={m.value} className="relative">
+              <input type="radio" name={`${uid}-method`} value={m.value} checked={method === m.value} onChange={() => setMethod(m.value)} className="peer sr-only" />
+              <span className="flex min-h-11 cursor-pointer items-center rounded-full border-2 border-input px-4 text-sm font-bold transition-colors peer-checked:border-transparent peer-checked:bg-st-lilac peer-checked:text-st-ink peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
+                {m.label}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <p className="text-sm text-muted-foreground">{methodHint}</p>
+
+        {included.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-border">
+            {included.map((person) => {
+              const row = rows[person.id];
+              const amount = amounts.get(person.id);
+              const typed = method === "EXACT" ? parsePesosToMinor(row.amount || "0") : null;
+              return (
+                <li key={person.id} className="flex items-center gap-3 py-3">
+                  <span className="min-w-0 flex-1 truncate font-semibold">{person.name}</span>
+                  {method === "SHARES" ? (
+                    <Input aria-label={`Shares for ${person.name}`} className="w-20 text-center" inputMode="numeric" value={row.shares} onChange={(e) => update(person.id, { shares: e.target.value })} />
+                  ) : null}
+                  {method === "PERCENT" ? (
+                    <div className="flex items-center gap-1">
+                      <Input aria-label={`Percent for ${person.name}`} className="w-24 text-right" inputMode="decimal" placeholder="0" value={row.percent} onChange={(e) => update(person.id, { percent: e.target.value })} />
+                      <span aria-hidden="true" className="font-bold">
+                        %
+                      </span>
+                    </div>
+                  ) : null}
+                  {method === "EXACT" ? (
+                    <Input aria-label={`Amount for ${person.name} in pesos`} className="w-32 text-right" inputMode="decimal" placeholder="0.00" value={row.amount} onChange={(e) => update(person.id, { amount: e.target.value })} />
+                  ) : null}
+                  {/* A plain span, not <output>: output is an implicit live region and would announce every keystroke. */}
+                  <span className="w-28 shrink-0 text-right font-bold tabular-nums">
+                    <span className="sr-only">{person.name} owes </span>
+                    {amount !== undefined ? formatMinor(amount, "PHP") : typed !== null && method === "EXACT" ? formatMinor(typed, "PHP") : "—"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </section>
+
+      <section aria-labelledby="summary" className="sheet flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="summary" className="font-display text-title">
+          Before you send
+        </h2>
+        {outcome?.ok ? (
+          <p>
+            You front <strong>{formatMinor(outcome.result.totalMinor, "PHP")}</strong>
+            {ownShare > 0 ? <> and your own share is {formatMinor(ownShare, "PHP")}</> : null}. {collecting.length} {collecting.length === 1 ? "friend gets" : "friends get"} their own link and a reminder
+            email (guests without an email get a link for you to share).
+          </p>
+        ) : (
+          <p className="text-muted-foreground">Fill in the bill and who&apos;s in to see the summary.</p>
+        )}
+        {state.error ? (
+          <p role="alert" className="flex items-start gap-2 font-semibold text-destructive">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {state.error}
+          </p>
+        ) : null}
+        <div>
+          <Button type="submit" form={formId} variant="candy" size="lg" disabled={!ready || pending}>
+            <HandCoins data-icon="inline-start" /> {pending ? "Creating…" : "Create ambag"}
+          </Button>
+        </div>
+      </section>
+
+      {/* The one live region: it announces the state of the split (left to assign, balanced), not every keystroke. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {announced}
+      </p>
+      <p
+        aria-hidden="true"
+        className={cn(
+          "sticky bottom-24 z-10 mx-auto w-fit max-w-full rounded-full px-4 py-2 text-sm font-bold shadow-[var(--sh-dock)]",
+          outcome?.ok ? "bg-st-mint text-st-ink" : "bg-card text-foreground ring-1 ring-border",
+        )}
+      >
+        {balance}
+      </p>
+    </div>
+  );
+}

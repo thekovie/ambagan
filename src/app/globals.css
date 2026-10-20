@@ -153,7 +153,7 @@
     scrollbar-width: thin;
     /* A focused field is never hidden behind the sticky top bar or the floating dock. */
     scroll-padding-top: 4.5rem;
-    scroll-padding-bottom: 7rem;
+    scroll-padding-bottom: 9rem;
   }
   body {
     @apply bg-background text-foreground antialiased;

@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   CircleUser,
   History,
+  HandCoins,
   House,
   LayoutDashboard,
   Mail,
@@ -43,6 +44,7 @@ export const NAV: Record<ShellVariant, { primary: NavItem[]; more: NavItem[] }> 
       { href: "/admin/statements", label: "Statements", icon: ReceiptText },
     ],
     more: [
+      { href: "/admin/ambag", label: "Ambag", icon: HandCoins },
       { href: "/admin/members", label: "Members", icon: Users },
       { href: "/admin/subscriptions", label: "Plans", icon: Repeat },
       { href: "/admin/notifications", label: "Emails", icon: Mail },

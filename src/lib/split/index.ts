@@ -1,5 +1,6 @@
 export { apportion, fnv1a, type Weighted } from "./apportion";
 export { computeSplit, formatBp, parsePercentToBp } from "./compute";
+export { buildSplitInput, type DraftMethod, type DraftPerson, type SplitDraft } from "./draft";
 export {
   EXTRA_KINDS,
   SPLIT_LIMITS,

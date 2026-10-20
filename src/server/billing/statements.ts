@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, lt, or } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
 import type { StatementStatus } from "@/lib/enums";
 import type { Db } from "@/server/db/client";
+import { displayEmail } from "@/lib/guest";
 import { statements, users } from "@/server/db/schema";
 
 export type Statement = typeof statements.$inferSelect;
@@ -135,5 +136,5 @@ export function listStatements(db: Db, filters: StatementFilters): AdminStatemen
     .orderBy(desc(statements.period), users.email)
     .limit(filters.limit ?? 500)
     .all()
-    .map((r) => ({ ...r.statement, memberName: r.memberName, memberEmail: r.memberEmail }));
+    .map((r) => ({ ...r.statement, memberName: r.memberName, memberEmail: displayEmail(r.memberEmail) }));
 }

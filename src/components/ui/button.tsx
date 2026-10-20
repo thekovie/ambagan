@@ -20,7 +20,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-accent aria-expanded:bg-accent",
         ghost: "text-foreground hover:bg-muted aria-expanded:bg-muted",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/40",
+          // White on the light theme's deep red; plum ink on the dark theme's light salmon (white there is only 2.5:1).
+          "bg-destructive text-white dark:text-st-ink hover:bg-destructive/90 focus-visible:ring-destructive/40",
         link: "rounded-sm text-foreground underline underline-offset-4 hover:text-candy",
       },
       size: {

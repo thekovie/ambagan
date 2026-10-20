@@ -557,3 +557,24 @@ No critical or high findings (no forgery, no cross-statement access, no guest si
 
 ### Verification
 560 tests (36 new here), typecheck, lint, production build, e2e journey.
+
+## 2026-10-21 — Ambag, PR 4 of 6: the admin screens (feat/ambag-admin-ui)
+
+### What changed
+The admin can now create and manage ambag in the app: **More → Ambag**.
+- **List, builder and detail:** `/admin/ambag` (cards with how much is still to collect), `/admin/ambag/new` and `/admin/ambag/[id]`. The builder takes the bill (title, total, due date, note), who is in, and how to split (equally, by shares, by percent, by exact amounts). It previews every person's amount live with the same engine the server uses, with a single debounced screen-reader announcement ("₱5.00 left to assign" / "Balanced"), and a summary ("You front ₱2,000. 3 friends get their own link"). The detail page shows what each person owes and their status, with **Copy link**, **Copy message** (a ready chat message with the link) and **New link** per person, plus cancel-with-reason.
+- **Friends without an account:** added inline in the builder or under **Members → Friends without an account**, and **Invite to join** turns a guest into a member (same person, so their history stays; the guest flag is cleared before the invitation is issued, otherwise accepting it would still be refused at sign-in).
+- Server: `addGuest`, `promoteGuest`, `listParticipants`, and admin-only actions (each starting with `requireAdmin()`, enforced by the existing guard test). The draft-to-split-input logic was extracted to `src/lib/split/draft.ts` so a test can prove the preview and the saved bill always agree (every method, odd centavos, admin outside the split).
+
+### Independent review and what changed
+No high findings; it confirmed the preview and saved bill cannot diverge. Fixed:
+- **Copy failure was invisible** (clipboards are blocked over plain http, which is common for a home server): the link and message now appear in fields to copy by hand.
+- **"Invite to join" result vanished** because the row moves from the Guests list to Members: the result now lives in the guests section, which stays put. The journey test covers it.
+- **A guest's placeholder address leaked onto the Statements and Verify pages**: now "No email" (tested).
+- The guest form no longer wipes what was typed on an error and flags the right field; a bad total says "That total isn't an amount" instead of asking for it again; "you" is the signed-in admin (not the first admin); "Balanced" counts only people actually billed; an inactive guest cannot be promoted; the extra scroll padding keeps the balance bar from covering a focused field.
+- **Contrast walk (real pages, both themes):** found the existing destructive button was white on the dark theme's salmon at 2.5:1. Now plum ink there (6.0:1); light stays white (6.7:1). (The disabled "Create ambag" button and a button inside a closed section were flagged by the walker but are false positives: inactive controls are exempt, and closed sections do not run colour transitions; verified by opening it.)
+- Two things the end-to-end test caught during development: the Members page now has two forms with "Name" and "Email" fields, so the old member-invite step had to be scoped to its own section; and the guest's page kept showing "Sent…" after approval when reloaded with `?sent=1`, now status-first.
+- Deferred (consistent with existing admin screens): 36px small buttons and a 40px email field are under the 44px guideline; the builder's draft logic runs on every keystroke (cheap at 50 people).
+
+### Verification
+579 tests (7 new here), typecheck, lint, production build, `pnpm audit --prod` clean, and the end-to-end journey now covers: building an ambag with an inline guest, the guest paying from a clean browser, the admin verifying, a tampered link giving 404, replacing a link, and Invite to join. Checked in a real browser at 390px.

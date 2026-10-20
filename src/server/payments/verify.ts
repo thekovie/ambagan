@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { PaymentStatus } from "@/lib/enums";
+import { displayEmail } from "@/lib/guest";
 import { recordAudit } from "@/server/audit";
 import { notifyPaymentDecided } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
@@ -230,7 +231,7 @@ export function listPendingPayments(db: Db): PendingPaymentRow[] {
       id: payment.id,
       userId: payment.userId,
       memberName: member.name,
-      memberEmail: member.email,
+      memberEmail: displayEmail(member.email),
       statementId: statement.id,
       statementReference: statement.reference,
       subscriptionName: statement.subscriptionName,
@@ -293,5 +294,6 @@ export function listReviewedPayments(db: Db, limit: number): ReviewedPaymentRow[
     .where(ne(payments.status, "PENDING"))
     .orderBy(desc(payments.reviewedAt))
     .limit(limit)
-    .all();
+    .all()
+    .map((row) => ({ ...row, memberEmail: displayEmail(row.memberEmail) }));
 }

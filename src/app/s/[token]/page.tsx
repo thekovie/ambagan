@@ -64,7 +64,7 @@ export default async function SharePage({ params, searchParams }: PageProps<"/s/
 
       <Sticker {...stickerProps(view.statement, now)} />
 
-      {sent === "1" ? (
+      {sent === "1" && status === "UNDER_VERIFICATION" ? (
         <Notice icon={<CircleCheck />}>Sent. The admin will check that the money arrived, then this will show as paid.</Notice>
       ) : status === "UNDER_VERIFICATION" ? (
         <Notice icon={<Hourglass />}>Thanks! Your payment is waiting for the admin to check it.</Notice>
