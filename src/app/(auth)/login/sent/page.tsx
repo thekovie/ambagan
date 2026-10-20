@@ -12,7 +12,7 @@ export default function CheckEmailPage() {
         <MailCheck className="size-7" aria-hidden="true" />
       </div>
       <div>
-        <h1 className="font-display text-5xl">Check your email</h1>
+        <h1 className="font-display text-display">Check your email</h1>
         <p className="mt-3 text-muted-foreground">
           If that address is on the list, a sign-in link is on its way. It works once and lasts 24 hours. Nothing
           there? Check spam, or ask the admin.

@@ -14,7 +14,7 @@ export function PaymentMethodsList({ methods }: { methods: PaymentMethod[] }) {
       {methods.map((method) => (
         <li key={method.id} className="flex flex-col gap-4 py-6 first:pt-0">
           <div>
-            <h3 className="font-display text-3xl">{method.label}</h3>
+            <h3 className="font-display text-xl">{method.label}</h3>
             {method.accountName ? <p className="mt-1 font-semibold">{method.accountName}</p> : null}
           </div>
 

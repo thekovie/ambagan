@@ -17,7 +17,7 @@ export default async function StatementsPage() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Statements</h1>
+        <h1 className="font-display text-display">Statements</h1>
         <p className="mt-3 text-muted-foreground">Every statement we&apos;ve issued you, newest first.</p>
       </header>
 

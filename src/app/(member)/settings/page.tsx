@@ -12,20 +12,20 @@ export default async function SettingsPage() {
   const email = user.email ?? "";
 
   return (
-    <div className="flex max-w-xl flex-col gap-12">
+    <div className="flex max-w-xl flex-col gap-6">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Settings</h1>
+        <h1 className="font-display text-display">Settings</h1>
       </header>
 
-      <section aria-labelledby="details" className="flex flex-col gap-5">
-        <h2 id="details" className="font-display text-3xl">
+      <section aria-labelledby="details" className="sheet flex flex-col gap-5 p-5 sm:p-6">
+        <h2 id="details" className="font-display text-title">
           Your details
         </h2>
         <ProfileForm name={user.name ?? ""} email={email} />
       </section>
 
-      <section aria-labelledby="emails" className="flex flex-col gap-3">
-        <h2 id="emails" className="font-display text-3xl">
+      <section aria-labelledby="emails" className="sheet flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="emails" className="font-display text-title">
           Emails
         </h2>
         <p className="text-muted-foreground">
@@ -35,8 +35,8 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <section aria-labelledby="session" className="flex flex-col gap-3">
-        <h2 id="session" className="font-display text-3xl">
+      <section aria-labelledby="session" className="flex flex-col gap-3 px-1">
+        <h2 id="session" className="font-display text-title">
           Sign out
         </h2>
         <form action={signOutAction}>

@@ -48,26 +48,26 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
   if (statement.status === "CANCELLED") details.push(["Note", "Cancelled by admin. Nothing is owed on this statement."]);
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-6">
       {/* Print-only letterhead; the on-screen strip below is hidden when printing. */}
       <div className="hidden items-center justify-between border-b border-border pb-4 print:flex">
         <Wordmark />
-        <p className="font-display text-3xl">Statement of Account</p>
+        <p className="font-display text-title">Statement of Account</p>
       </div>
 
       <header className="print:hidden">
         <Link href="/statements" className="text-sm font-semibold text-muted-foreground underline underline-offset-4">
           All statements
         </Link>
-        <h1 className="font-display mt-2 text-5xl md:text-6xl">{periodLabel(statement.period)}</h1>
+        <h1 className="font-display mt-2 text-display">{periodLabel(statement.period)}</h1>
       </header>
 
       <Sticker className="max-w-2xl print:hidden" {...stickerProps(statement)}>
         <StatementAction statement={statement} omitView />
       </Sticker>
 
-      <section aria-labelledby="details" className="flex max-w-2xl flex-col gap-4">
-        <h2 id="details" className="font-display text-3xl">
+      <section aria-labelledby="details" className="sheet flex max-w-2xl flex-col gap-2 p-5 sm:p-6">
+        <h2 id="details" className="font-display text-title">
           Statement details
         </h2>
         <dl className="divide-y divide-border">
@@ -81,8 +81,8 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
       </section>
 
       {payable && (plan?.paymentInstructions || methods.length > 0) ? (
-        <section aria-labelledby="how-to-pay" className="flex max-w-2xl flex-col gap-5 print:hidden">
-          <h2 id="how-to-pay" className="font-display text-3xl">
+        <section aria-labelledby="how-to-pay" className="sheet flex max-w-2xl flex-col gap-5 p-5 sm:p-6 print:hidden">
+          <h2 id="how-to-pay" className="font-display text-title">
             How to pay
           </h2>
           {plan?.paymentInstructions ? <p className="whitespace-pre-line">{plan.paymentInstructions}</p> : null}

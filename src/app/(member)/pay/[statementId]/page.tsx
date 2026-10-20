@@ -25,12 +25,12 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
   const methods = listPaymentMethods(db, { activeOnly: true });
 
   return (
-    <div className="flex max-w-2xl flex-col gap-10">
+    <div className="flex max-w-2xl flex-col gap-6">
       <header>
         <Link href={`/statements/${statement.id}`} className="text-sm font-semibold text-muted-foreground underline underline-offset-4">
           Back to the statement
         </Link>
-        <h1 className="font-display mt-2 text-5xl md:text-6xl">Report your payment</h1>
+        <h1 className="font-display mt-2 text-display">Report your payment</h1>
       </header>
 
       <Sticker compact {...stickerProps(statement)} />
@@ -49,16 +49,16 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
         </p>
       ) : (
         <>
-          <section aria-labelledby="where" className="flex flex-col gap-4">
-            <h2 id="where" className="font-display text-3xl">
+          <section aria-labelledby="where" className="sheet flex flex-col gap-4 p-5 sm:p-6">
+            <h2 id="where" className="font-display text-title">
               1. Send the money
             </h2>
             <p className="text-muted-foreground">Pay from your own wallet or bank app using one of these, then come back here.</p>
             <PaymentMethodsList methods={methods} />
           </section>
 
-          <section aria-labelledby="report" className="flex flex-col gap-4">
-            <h2 id="report" className="font-display text-3xl">
+          <section aria-labelledby="report" className="sheet flex flex-col gap-4 p-5 sm:p-6">
+            <h2 id="report" className="font-display text-title">
               2. Tell us what you sent
             </h2>
             <PaymentForm
