@@ -379,3 +379,21 @@ An independent security review (first attempt died on an API rate limit and was 
 - Folders without `ambagan.db` are not backups (an interrupted copy can't push out a good one); stale `.tmp-*` folders from a crash are cleaned; the settings page shows an error instead of crashing on an unreadable backup folder.
 - **Accepted / documented:** restoring rewinds the email queue (some sent mail may be re-sent; check the Emails page); no free-space check; a backward clock jump could sort a new backup as older; the admin panel shows the backup path (admin-only, and it is in the docs); `restore-safety` folders are never auto-cleaned.
 - Re-ran the full Docker drill with the final script and backup format: new backup has 0 sessions while live had 3; newer-version and forced-copy-failure cases refused/rolled back with live data untouched; wipe then restore returned 8/3/6/7 with health OK.
+
+## 2026-10-20 — test/e2e
+
+### Decisions
+- **One Playwright journey that walks the whole product** (`e2e/happy-path.spec.ts`): admin signs in by emailed link; switches on GCash; invites a member; member accepts the invitation and signs in by emailed link; admin issues the month's statements; member sees ₱50.00, **scans a receipt** (drawn in the browser; OCR runs in a worker), pays; admin and member are emailed; admin approves (two-step); member sees it paid and gets the confirmation; the admin's email log shows nothing failed. It also fails if the browser reports any Content-Security-Policy violation, so the strict CSP is tested against the real OCR worker and WebAssembly.
+- **It tests what ships:** `pnpm build`, then the *standalone* server started the way the Docker image starts it (`e2e/serve.mjs` lays out static files, public assets and migrations beside `server.js`; `next start` is not supported with `output: "standalone"`, which it warned about). This also exercises the traced native SQLite module.
+- **Real email, no provider:** a ~60-line SMTP-over-TLS sink (`e2e/smtp-sink.ts`) receives mail from nodemailer and writes `.eml` files; the test reads sign-in/invitation links out of them (quoted-printable and RFC 2047 headers decoded). Self-signed certificate generated per run by `openssl` (`e2e/prepare.mjs`), `NODE_TLS_REJECT_UNAUTHORIZED=0` only for the webServer process. Fresh database every run.
+- Full Chromium channel rather than the headless shell; one worker, serial. CI gets an `e2e` job (installs Chromium, runs the journey, uploads the report/trace on failure). Lint scope extended to `e2e` and `playwright.config.ts`.
+
+### Issues along the way (all in the test, none in the app)
+- Chromium download stalled with no progress on the first attempt (lock directory, 0 bytes); killing it and retrying completed (186 MiB).
+- The default headless-shell binary wasn't installed: switched to `channel: "chromium"`.
+- My mail helper kept the folding space between two RFC 2047 encoded words ("of  ₱50.00"): fixed per RFC 2047 section 6.2.
+- A wrong final assertion (the word "Failed" is also the label of the totals tile): now checks that the Failed count is 0.
+
+### Verification
+- Passes 3 times in a row locally (~12 s each including the app already built; OCR step ~1 s on the synthetic receipt). 381 unit tests, typecheck, lint unchanged.
+- **Not covered by e2e:** the scheduler's daily run (unit-tested; verified manually in Docker), backups and restore (drilled in Docker), mobile viewport, dark mode, real-world receipts.

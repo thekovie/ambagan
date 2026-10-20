@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src tests scripts next.config.ts drizzle.config.ts vitest.config.mts eslint.config.mjs",
+    "lint": "eslint src tests e2e scripts next.config.ts playwright.config.ts drizzle.config.ts vitest.config.mts eslint.config.mjs",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "ocr:assets": "node scripts/copy-ocr-assets.mjs",
     "predev": "pnpm ocr:assets",
-    "prebuild": "pnpm ocr:assets"
+    "prebuild": "pnpm ocr:assets",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -39,6 +40,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.20.5",
