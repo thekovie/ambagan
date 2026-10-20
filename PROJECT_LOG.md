@@ -490,3 +490,31 @@ No high findings. The medium: the badge is computed when the layout renders, so 
 - `periodStub` in `server/billing/period.ts` and its test are now unused by the app (the sticker has no month stub); remove in a small follow-up.
 - Member nav says "Me" while the route and page title stay "Settings" (kept as decided).
 - The statement page has no 1440px two-column layout (`lg` grid) as first sketched; the single centred column reads well at every width.
+
+## 2026-10-20 — Ambag (bill splitting), the plan and PR 1 of 6: the split engine (feat/split-engine)
+
+### Why
+The owner felt the app "seems weird if it doesn't serve its true purpose": ambagan means a group chipping in for a shared cost, but the app only issued one fixed monthly subscription fee. The answer is not to rebuild but to add the missing piece, one-off split bills ("ambag"), on top of the existing statement, pay, report and verify flow.
+
+### Decisions (with the owner)
+- Add one-off bill splits and keep monthly subscriptions. Admin-only creator and collector (members reimburse the admin's existing payment accounts). Split ways: equal, custom amounts, shares, percentages and itemised with shared extras (tax, service charge, tip, delivery, discount). Money flow: the admin fronted it, the group reimburses.
+- **Friends need no account.** Each participant gets a private, signed link to see their share and report their payment; the admin copies links and ready-made chat messages. People without an account are "guests". (Chosen over requiring an invited account for every friend, and over a view-only link.)
+- Defaults chosen: members and link holders see only their own share; no editing a bill (cancel and recreate); the admin may be a participant (no statement for their own share); odd centavos are spread fairly by a deterministic hash tie-break.
+- Six PRs: engine, core (database + service), share links, admin builder, itemised builder, member view and wording.
+
+### Findings from reading the code (drive the design)
+- Statements are welded to "plan + month": `subscription_id`, `period`, a plan-built reference and the `(user, plan, period)` unique index. Pay, verify, overdue, reminders and cancel are generic and are reused unchanged.
+- Making `subscription_id` nullable would make drizzle-kit rebuild the `statement` table, which is unsafe inside drizzle's migration transaction with `foreign_keys=ON` and restrict foreign keys from `payment` and `email_log`. The migration will therefore be additive only (new table, new nullable `bill_id`, new columns, index swap) with a hidden one-off plan row.
+- In drizzle-orm 0.45 `onConflictDoNothing` cannot target a partial index (only `onConflictDoUpdate` has `targetWhere`), so the daily statement generator needs a pre-select duplicate guard once the unique index becomes partial. Verified in the installed source; ships with the migration.
+- `users.email` is required and unique, so a guest without an email gets a placeholder address and an `is_guest` flag.
+
+### PR 1: what changed
+Pure library `src/lib/split/` (no database, no UI, nothing imports it yet): `apportion` (largest-remainder rounding, BigInt products), `computeSplit` for all five methods with plain-language issues instead of exceptions, `parsePercentToBp`, and a shared zod input schema.
+- A fairness bug was caught by its own test: with a plain FNV-1a hash as the tie-break, the odd centavo landed on one of three equal people only 24% of the time (should be about 33%) because FNV-1a mixes the last character weakly. Fixed with a murmur3 finaliser; the test now requires each person within 25% to 42% over 600 bills.
+- BigInt literals (`0n`) are not allowed by the project's TypeScript target, so `BigInt(0)` calls are used instead of changing the compiler target.
+
+### Independent review (adversarial) and what changed
+The reviewer fuzzed 500k inputs (NaN, Infinity, huge numbers, `__proto__` ids, unicode): nothing threw. It found one real invariant break: **several discounts could push one person below zero** (each discount rounded a centavo against the same person, e.g. 2 centavos shared by two people with two 33.33% discounts gave -1). Fixed by applying discounts one at a time against each person's remaining amount (charges still weigh by the original subtotal). Also fixed: a bill discounted down to nothing is now rejected (`TOTAL_NOT_POSITIVE`), the size limit applies to the bill before discounts (a discount can no longer be used to get past it), item and extra ids must be unique across both lists, and a negative receipt total is rejected by the schema. Added regression tests for each, hostile ids, weights summing past a double, and a permanent seeded property test across all five methods (4,000 random inputs: never throws, exact, non-negative, explained line by line, deterministic).
+
+### Verification
+483 tests (45 new), typecheck, lint, production build, 98% line coverage on the engine. Local e2e was not run for this PR (the demo server was using its port); the engine is not imported by the app yet and CI runs the journey.
