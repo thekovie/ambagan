@@ -28,7 +28,7 @@ Nothing is ever approved by OCR: the result only pre-fills a form, and every sub
 
 First scan downloads about 7 MB from our own origin (cached by the browser; served with `Cache-Control: public, max-age=2592000`). No request goes to jsdelivr, unpkg or any third party; all three paths are set explicitly in `engine.ts`.
 
-Deployment notes: serve `/ocr/*` as static files; if a Content-Security-Policy is added it needs `worker-src 'self' blob:` and `'wasm-unsafe-eval'` in `script-src`; the Docker image must run `pnpm build` (which copies the assets) or copy `public/ocr`.
+Deployment notes: serve `/ocr/*` as static files; the Content-Security-Policy that ships already allows exactly what the scanner needs (`worker-src 'self' blob:` and `'wasm-unsafe-eval'` in `script-src`, see `src/lib/csp.ts`); the Docker image must run `pnpm build` (which copies the assets) or copy `public/ocr`.
 
 ## Parser behaviour (`parse.ts`)
 

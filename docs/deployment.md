@@ -17,10 +17,11 @@ Open the app, enter the `ADMIN_EMAIL` address on the sign-in page, and use the e
 
 | Variable | Notes |
 |---|---|
-| `APP_URL` | The public address, e.g. `https://pay.example.com`. Used for links in emails, and sign-in is pinned to it. Use `https` in production. |
+| `APP_URL` | The public address, e.g. `https://pay.example.com`. Used for links in emails, and sign-in is pinned to it. **Must be `https` in production** (the app refuses to start otherwise; `http://localhost` is allowed for trying it out). |
 | `AUTH_SECRET` | `openssl rand -base64 32`. Keep it; changing it signs everyone out. |
 | `ADMIN_EMAIL` | The first administrator. |
 | `SMTP_*` | Required in production. See [email.md](email.md). |
+| `BACKUP_DIR`, `BACKUP_KEEP` | Optional: where daily backups go (default `/data/backups`) and how many to keep (default 14). See [backup-restore.md](backup-restore.md). |
 
 `DATABASE_PATH` and `ASSETS_DIR` are fixed to the `/data` volume by `compose.yaml`.
 
