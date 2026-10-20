@@ -51,3 +51,8 @@ CLAUDE.md
 *.tsbuildinfo
 next-env.d.ts
 .impeccable/
+
+# end-to-end run output (scratch database, captured mail, certificates, reports)
+/e2e/.tmp/
+/test-results/
+/playwright-report/

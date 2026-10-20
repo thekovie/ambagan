@@ -47,3 +47,25 @@ jobs:
           done
           docker logs ambagan
           exit 1
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Builds the app, starts the standalone server and a local TLS SMTP sink, then walks the whole journey:
+      # invite, sign in, statement, scan a receipt, pay, verify, emails.
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
