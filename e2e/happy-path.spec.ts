@@ -149,11 +149,42 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await waitForMail(MEMBER, /Payment confirmed/);
   });
 
+  await test.step("people move around with the floating dock (there is no sidebar)", async () => {
+    // Member: the dock is the main navigation, and the current page is marked.
+    await member.goto("/dashboard");
+    const memberDock = member.getByRole("navigation", { name: "Main" });
+    await memberDock.getByRole("link", { name: "Statements" }).click();
+    await expect(member).toHaveURL(/\/statements$/);
+    await expect(memberDock.getByRole("link", { name: "Statements" })).toHaveAttribute("aria-current", "page");
+    await memberDock.getByRole("link", { name: "History" }).click();
+    await expect(member).toHaveURL(/\/payments$/);
+
+    // Admin: three destinations in the dock, the rest behind "More".
+    await admin.goto("/admin/dashboard");
+    const adminDock = admin.getByRole("navigation", { name: "Admin" });
+    await expect(adminDock.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    await adminDock.getByRole("button", { name: "More" }).click();
+    await admin.getByRole("navigation", { name: "More admin pages" }).getByRole("link", { name: "Members" }).click();
+    await expect(admin).toHaveURL(/\/admin\/members$/);
+
+    // Account menu: sign out lives here on every screen size.
+    await member.getByRole("button", { name: "Account menu" }).click();
+    await expect(member.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+    await member.keyboard.press("Escape");
+    await expect(member.getByRole("menuitem", { name: "Sign out" })).toBeHidden();
+  });
+
   await test.step("the admin's email log shows what was sent", async () => {
     await admin.goto("/admin/notifications");
     await expect(admin.getByText(/Payment approved/).first()).toBeVisible();
     // The totals tile for failed messages reads 0 (every message was accepted by the SMTP sink).
     await expect(admin.locator("dl > div").filter({ hasText: "Failed" }).locator("dd")).toHaveText("0");
+  });
+
+  await test.step("signing out from the account menu ends the session", async () => {
+    await member.getByRole("button", { name: "Account menu" }).click();
+    await member.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect(member).toHaveURL(/\/login/);
   });
 
   expect(violations, "the CSP blocked something").toEqual([]);

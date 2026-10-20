@@ -9,19 +9,17 @@ interface EmptyStateProps {
   className?: string;
 }
 
-/** An empty hook on the rack: dashed outline where a sachet would hang. */
+/** An empty sticker slot: a dashed outline where a sticker will go. */
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-border px-6 py-10 text-center",
+        "flex flex-col items-center gap-3 rounded-[var(--radius-sticker)] border-2 border-dashed border-input px-6 py-10 text-center",
         className,
       )}
     >
-      <div className="grid size-12 place-items-center rounded-full bg-secondary text-secondary-foreground [&_svg]:size-5">
-        {icon}
-      </div>
-      <h2 className="font-display text-3xl">{title}</h2>
+      <div className="grid size-12 place-items-center rounded-full bg-st-lilac text-st-ink [&_svg]:size-5">{icon}</div>
+      <h2 className="font-display text-2xl">{title}</h2>
       <p className="max-w-[38ch] text-sm text-muted-foreground">{description}</p>
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

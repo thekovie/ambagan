@@ -2,8 +2,8 @@ import { ReceiptText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { Sachet } from "@/components/sachet";
-import { sachetProps } from "@/lib/statement-view";
+import { Sticker } from "@/components/sticker";
+import { stickerProps } from "@/lib/statement-view";
 import { requireUser } from "@/server/auth/session";
 import { listStatementsForUser } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
@@ -28,14 +28,14 @@ export default async function StatementsPage() {
           description="Your first statement shows up here as soon as it's issued, and we'll email you when it lands."
         />
       ) : (
-        <div className="rack max-w-2xl">
+        <div className="sticker-sheet max-w-2xl">
           {statements.map((statement) => (
             <Link
               key={statement.id}
               href={`/statements/${statement.id}`}
               className="block rounded-lg outline-offset-4"
             >
-              <Sachet hung compact {...sachetProps(statement)} />
+              <Sticker compact {...stickerProps(statement)} />
             </Link>
           ))}
         </div>

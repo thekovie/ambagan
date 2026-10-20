@@ -69,7 +69,7 @@ export function periodLabel(period: string): string {
   return `${MONTHS[month - 1]} ${year}`;
 }
 
-/** "OCT": printed on the sachet stub. */
+/** "OCT": a short month tag. */
 export function periodStub(period: string): string {
   return MONTHS[split(period)[1] - 1].slice(0, 3).toUpperCase();
 }

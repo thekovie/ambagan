@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Archivo } from "next/font/google";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 
-// One family, two voices: narrow/heavy for pesos and headings, normal width for text.
-const archivo = Archivo({
-  variable: "--font-archivo",
+// One soft rounded family for everything: headings and pesos at semibold, text at medium.
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
-  axes: ["wdth"],
   display: "swap",
 });
 
@@ -19,8 +18,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f5fa" },
-    { media: "(prefers-color-scheme: dark)", color: "#16121f" },
+    { media: "(prefers-color-scheme: light)", color: "#fff4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e111b" },
   ],
 };
 
@@ -31,7 +30,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Set by src/proxy.ts for the Content-Security-Policy: without it the browser refuses this inline script.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en" className={`${archivo.variable} h-full`} suppressHydrationWarning>
+    <html lang="en" className={`${nunito.variable} h-full`} suppressHydrationWarning>
       <head>
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>

@@ -422,3 +422,29 @@ Correctness review (invariant checklist: all OK except the gaps below):
 
 ### Verification
 - 433 unit/integration tests (was 381), typecheck, lint, production build (no warnings), e2e journey on nodemailer 10, `pnpm audit --prod` clean. CI: verify, docker smoke, e2e.
+
+## 2026-10-20 — UI reroll "Sticker Book" (feat/sticker-foundation, PR 1 of 4)
+
+### Why
+Owner feedback on the Tingi Sachet Rack look: the type is too strong (ultra-condensed Archivo 850), it should feel cuter, and no sidebar menus. UI-only: behaviour, copy, routes and server code are unchanged.
+
+### Decisions (made with the owner)
+- **World:** a sticker book, restrained ("not too cute, just cute"): no mascot, no confetti. Cuteness comes from pastel candy colours, pillowy radii, plum-tinted soft shadows, white die-cut sticker borders and one motif: a statement is a sticker, and a paid one peels its corner and shows a small sparkle.
+- **Navigation:** a floating dock on every screen size, no sidebar. Member: Home, Statements, History, Me. Admin: Overview, Verify (live count badge, wired in PR 3), Statements, More (Members, Plans, Emails, Settings). A slim top bar holds the wordmark and an avatar menu (name, email, dark theme, Sign out), which also gives phones a sign-out for the first time.
+- **Type:** Nunito (variable), medium to semibold. `font-display` keeps its name (69 call sites) but is retuned.
+- **Status looks (word + icon + edge shape + hue, never colour alone):** unpaid sky, whole; under verification butter, half-peeled; paid mint, peeled + sparkle; overdue peach with a rose corner tab and one wobble; cancelled a dashed empty slot.
+- **Candy** (deep raspberry, white text, 5.3:1) is reserved for the single action needed now.
+- Alternatives considered and dropped: piggy-bank jar, chat bubbles, softened sachet; hub-of-tiles and top-tab navigation; a rounder display face (Fredoka) as too cartoonish.
+
+### Issues along the way
+- The dock label was clipped: a CSS-grid 0fr→1fr width animation resolved the track narrower than the text. Replaced with a `max-width` transition and the icon/label gap moved to the item. Measured in the browser: full text width, no clipping, inactive labels collapsed.
+- Base UI warned when the Sign out menu item rendered a real `<button>`; fixed with `nativeButton`. Sign out was verified to submit from inside the menu portal (the form lives outside it, linked by the `form` attribute).
+- The scripted contrast check (31 token pairs, both themes) caught the light field border at 2.95:1; darkened to 3.46:1.
+- `kit` (dev-only showcase of the old look) and `AccountFooter` were deleted. `periodStub` in `server/billing/period.ts` is now only used by its test; left in place to keep this PR free of server changes (remove in a follow-up).
+
+### Independent review (shell + accessibility) and what changed
+No critical or high findings. Fixed: account-menu items had no visible keyboard focus (now an outline); `scroll-padding-top` added for the sticky top bar (WCAG 2.4.11); the hide-dock-while-typing rule now applies only on touch screens, ignores checkboxes/radios/files, and uses `visibility` so a hidden dock leaves the tab order; the More trigger shows an open state and `aria-current` when a More page is active; the popup and its inner nav no longer share one accessible name; name/email are a menu group label (announced) and the On/Off text is `aria-hidden`; `initials()` keeps emoji whole (with new unit tests, 437 total); the unused `ThemeToggle` component was removed; the e2e now signs out through the avatar menu and expects `/login`. Dock width was measured at 360px (fits, no clipping) rather than trusting the review's estimate. Kept as decided: the member nav label "Me" (route and page title stay "Settings"); the Verify badge count is wired in PR 3.
+A stale Turbopack dev cache served an old stylesheet and a bogus hydration warning after CSS edits; clearing `.next/dev` fixed it (not an app bug).
+
+### Verification
+437 tests, typecheck, lint, production build, e2e journey (now includes a dock step: member Statements/History with `aria-current`, admin More → Members, account menu). Contrast script all pass; focus ring visible on dock items (3px); dock targets 48px; reduced-motion block and print rules reviewed.

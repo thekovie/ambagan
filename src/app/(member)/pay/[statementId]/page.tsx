@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PaymentMethodsList } from "@/components/payment-methods-list";
-import { Sachet } from "@/components/sachet";
+import { Sticker } from "@/components/sticker";
 import { toLocalInputValue } from "@/lib/dates";
-import { effectiveStatus, sachetProps } from "@/lib/statement-view";
+import { effectiveStatus, stickerProps } from "@/lib/statement-view";
 import { requireUser } from "@/server/auth/session";
 import { getStatementForUser } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
@@ -33,7 +33,7 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
         <h1 className="font-display mt-2 text-5xl md:text-6xl">Report your payment</h1>
       </header>
 
-      <Sachet compact {...sachetProps(statement)} />
+      <Sticker compact {...stickerProps(statement)} />
 
       {!payable ? (
         <p className="text-muted-foreground">

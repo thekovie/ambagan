@@ -68,7 +68,7 @@ export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
               {/* Served by an authorised route, not a static asset, so Next's image optimizer is skipped. */}
               <Image src={`/api/payment-methods/${method.id}/qr`} alt={`Current ${method.label} QR code`} width={160} height={160} unoptimized className="size-40 shrink-0 rounded-xl border border-border bg-white object-contain p-2" />
               <label className="flex items-center gap-2 text-sm font-semibold">
-                <input type="checkbox" name="removeQr" className="size-5 rounded accent-foil-magenta" />
+                <input type="checkbox" name="removeQr" className="size-5 rounded accent-candy" />
                 Remove this QR
               </label>
             </div>
@@ -82,7 +82,7 @@ export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
 
         <div className="flex flex-col gap-2 sm:col-span-2">
           <label className="flex items-center gap-3 text-sm font-semibold">
-            <input type="checkbox" name="isActive" defaultChecked={typed ? typed.isActive === "on" : method.isActive} className="size-5 rounded accent-foil-magenta" aria-describedby={describe("isActive")} />
+            <input type="checkbox" name="isActive" defaultChecked={typed ? typed.isActive === "on" : method.isActive} className="size-5 rounded accent-candy" aria-describedby={describe("isActive")} />
             Show this to members
           </label>
           <FieldError id={`${id("isActive")}-error`} message={errors.isActive} />

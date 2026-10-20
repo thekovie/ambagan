@@ -5,12 +5,12 @@ import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { PaymentMethodsList } from "@/components/payment-methods-list";
 import { PrintButton } from "@/components/print-button";
-import { Sachet } from "@/components/sachet";
+import { Sticker } from "@/components/sticker";
 import { StatementAction } from "@/components/statement-action";
 import { formatLongDate } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
-import { effectiveStatus, sachetProps } from "@/lib/statement-view";
+import { effectiveStatus, stickerProps } from "@/lib/statement-view";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/auth/session";
 import { periodLabel } from "@/server/billing/period";
@@ -62,9 +62,9 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
         <h1 className="font-display mt-2 text-5xl md:text-6xl">{periodLabel(statement.period)}</h1>
       </header>
 
-      <Sachet className="max-w-2xl print:hidden" {...sachetProps(statement)}>
+      <Sticker className="max-w-2xl print:hidden" {...stickerProps(statement)}>
         <StatementAction statement={statement} omitView />
-      </Sachet>
+      </Sticker>
 
       <section aria-labelledby="details" className="flex max-w-2xl flex-col gap-4">
         <h2 id="details" className="font-display text-3xl">

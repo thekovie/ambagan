@@ -103,7 +103,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
               value={method.id}
               checked={fields.destination === method.id}
               onChange={set("destination")}
-              className="size-5 accent-foil-magenta"
+              className="size-5 accent-candy"
             />
             <span>
               <span className="block font-bold">{method.label}</span>
@@ -230,7 +230,7 @@ export function PaymentForm({ statementId, currency, outstandingMinor, methods, 
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <Button type="submit" variant="foil" size="lg" disabled={pending} className="w-full sm:w-auto">
+        <Button type="submit" variant="candy" size="lg" disabled={pending} className="w-full sm:w-auto">
           <Send data-icon="inline-start" />
           {pending ? "Sending…" : "Send for checking"}
         </Button>

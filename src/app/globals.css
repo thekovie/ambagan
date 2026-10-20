@@ -5,14 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ambagan design tokens: the tingi sachet rack.
- * Foil fields (magenta, cobalt, tangerine, lime) sit on an ink-violet (dark) or
- * cool foil-white (light) ground. Foils are theme-independent; text on a foil
- * uses --on-foil-* so contrast holds in both themes.
+ * ambagan design tokens: the sticker book.
+ * Pastel stickers (sky, mint, butter, peach, rose, lilac) with white die-cut borders sit on a marshmallow
+ * ground (light) or a plum-cocoa ground (dark). Stickers are theme-independent and always carry dark plum ink,
+ * so contrast holds in both themes. One candy colour is reserved for the single action needed now.
  */
 @theme inline {
-  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 
   --color-background: var(--background);
@@ -33,27 +33,17 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
 
-  --color-foil-magenta: var(--foil-magenta);
-  --color-foil-cobalt: var(--foil-cobalt);
-  --color-foil-tangerine: var(--foil-tangerine);
-  --color-foil-lime: var(--foil-lime);
-  --color-on-foil-magenta: var(--on-foil-magenta);
-  --color-ink: var(--ink);
-  --color-paper: var(--paper);
+  --color-st-sky: var(--st-sky);
+  --color-st-mint: var(--st-mint);
+  --color-st-butter: var(--st-butter);
+  --color-st-peach: var(--st-peach);
+  --color-st-rose: var(--st-rose);
+  --color-st-lilac: var(--st-lilac);
+  --color-st-ink: var(--st-ink);
+  --color-candy: var(--candy);
+  --color-on-candy: var(--on-candy);
+  --color-ink: var(--st-ink);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -62,90 +52,93 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-card: 1.5rem;
+  --radius-sticker: 2rem;
+
+  --shadow-soft: var(--sh-soft);
+  --shadow-dock: var(--sh-dock);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Registered so the sticker's peel can be animated in plain CSS. */
+@property --peel {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 :root {
-  --ink: oklch(0.2 0.045 290);
-  --paper: oklch(0.975 0.01 290);
+  /* Stickers: the raw material colours. Dark plum ink on every one of them. */
+  --st-ink: oklch(0.27 0.05 335);
+  --st-sky: oklch(0.87 0.065 240);
+  --st-mint: oklch(0.91 0.085 160);
+  --st-butter: oklch(0.94 0.1 95);
+  --st-peach: oklch(0.88 0.085 50);
+  --st-rose: oklch(0.87 0.085 5);
+  --st-lilac: oklch(0.86 0.075 300);
+  --sticker-edge: oklch(0.995 0.004 35);
+  --sticker-back: oklch(0.93 0.012 35);
 
-  /* Foils: raw material colours. */
-  --foil-magenta: oklch(0.55 0.24 5);
-  --foil-cobalt: oklch(0.5 0.23 268);
-  --foil-tangerine: oklch(0.77 0.17 60);
-  --foil-lime: oklch(0.87 0.2 128);
-  --on-foil-magenta: oklch(0.99 0.005 5);
-  --on-foil-cobalt: oklch(0.99 0.005 268);
-  --on-foil-tangerine: var(--ink);
-  --on-foil-lime: var(--ink);
+  /* The one action that needs doing now. White text on raspberry. */
+  --candy: oklch(0.55 0.21 8);
+  --on-candy: oklch(0.99 0.005 8);
 
-  --background: var(--paper);
-  --foreground: var(--ink);
-  --card: oklch(1 0 0);
-  --card-foreground: var(--ink);
-  --popover: oklch(1 0 0);
-  --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: var(--paper);
-  --secondary: oklch(0.935 0.018 290);
-  --secondary-foreground: var(--ink);
-  --muted: oklch(0.945 0.014 290);
-  --muted-foreground: oklch(0.44 0.035 290);
-  --accent: oklch(0.925 0.025 290);
-  --accent-foreground: var(--ink);
-  --destructive: oklch(0.52 0.22 25);
-  --border: oklch(0.86 0.022 290);
-  --input: oklch(0.8 0.03 290);
-  --ring: var(--foil-cobalt);
-  --chart-1: var(--foil-cobalt);
-  --chart-2: var(--foil-magenta);
-  --chart-3: var(--foil-tangerine);
-  --chart-4: var(--foil-lime);
-  --chart-5: oklch(0.5 0.04 290);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.955 0.016 290);
-  --sidebar-foreground: var(--ink);
-  --sidebar-primary: var(--foil-magenta);
-  --sidebar-primary-foreground: var(--on-foil-magenta);
-  --sidebar-accent: oklch(0.91 0.03 290);
-  --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: oklch(0.86 0.022 290);
-  --sidebar-ring: var(--foil-cobalt);
+  --background: oklch(0.976 0.012 35);
+  --foreground: var(--st-ink);
+  --card: oklch(0.996 0.005 35);
+  --card-foreground: var(--st-ink);
+  --popover: oklch(0.996 0.005 35);
+  --popover-foreground: var(--st-ink);
+  --primary: var(--st-ink);
+  --primary-foreground: oklch(0.976 0.012 35);
+  --secondary: oklch(0.945 0.022 35);
+  --secondary-foreground: var(--st-ink);
+  --muted: oklch(0.956 0.016 35);
+  --muted-foreground: oklch(0.46 0.04 335);
+  --accent: oklch(0.93 0.035 340);
+  --accent-foreground: var(--st-ink);
+  --destructive: oklch(0.5 0.2 25);
+  --border: oklch(0.89 0.02 35);
+  --input: oklch(0.62 0.045 335);
+  --ring: oklch(0.5 0.17 335);
+  --radius: 1rem;
 
-  --selection: var(--foil-lime);
-  --selection-fg: var(--ink);
+  --shadow-tint: oklch(0.27 0.05 335);
+  --sh-soft: 0 1px 2px oklch(0.27 0.05 335 / 0.06), 0 10px 22px -10px oklch(0.27 0.05 335 / 0.2);
+  --sh-dock: 0 2px 4px oklch(0.27 0.05 335 / 0.08), 0 18px 34px -12px oklch(0.27 0.05 335 / 0.3);
+
+  --selection: var(--st-lilac);
+  --selection-fg: var(--st-ink);
   color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.155 0.035 290);
-  --foreground: oklch(0.96 0.012 290);
-  --card: oklch(0.205 0.04 290);
-  --card-foreground: oklch(0.96 0.012 290);
-  --popover: oklch(0.235 0.045 290);
-  --popover-foreground: oklch(0.96 0.012 290);
-  --primary: oklch(0.96 0.012 290);
-  --primary-foreground: var(--ink);
-  --secondary: oklch(0.26 0.045 290);
-  --secondary-foreground: oklch(0.96 0.012 290);
-  --muted: oklch(0.24 0.04 290);
-  --muted-foreground: oklch(0.76 0.03 290);
-  --accent: oklch(0.3 0.05 290);
-  --accent-foreground: oklch(0.96 0.012 290);
-  --destructive: oklch(0.72 0.19 22);
-  --border: oklch(0.34 0.045 290);
-  --input: oklch(0.45 0.05 290);
-  --ring: oklch(0.8 0.14 268);
-  --chart-5: oklch(0.7 0.04 290);
-  --sidebar: oklch(0.185 0.04 290);
-  --sidebar-foreground: oklch(0.96 0.012 290);
-  --sidebar-accent: oklch(0.27 0.05 290);
-  --sidebar-accent-foreground: oklch(0.96 0.012 290);
-  --sidebar-border: oklch(0.32 0.045 290);
-  --sidebar-ring: oklch(0.8 0.14 268);
-  --selection: var(--foil-magenta);
-  --selection-fg: var(--on-foil-magenta);
+  --background: oklch(0.2 0.03 335);
+  --foreground: oklch(0.96 0.015 35);
+  --card: oklch(0.255 0.036 335);
+  --card-foreground: oklch(0.96 0.015 35);
+  --popover: oklch(0.285 0.04 335);
+  --popover-foreground: oklch(0.96 0.015 35);
+  --primary: oklch(0.96 0.015 35);
+  --primary-foreground: var(--st-ink);
+  --secondary: oklch(0.3 0.04 335);
+  --secondary-foreground: oklch(0.96 0.015 35);
+  --muted: oklch(0.275 0.036 335);
+  --muted-foreground: oklch(0.78 0.03 335);
+  --accent: oklch(0.34 0.05 335);
+  --accent-foreground: oklch(0.96 0.015 35);
+  --destructive: oklch(0.74 0.17 22);
+  --border: oklch(0.36 0.04 335);
+  --input: oklch(0.55 0.05 335);
+  --ring: oklch(0.82 0.11 340);
+
+  --shadow-tint: oklch(0.08 0.03 335);
+  --sh-soft: 0 1px 2px oklch(0.08 0.03 335 / 0.3), 0 10px 22px -10px oklch(0.08 0.03 335 / 0.6);
+  --sh-dock: 0 2px 4px oklch(0.08 0.03 335 / 0.35), 0 18px 34px -12px oklch(0.08 0.03 335 / 0.75);
+
+  --selection: var(--st-lilac);
+  --selection-fg: var(--st-ink);
   color-scheme: dark;
 }
 
@@ -156,21 +149,26 @@
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: var(--input) transparent;
     scrollbar-width: thin;
+    /* A focused field is never hidden behind the sticky top bar or the floating dock. */
+    scroll-padding-top: 4.5rem;
+    scroll-padding-bottom: 7rem;
   }
   body {
     @apply bg-background text-foreground antialiased;
     font-variant-numeric: tabular-nums;
     text-rendering: optimizeLegibility;
+    caret-color: var(--candy);
+    accent-color: var(--candy);
   }
   ::selection {
     background: var(--selection);
     color: var(--selection-fg);
   }
   :focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+    outline: 3px solid var(--ring);
+    outline-offset: 3px;
   }
   h1,
   h2,
@@ -180,276 +178,150 @@
   p {
     text-wrap: pretty;
   }
+  a {
+    text-underline-offset: 0.2em;
+  }
 }
 
-/* Condensed heavy voice for pesos and headings (Archivo width axis). */
+/* One soft rounded voice. Headings and pesos are semibold, never shouty. */
 @utility font-display {
-  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  font-variation-settings: "wdth" 62;
-  font-weight: 850;
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
   letter-spacing: -0.01em;
-  word-spacing: 0.12em;
-  line-height: 0.95;
+  line-height: 1.1;
 }
 
-/* ---- Sachet: flat foil strip, crimped seal, perforated stub ---- */
+/* ---- Sheet: an ordinary soft card ---- */
 
-.sachet {
-  --sachet-bg: var(--foil-cobalt);
-  --sachet-fg: var(--on-foil-cobalt);
-  --notch: 10px;
-  --stub-w: 4.25rem;
-  display: flex;
+.sheet {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--sh-soft);
+}
+
+/* ---- Sticker: a statement as a pastel die-cut sticker whose corner peels when it is settled ---- */
+
+.sticker {
+  /* --tilt and --peel are inherited: a list sets the tilt, the status sets the peel. */
+  --st-bg: var(--st-sky);
   position: relative;
-  color: var(--sachet-fg);
-  filter: drop-shadow(0 1px 0 oklch(0 0 0 / 0.1)) drop-shadow(0 10px 14px oklch(0.2 0.1 290 / 0.18));
+  color: var(--st-ink);
+  transform: rotate(var(--tilt, 0deg));
+  /* A filter (not box-shadow) so the shadow follows the peeled corner. */
+  filter: drop-shadow(0 1px 1px color-mix(in oklab, var(--shadow-tint) 14%, transparent))
+    drop-shadow(0 14px 14px color-mix(in oklab, var(--shadow-tint) 20%, transparent));
 }
 
-.sachet[data-status="UNPAID"] {
-  --sachet-bg: var(--foil-cobalt);
-  --sachet-fg: var(--on-foil-cobalt);
-}
-.sachet[data-status="UNDER_VERIFICATION"] {
-  --sachet-bg: var(--foil-tangerine);
-  --sachet-fg: var(--on-foil-tangerine);
-}
-.sachet[data-status="PAID"] {
-  --sachet-bg: var(--foil-lime);
-  --sachet-fg: var(--on-foil-lime);
-}
-.sachet[data-status="OVERDUE"] {
-  --sachet-bg: var(--foil-magenta);
-  --sachet-fg: var(--on-foil-magenta);
-}
-.sachet[data-status="CANCELLED"] {
-  --sachet-bg: var(--muted);
-  --sachet-fg: var(--muted-foreground);
-  filter: none;
+.sticker-face {
+  background: var(--st-bg);
+  border: 5px solid var(--sticker-edge);
+  border-radius: var(--radius-sticker);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--peel)), calc(100% - var(--peel)) 100%, 0 100%);
 }
 
-.sachet-body,
-.sachet-stub {
-  background-color: var(--sachet-bg);
-  position: relative;
-}
-
-/* Crimp seal: fine ridges across the top and bottom edges. */
-.sachet-body::before,
-.sachet-stub::before,
-.sachet-body::after,
-.sachet-stub::after {
-  content: "";
+/* The folded-over corner: the back of the sticker, shown on the other side of the same diagonal. */
+.sticker-flap {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 0.7rem;
-  background: repeating-linear-gradient(90deg, oklch(0 0 0 / 0.16) 0 1.5px, transparent 1.5px 4px);
-  pointer-events: none;
-}
-.sachet-body::before,
-.sachet-stub::before {
-  top: 0;
-}
-.sachet-body::after,
-.sachet-stub::after {
-  bottom: 0;
-}
-
-.sachet-body {
-  flex: 1;
-  min-width: 0;
-  border-radius: 0.5rem 0 0 0.5rem;
-  /* Round notches where the perforation meets the top and bottom edges. */
-  -webkit-mask:
-    radial-gradient(circle var(--notch) at 100% 0, #0000 calc(100% - 0.5px), #000) top / 100% 51% no-repeat,
-    radial-gradient(circle var(--notch) at 100% 100%, #0000 calc(100% - 0.5px), #000) bottom / 100% 51% no-repeat;
-  mask:
-    radial-gradient(circle var(--notch) at 100% 0, #0000 calc(100% - 0.5px), #000) top / 100% 51% no-repeat,
-    radial-gradient(circle var(--notch) at 100% 100%, #0000 calc(100% - 0.5px), #000) bottom / 100% 51% no-repeat;
-}
-
-.sachet-stub {
-  width: var(--stub-w);
-  flex: none;
-  border-radius: 0 0.5rem 0.5rem 0;
-  transform-origin: 0 100%;
-  -webkit-mask:
-    radial-gradient(circle var(--notch) at 0 0, #0000 calc(100% - 0.5px), #000) top / 100% 51% no-repeat,
-    radial-gradient(circle var(--notch) at 0 100%, #0000 calc(100% - 0.5px), #000) bottom / 100% 51% no-repeat;
-  mask:
-    radial-gradient(circle var(--notch) at 0 0, #0000 calc(100% - 0.5px), #000) top / 100% 51% no-repeat,
-    radial-gradient(circle var(--notch) at 0 100%, #0000 calc(100% - 0.5px), #000) bottom / 100% 51% no-repeat;
-}
-
-/* Perforation line between body and stub. */
-.sachet-perf {
-  position: absolute;
-  top: 1rem;
-  bottom: 1rem;
-  right: 0;
-  width: 0;
-  border-right: 2px dashed color-mix(in oklch, var(--sachet-fg), transparent 55%);
-  pointer-events: none;
-}
-
-/* UNDER_VERIFICATION: stub is half torn, hanging off the perforation. */
-.sachet[data-status="UNDER_VERIFICATION"] .sachet-stub {
-  transform: rotate(3deg) translateY(2px);
-}
-
-/* PAID: stub is gone; the torn edge is scalloped. */
-.sachet[data-status="PAID"] .sachet-stub,
-.sachet[data-status="PAID"] .sachet-perf {
-  display: none;
-}
-/* Right after approval the stub is still there, then tears away from the perforation. */
-.sachet[data-status="PAID"][data-just-paid] .sachet-stub {
-  display: grid;
-  position: absolute;
-  top: 0;
   right: 0;
   bottom: 0;
-  transform-origin: 0 100%;
-  animation: stub-tear 1s var(--ease-out-expo) 0.15s forwards;
+  width: var(--peel);
+  height: var(--peel);
+  background: linear-gradient(135deg, oklch(1 0 0) 0%, var(--sticker-back) 52%, transparent 52%);
+  border-top-left-radius: 0.45rem;
   pointer-events: none;
 }
-@keyframes stub-tear {
-  35% {
-    transform: rotate(7deg) translate(4px, 2px);
-    opacity: 1;
-  }
-  to {
-    transform: rotate(32deg) translate(46px, 70px);
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-.sachet[data-status="PAID"] .sachet-body {
-  border-radius: 0.5rem;
-  -webkit-mask:
-    radial-gradient(circle 5px at 100% 50%, #0000 calc(100% - 0.5px), #000) right / 10px 14px repeat-y,
-    linear-gradient(#000, #000) left / calc(100% - 10px) 100% no-repeat;
-  mask:
-    radial-gradient(circle 5px at 100% 50%, #0000 calc(100% - 0.5px), #000) right / 10px 14px repeat-y,
-    linear-gradient(#000, #000) left / calc(100% - 10px) 100% no-repeat;
+
+.sticker-tab,
+.sticker-sparkle {
+  display: none;
 }
 
-/* OVERDUE: creased corner. */
-.sachet-crease {
-  display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: linear-gradient(135deg, var(--background) 50%, oklch(0 0 0 / 0.28) 50%);
-  z-index: 1;
+.sticker[data-status="UNPAID"] {
+  --st-bg: var(--st-sky);
 }
-.sachet[data-status="OVERDUE"] .sachet-crease {
+/* Under verification: the corner is half peeled. */
+.sticker[data-status="UNDER_VERIFICATION"] {
+  --st-bg: var(--st-butter);
+  --peel: 1.75rem;
+}
+/* Paid: peeled, with a small sparkle. */
+.sticker[data-status="PAID"] {
+  --st-bg: var(--st-mint);
+  --peel: 3rem;
+}
+.sticker[data-status="PAID"] .sticker-sparkle {
   display: block;
+  position: absolute;
+  right: calc(var(--peel) + 0.3rem);
+  bottom: calc(var(--peel) * 0.3);
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--st-ink);
+  opacity: 0.55;
 }
-
-/* CANCELLED: slack, dashed, struck. */
-.sachet[data-status="CANCELLED"] .sachet-body,
-.sachet[data-status="CANCELLED"] .sachet-stub {
-  outline: 1.5px dashed var(--border);
-  outline-offset: -2px;
+/* Overdue: a small label tab sticks out of the top edge. */
+.sticker[data-status="OVERDUE"] {
+  --st-bg: var(--st-peach);
 }
-.sachet[data-status="CANCELLED"] .sachet-amount {
+.sticker[data-status="OVERDUE"] .sticker-tab {
+  display: block;
+  position: absolute;
+  top: -0.55rem;
+  left: 1.6rem;
+  width: 2.6rem;
+  height: 1.1rem;
+  background: var(--st-rose);
+  border: 3px solid var(--sticker-edge);
+  border-bottom: 0;
+  border-radius: 0.65rem 0.65rem 0 0;
+}
+/* Cancelled: an empty dashed sticker slot. */
+.sticker[data-status="CANCELLED"] {
+  filter: none;
+  color: var(--muted-foreground);
+}
+.sticker[data-status="CANCELLED"] .sticker-face {
+  background: transparent;
+  border: 2px dashed var(--input);
+  clip-path: none;
+}
+.sticker[data-status="CANCELLED"] .sticker-amount {
   text-decoration: line-through;
   text-decoration-thickness: 3px;
 }
 
-/* The body settles when a payment is approved (set data-just-paid once). */
-@media (prefers-reduced-motion: no-preference) {
-  .sachet-stub {
-    transition: transform 0.5s var(--ease-out-expo);
-  }
-  .sachet[data-just-paid] .sachet-body {
-    animation: sachet-settle 0.6s var(--ease-out-expo);
-  }
-  @keyframes sachet-settle {
-    from {
-      transform: translateX(8px);
-    }
-    to {
-      transform: none;
-    }
-  }
+/* Lists of stickers sit slightly off true, like a sheet someone stuck them on by hand. */
+.sticker-sheet {
+  display: grid;
+  gap: 1.5rem;
+}
+.sticker-sheet > :nth-child(odd) {
+  --tilt: -0.6deg;
+}
+.sticker-sheet > :nth-child(even) {
+  --tilt: 0.5deg;
 }
 
-/* ---- Crimped panel edge: bottom on mobile, right on desktop ---- */
-.crimp-panel {
-  position: relative;
-}
-.crimp-panel::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 0.7rem;
-  background: repeating-linear-gradient(90deg, oklch(0 0 0 / 0.16) 0 1.5px, transparent 1.5px 4px);
-}
-@media (min-width: 64rem) {
-  .crimp-panel::after {
-    inset: 0 0 0 auto;
-    width: 0.7rem;
-    height: auto;
-    background: repeating-linear-gradient(0deg, oklch(0 0 0 / 0.16) 0 1.5px, transparent 1.5px 4px);
-  }
-}
+/* ---- Soft status pill: word + icon chip. On a sticker it turns die-cut white. ---- */
 
-/* ---- Rack: strips hang from a rail by a punched hole, each slightly off true ---- */
-.rack {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-  padding-top: 1.25rem;
-}
-.rack::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: var(--input);
-}
-.rack > :nth-child(odd) {
-  transform: rotate(-0.5deg);
-}
-.rack > :nth-child(even) {
-  transform: rotate(0.4deg) translateX(0.25rem);
-}
-.sachet-hole {
-  position: absolute;
-  z-index: 2;
-  top: 0.15rem;
-  left: 3rem;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 999px;
-  background: var(--background);
-  box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.35);
-}
-
-/* ---- Capsule status pill: icon + word + trailing chip ---- */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   height: 1.75rem;
-  padding: 0 0.35rem 0 0.7rem;
+  padding: 0 0.3rem 0 0.75rem;
   border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
   background: var(--pill-bg);
   color: var(--pill-fg);
   white-space: nowrap;
 }
 .pill-chip {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.15rem;
+  height: 1.15rem;
   border-radius: 999px;
   background: var(--pill-fg);
   color: var(--pill-bg);
@@ -458,33 +330,204 @@
   flex: none;
 }
 .pill[data-status="UNPAID"] {
-  --pill-bg: var(--foil-cobalt);
-  --pill-fg: var(--on-foil-cobalt);
+  --pill-bg: var(--st-sky);
+  --pill-fg: var(--st-ink);
 }
 .pill[data-status="UNDER_VERIFICATION"] {
-  --pill-bg: var(--foil-tangerine);
-  --pill-fg: var(--on-foil-tangerine);
+  --pill-bg: var(--st-butter);
+  --pill-fg: var(--st-ink);
 }
 .pill[data-status="PAID"] {
-  --pill-bg: var(--foil-lime);
-  --pill-fg: var(--on-foil-lime);
+  --pill-bg: var(--st-mint);
+  --pill-fg: var(--st-ink);
 }
 .pill[data-status="OVERDUE"] {
-  --pill-bg: var(--foil-magenta);
-  --pill-fg: var(--on-foil-magenta);
+  --pill-bg: var(--st-rose);
+  --pill-fg: var(--st-ink);
 }
 .pill[data-status="CANCELLED"] {
   --pill-bg: var(--muted);
   --pill-fg: var(--muted-foreground);
-  outline: 1.5px dashed var(--border);
+  outline: 1.5px dashed var(--input);
   outline-offset: -1.5px;
 }
-
-/* On its own coloured sachet the pill inverts so it never vanishes into the field. */
-.sachet .pill[data-status] {
-  --pill-bg: var(--sachet-fg);
-  --pill-fg: var(--sachet-bg);
+.sticker .pill[data-status] {
+  --pill-bg: var(--sticker-edge);
+  --pill-fg: var(--st-ink);
   outline: none;
+}
+.sticker[data-status="CANCELLED"] .pill[data-status] {
+  --pill-bg: var(--muted);
+  --pill-fg: var(--muted-foreground);
+}
+
+/* ---- Floating dock: the only navigation. A small pill within thumb reach, never a sidebar. ---- */
+
+.dock {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  translate: -50% 0;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  max-width: calc(100vw - 1.5rem);
+  border-radius: 999px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-dock);
+  transition:
+    translate 0.3s var(--ease-out-expo),
+    visibility 0s;
+}
+/* On touch screens it steps aside while someone types, so it never covers the keyboard or the submit button.
+   Hidden means out of the tab order too (visibility), and checkboxes, radios and files don't count as typing. */
+@media (pointer: coarse) {
+  body:has(
+      input:not([type="checkbox"], [type="radio"], [type="file"], [type="submit"], [type="button"]):focus,
+      textarea:focus,
+      select:focus
+    )
+    .dock {
+    translate: -50% 200%;
+    visibility: hidden;
+    transition:
+      translate 0.3s var(--ease-out-expo),
+      visibility 0s 0.3s;
+  }
+}
+
+.dock-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
+  min-width: 3rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.dock-item:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.dock-item[aria-current="page"],
+.dock-item[data-open],
+.dock-item[data-popup-open] {
+  background: var(--st-lilac);
+  color: var(--st-ink);
+}
+
+/* The label is always in the DOM (it is the accessible name); only the current item shows it. */
+.dock-label {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  opacity: 0;
+  transition:
+    max-width 0.3s var(--ease-out-expo),
+    opacity 0.2s;
+}
+.dock-item[aria-current="page"] .dock-label,
+.dock-item[data-open] .dock-label,
+.dock-item[data-popup-open] .dock-label {
+  max-width: 7.5rem;
+  opacity: 1;
+}
+/* The space between icon and label belongs to the item, so it grows with the label and nothing clips. */
+.dock-item[aria-current="page"],
+.dock-item[data-open],
+.dock-item[data-popup-open] {
+  gap: 0.5rem;
+}
+/* Five admin items plus an open label must still fit a 360px phone. */
+@media (max-width: 400px) {
+  .dock {
+    gap: 0.125rem;
+  }
+  .dock-item {
+    min-width: 2.75rem;
+    padding: 0 0.6rem;
+  }
+}
+
+.dock-badge {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.2rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--candy);
+  color: var(--on-candy);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One authored moment: a settled sticker peels back its corner. */
+  .sticker[data-just-paid] {
+    animation: peel-in 0.9s var(--ease-out-expo) 0.2s both;
+  }
+  .sticker[data-just-paid] .sticker-sparkle {
+    animation: sparkle-in 0.7s var(--ease-out-expo) 0.9s both;
+  }
+  @keyframes peel-in {
+    from {
+      --peel: 0px;
+    }
+  }
+  @keyframes sparkle-in {
+    from {
+      scale: 0;
+      rotate: -40deg;
+    }
+  }
+  /* Overdue wobbles once on arrival. */
+  .sticker[data-status="OVERDUE"] {
+    animation: sticker-wobble 0.9s var(--ease-out-expo) 0.15s 1;
+  }
+  @keyframes sticker-wobble {
+    30% {
+      transform: rotate(calc(var(--tilt, 0deg) - 1.2deg));
+    }
+    60% {
+      transform: rotate(calc(var(--tilt, 0deg) + 0.8deg));
+    }
+  }
+  .dock-item[aria-current="page"] svg {
+    animation: dock-hop 0.45s var(--ease-out-expo);
+  }
+  @keyframes dock-hop {
+    40% {
+      translate: 0 -0.3rem;
+    }
+  }
+}
+
+@media print {
+  .sticker {
+    transform: none;
+    filter: none;
+  }
+  .sticker-face {
+    border-color: currentColor;
+  }
+  .sheet {
+    box-shadow: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

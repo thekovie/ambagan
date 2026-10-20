@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Check your email" };
 export default function CheckEmailPage() {
   return (
     <div className="flex flex-col items-start gap-6">
-      <div className="grid size-14 place-items-center rounded-full bg-foil-lime text-ink">
+      <div className="grid size-14 place-items-center rounded-full bg-st-mint text-st-ink">
         <MailCheck className="size-7" aria-hidden="true" />
       </div>
       <div>

@@ -2,11 +2,11 @@ import { ReceiptText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { Sachet } from "@/components/sachet";
+import { Sticker } from "@/components/sticker";
 import { StatementAction } from "@/components/statement-action";
 import { formatDate, formatDateTime, greeting } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
-import { sachetProps } from "@/lib/statement-view";
+import { stickerProps } from "@/lib/statement-view";
 import { requireUser } from "@/server/auth/session";
 import { getMemberDashboard } from "@/server/billing/dashboard";
 import { periodLabel } from "@/server/billing/period";
@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Home" };
 function StatementLink({ statement }: { statement: Statement }) {
   return (
     <Link href={`/statements/${statement.id}`} className="block rounded-lg outline-offset-4">
-      <Sachet hung compact {...sachetProps(statement)} />
+      <Sticker compact {...stickerProps(statement)} />
     </Link>
   );
 }
@@ -39,9 +39,9 @@ export default async function DashboardPage() {
       <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]">
         <div className="flex flex-col gap-12">
           {primary ? (
-            <Sachet {...sachetProps(primary, now)}>
+            <Sticker {...stickerProps(primary, now)}>
               <StatementAction statement={primary} />
-            </Sachet>
+            </Sticker>
           ) : (
             <EmptyState
               icon={<ReceiptText />}
@@ -55,7 +55,7 @@ export default async function DashboardPage() {
               <h2 id="attention" className="font-display text-3xl">
                 Also waiting on you
               </h2>
-              <div className="rack">
+              <div className="sticker-sheet">
                 {attention.map((statement) => (
                   <StatementLink key={statement.id} statement={statement} />
                 ))}
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
                   See all
                 </Link>
               </div>
-              <div className="rack">
+              <div className="sticker-sheet">
                 {recent.map((statement) => (
                   <StatementLink key={statement.id} statement={statement} />
                 ))}

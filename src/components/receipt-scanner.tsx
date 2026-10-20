@@ -119,7 +119,7 @@ export function ReceiptScanner({ knownApps, onDetected }: ReceiptScannerProps) {
             max={1}
             value={phase.fraction}
             aria-label={phase.label}
-            className="h-2 w-full overflow-hidden rounded-full accent-foil-magenta"
+            className="h-2 w-full overflow-hidden rounded-full accent-candy"
           />
           <p className="text-sm font-semibold">{phase.label}</p>
         </div>

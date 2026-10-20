@@ -1,8 +1,6 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
 import { useSyncExternalStore } from "react";
-import { Button } from "@/components/ui/button";
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -12,7 +10,8 @@ function subscribe(onChange: () => void) {
 
 const isDark = () => document.documentElement.classList.contains("dark");
 
-export function ThemeToggle({ className }: { className?: string }) {
+/** The current theme and a way to flip it. The server snapshot is "light", so the first render matches the HTML. */
+export function useDarkMode(): { dark: boolean; toggle: () => void } {
   const dark = useSyncExternalStore(subscribe, isDark, () => false);
 
   function toggle() {
@@ -25,16 +24,5 @@ export function ThemeToggle({ className }: { className?: string }) {
     }
   }
 
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={className}
-      onClick={toggle}
-      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-    >
-      {dark ? <Sun /> : <Moon />}
-    </Button>
-  );
+  return { dark, toggle };
 }

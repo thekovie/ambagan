@@ -1,7 +1,7 @@
-import type { SachetProps } from "@/components/sachet";
+import type { StickerProps } from "@/components/sticker";
 import { formatDate } from "@/lib/dates";
 import type { StatementStatus } from "@/lib/enums";
-import { periodLabel, periodStub } from "@/server/billing/period";
+import { periodLabel } from "@/server/billing/period";
 
 /** The fields of a statement row that the display layer needs. */
 export interface StatementLike {
@@ -16,7 +16,7 @@ export interface StatementLike {
   cancelledAt: Date | null;
 }
 
-/** What the strip's date line says for each status. */
+/** What the sticker's date line says for each status. */
 export function statementDateLabel(st: Pick<StatementLike, "status" | "dueAt" | "cancelledAt">): string {
   switch (st.status) {
     case "UNPAID":
@@ -32,9 +32,9 @@ export function statementDateLabel(st: Pick<StatementLike, "status" | "dueAt" | 
   }
 }
 
-export type StatementSachetProps = Pick<
-  SachetProps,
-  "status" | "subscriptionName" | "periodLabel" | "stubLabel" | "amountMinor" | "currency" | "dateLabel" | "reference"
+export type StatementStickerProps = Pick<
+  StickerProps,
+  "status" | "subscriptionName" | "periodLabel" | "amountMinor" | "currency" | "dateLabel" | "reference"
 >;
 
 /**
@@ -45,13 +45,12 @@ export function effectiveStatus(st: Pick<StatementLike, "status" | "dueAt">, now
   return st.status === "UNPAID" && st.dueAt.getTime() < now.getTime() ? "OVERDUE" : st.status;
 }
 
-export function sachetProps(st: StatementLike, now = new Date()): StatementSachetProps {
+export function stickerProps(st: StatementLike, now = new Date()): StatementStickerProps {
   const status = effectiveStatus(st, now);
   return {
     status,
     subscriptionName: st.subscriptionName,
     periodLabel: periodLabel(st.period),
-    stubLabel: periodStub(st.period),
     amountMinor: st.amountMinor,
     currency: st.currency,
     dateLabel: statementDateLabel({ ...st, status }),
