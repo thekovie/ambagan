@@ -29,6 +29,14 @@ const TYPE_LABELS: Record<string, string> = {
   TEST: "Test",
 };
 const STATUS_LABELS: Record<EmailStatus, string> = { PENDING: "Waiting", SENDING: "Sending", SENT: "Sent", FAILED: "Failed", SKIPPED: "Skipped" };
+/** Each total gets its own pastel; the word above the number carries the meaning. */
+const TILE: Record<EmailStatus, string> = {
+  PENDING: "bg-st-butter",
+  SENDING: "bg-st-sky",
+  SENT: "bg-st-mint",
+  FAILED: "bg-st-rose",
+  SKIPPED: "bg-st-lilac",
+};
 
 /** The sign-in link and invitation are one-time secrets that are never stored, so they can't be resent. */
 const canResend = (type: string, status: string) =>
@@ -43,9 +51,9 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
   const rows = listEmails(db, { status, limit: LIST_LIMIT });
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header className="max-w-2xl">
-        <h1 className="font-display text-5xl md:text-6xl">Emails</h1>
+        <h1 className="font-display text-display">Emails</h1>
         <p className="mt-3 text-muted-foreground">
           Everything ambagan emails is listed here. <strong>Sent</strong> means the mail server accepted it; email can&apos;t
           confirm that it reached the inbox. Failed messages are retried a few times before we give up.
@@ -55,16 +63,16 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
       <section aria-label="Email totals">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {EMAIL_STATUSES.map((s) => (
-            <div key={s} className="rounded-xl bg-secondary p-4">
-              <dt className="text-sm font-semibold text-muted-foreground">{STATUS_LABELS[s]}</dt>
+            <div key={s} className={`rounded-2xl p-4 text-st-ink ${TILE[s]}`}>
+              <dt className="text-sm font-semibold">{STATUS_LABELS[s]}</dt>
               <dd className="font-display text-4xl">{counts[s]}</dd>
             </div>
           ))}
         </dl>
       </section>
 
-      <section aria-labelledby="tools" className="flex flex-col gap-4">
-        <h2 id="tools" className="font-display text-3xl">
+      <section aria-labelledby="tools" className="sheet p-5 sm:p-6 flex flex-col gap-4">
+        <h2 id="tools" className="font-display text-title">
           Check email works
         </h2>
         <EmailTools />
@@ -72,7 +80,7 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
 
       <section aria-labelledby="log" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 id="log" className="font-display text-3xl">
+          <h2 id="log" className="font-display text-title">
             Recent emails
           </h2>
           <form className="flex items-end gap-2">
@@ -100,9 +108,9 @@ export default async function AdminNotificationsPage({ searchParams }: PageProps
             description="Invitations, statements and payment updates show up here as they are sent."
           />
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="flex flex-col gap-3">
             {rows.map((row) => (
-              <li key={row.id} className="flex flex-col gap-2 py-4">
+              <li key={row.id} className="sheet flex flex-col gap-2 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="font-bold">
                     {TYPE_LABELS[row.type] ?? row.type} <span className="font-normal text-muted-foreground">to</span>{" "}

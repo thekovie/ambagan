@@ -21,8 +21,8 @@ function describeRun(run: JobRun): string {
 /** The automatic daily run: when it happens, what the last runs did, and a manual trigger. */
 export function DailyRunPanel({ runs }: { runs: JobRun[] }) {
   return (
-    <section aria-labelledby="daily" className="flex max-w-2xl flex-col gap-4">
-      <h2 id="daily" className="font-display text-3xl">
+    <section aria-labelledby="daily" className="sheet p-5 sm:p-6 flex max-w-2xl flex-col gap-4">
+      <h2 id="daily" className="font-display text-title">
         Daily run
       </h2>
       <p className="text-muted-foreground">

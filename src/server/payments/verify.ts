@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { PaymentStatus } from "@/lib/enums";
 import { recordAudit } from "@/server/audit";
@@ -187,6 +187,11 @@ export interface PendingPaymentRow {
   previousAttempts: PreviousAttempt[];
   /** This reference was declined before (possibly for another member): worth a closer look. */
   referenceSeenDeclined: boolean;
+}
+
+/** How many payments are waiting for the admin (the badge on the dock's Verify item). */
+export function countPendingPayments(db: Db): number {
+  return db.select({ n: count() }).from(payments).where(eq(payments.status, "PENDING")).get()?.n ?? 0;
 }
 
 /** The verification queue, oldest first. */

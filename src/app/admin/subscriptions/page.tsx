@@ -11,20 +11,20 @@ export default async function SubscriptionsPage() {
   const plans = listSubscriptions(getDb());
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-5xl md:text-6xl">Plans</h1>
+        <h1 className="font-display text-display">Plans</h1>
         <p className="mt-3 text-muted-foreground">
           Each plan is one shared subscription. Fees and dates here apply to statements issued from now on; statements
           already issued never change.
         </p>
       </header>
 
-      <div className="flex max-w-3xl flex-col divide-y divide-border">
+      <div className="flex max-w-3xl flex-col gap-6">
         {plans.map((plan) => (
-          <section key={plan.id} aria-labelledby={`plan-${plan.id}`} className="flex flex-col gap-5 py-8 first:pt-0">
+          <section key={plan.id} aria-labelledby={`plan-${plan.id}`} className="sheet p-5 sm:p-6 flex flex-col gap-5">
             <div>
-              <h2 id={`plan-${plan.id}`} className="font-display text-4xl">
+              <h2 id={`plan-${plan.id}`} className="font-display text-title">
                 {plan.name}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -47,8 +47,8 @@ export default async function SubscriptionsPage() {
           </section>
         ))}
 
-        <section aria-labelledby="new-plan" className="flex flex-col gap-5 py-8">
-          <h2 id="new-plan" className="font-display text-4xl">
+        <section aria-labelledby="new-plan" className="sheet p-5 sm:p-6 flex flex-col gap-5">
+          <h2 id="new-plan" className="font-display text-title">
             Add another plan
           </h2>
           <SubscriptionForm />

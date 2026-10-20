@@ -135,10 +135,13 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
   await test.step("the admin checks the money and approves", async () => {
     await admin.goto("/admin/payments");
     await expect(admin.getByText("Waiting for you (1)")).toBeVisible();
+    await expect(admin.getByRole("link", { name: "Verify, 1 waiting" })).toBeVisible();
     await expect(admin.getByText("Ana Reyes").first()).toBeVisible();
     await admin.getByRole("button", { name: /Money arrived: approve/ }).click();
     await admin.getByRole("button", { name: /Sure\? Mark paid/ }).click();
     await expect(admin.getByText("Waiting for you (0)")).toBeVisible();
+    // The dock's count follows the queue without a manual reload.
+    await expect(admin.getByRole("link", { name: "Verify", exact: true })).toBeVisible();
   });
 
   await test.step("the member sees it paid and is emailed", async () => {
