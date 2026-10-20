@@ -7,19 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMinor, parsePesosToMinor } from "@/lib/money";
-import { buildSplitInput, computeSplit, type DraftMethod } from "@/lib/split";
+import { buildItemsSplitInput, buildSplitInput, computeSplit, type DraftExtra, type DraftItem, type DraftMethod } from "@/lib/split";
 import { cn } from "@/lib/utils";
 import type { Participant } from "@/server/bills";
 import { createBillAction, type CreateBillState } from "../actions";
 import { GuestForm, type AddedGuest } from "../guest-form";
+import { ItemsEditor } from "./items-editor";
 
-type Method = DraftMethod;
+type Method = DraftMethod | "ITEMS";
 
 const METHODS: { value: Method; label: string; hint: string }[] = [
   { value: "EQUAL", label: "Equally", hint: "Everyone pays the same." },
   { value: "SHARES", label: "By shares", hint: "A couple counts as 2 shares, someone eating light as 1." },
   { value: "PERCENT", label: "By percent", hint: "Give each person a percentage. They must add up to 100%." },
   { value: "EXACT", label: "Exact amounts", hint: "Type what each person owes. It must add up to the total." },
+  { value: "ITEMS", label: "By items", hint: "Each person pays for what they had, with tax, service and tip shared fairly. Best for a receipt." },
 ];
 
 interface Row {
@@ -62,6 +64,9 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [totalText, setTotalText] = useState("");
   const [method, setMethod] = useState<Method>("EQUAL");
+  const [items, setItems] = useState<DraftItem[]>(() => [{ id: "first-item", label: "", priceText: "", assignees: [] }]);
+  const [extras, setExtras] = useState<DraftExtra[]>([]);
+  const [receiptText, setReceiptText] = useState("");
 
   const update = (id: string, patch: Partial<Row>) => setRows((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
   const setAll = (included: boolean) => setRows((current) => Object.fromEntries(Object.entries(current).map(([id, row]) => [id, { ...row, included }])));
@@ -75,11 +80,11 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
 
   // The split as the server will see it, or why it cannot be built yet. Recomputed on every render: it is cheap
   // (at most 50 people), and building it in one shared place keeps the preview and the saved bill identical.
-  const draft = buildSplitInput({
-    method,
-    totalText,
-    people: included.map((p) => ({ id: p.id, name: p.name, shares: rows[p.id].shares, percent: rows[p.id].percent, amount: rows[p.id].amount })),
-  });
+  const draftPeople = included.map((p) => ({ id: p.id, name: p.name, shares: rows[p.id].shares, percent: rows[p.id].percent, amount: rows[p.id].amount }));
+  const draft =
+    method === "ITEMS"
+      ? buildItemsSplitInput({ people: draftPeople, items, extras, receiptText })
+      : buildSplitInput({ method, totalText, people: draftPeople });
 
   const outcome = "input" in draft ? computeSplit(draft.input, billId) : null;
   const amounts = new Map(outcome?.ok ? outcome.result.shares.map((s) => [s.userId, s.amountMinor]) : []);
@@ -117,10 +122,17 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
           <Input id={`${uid}-title`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} autoComplete="off" placeholder="Dinner at Gerry's" />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor={`${uid}-total`}>Total you paid (₱)</Label>
-            <Input id={`${uid}-total`} value={totalText} onChange={(e) => setTotalText(e.target.value)} inputMode="decimal" autoComplete="off" placeholder="1,500.00" />
-          </div>
+          {method === "ITEMS" ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold">Total you paid</p>
+              <p className="flex min-h-12 items-center text-lg font-bold tabular-nums">{outcome?.ok ? formatMinor(outcome.result.totalMinor, "PHP") : "Adds up from the items"}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`${uid}-total`}>Total you paid (₱)</Label>
+              <Input id={`${uid}-total`} value={totalText} onChange={(e) => setTotalText(e.target.value)} inputMode="decimal" autoComplete="off" placeholder="1,500.00" />
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${uid}-due`}>Everyone pays by</Label>
             <Input id={`${uid}-due`} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
@@ -177,6 +189,18 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
           ))}
         </fieldset>
         <p className="text-sm text-muted-foreground">{methodHint}</p>
+
+        {method === "ITEMS" ? (
+          <ItemsEditor
+            people={included.map((p) => ({ id: p.id, name: p.name }))}
+            items={items}
+            onItems={setItems}
+            extras={extras}
+            onExtras={setExtras}
+            receiptText={receiptText}
+            onReceipt={setReceiptText}
+          />
+        ) : null}
 
         {included.length > 0 ? (
           <ul className="flex flex-col divide-y divide-border">

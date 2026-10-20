@@ -578,3 +578,15 @@ No high findings; it confirmed the preview and saved bill cannot diverge. Fixed:
 
 ### Verification
 579 tests (7 new here), typecheck, lint, production build, `pnpm audit --prod` clean, and the end-to-end journey now covers: building an ambag with an inline guest, the guest paying from a clean browser, the admin verifying, a tampered link giving 404, replacing a link, and Invite to join. Checked in a real browser at 390px.
+
+## 2026-10-21 — Ambag, PR 5 of 6: itemised bills (feat/ambag-itemised)
+
+### What changed
+The builder gains **By items**, for splitting a receipt: each item with the people who shared it, then **Tax, Service charge, Tip, Delivery fee, Discount and Other** as a peso amount or a percentage of the items (shared by what each person had, or equally; delivery starts equal, a discount is always proportional). An optional "total on the receipt" is checked against what the items and extras add up to, so a missing line cannot slip through. The total field becomes "adds up from the items". The engine already supported all of this (PR 1); this PR is the form (`items-editor.tsx`) and `buildItemsSplitInput`, which turns it into the split input and says what is missing.
+- Checked in the browser with a real receipt (₱600 pizza for three, ₱450 beer for two, 10% service, ₱99 delivery): the amounts matched a hand calculation to the centavo (₱500.50, ₱500.50, ₱253.00; total ₱1,254.00).
+- Tested: 6 new tests for the itemised draft (shaping, missing-field messages, people removed from the split, a discount forced proportional, and **preview equals saved bill** against `createBill`). The end-to-end journey gained an itemised step, including the receipt-total mismatch message.
+- A robustness fix found while testing by script: the editor built updates from props captured at render, so two clicks in the same tick overwrote each other. It now uses functional state updates.
+- Contrast walk on the itemised view in both themes: no failures. Select option text shortened so it does not truncate on a phone.
+
+### Verification
+585 tests, typecheck, lint, production build, e2e journey. No independent review for this PR: it is a form over the engine reviewed in PR 1 and the builder reviewed in PR 4, and the new logic is covered by the parity test.
