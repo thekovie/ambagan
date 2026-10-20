@@ -31,7 +31,7 @@ Deactivating a member pauses their membership; reactivating moves `start_period`
 | Status | Meaning |
 |---|---|
 | `UNPAID` | Issued, due date not yet passed |
-| `UNDER_VERIFICATION` | Member reported a payment; waiting for the admin (set by the payments milestone) |
+| `UNDER_VERIFICATION` | Member reported a payment; waiting for the admin (set when a payment is reported) |
 | `PAID` | Admin approved the payment |
 | `OVERDUE` | Unpaid and the due day has ended |
 | `CANCELLED` | Admin cancelled it; balance zero, history kept |
@@ -50,16 +50,18 @@ Only `UNPAID` or `OVERDUE` statements can be cancelled; a reason (3 to 200 chara
 
 ## Scheduled jobs (the daily run)
 
-No cron, no second container: `src/instrumentation.ts` starts a one-minute timer inside the web server process (Node runtime only, never during `next build`). Each tick does two things: (1) if it is 08:00 Manila or later and today's run hasn't succeeded yet, run the daily job, (2) send any email that is due or waiting out a retry. Because the condition is "08:00 or later" rather than "exactly 08:00", an app that was off at 08:00 runs the job on its first tick after it starts.
+No cron, no second container: `src/instrumentation.ts` (which loads `instrumentation-node.ts`) starts a one-minute timer inside the web server process (Node runtime only, never during `next build`). Each tick does three things: (1) if it is 08:00 Manila or later and today's run hasn't succeeded yet, take the daily backup and then (2) run the daily job, and (3) send any email that is due or waiting out a retry. Because the condition is "08:00 or later" rather than "exactly 08:00", an app that was off at 08:00 runs the job on its first tick after it starts.
 
 The daily job (`reconcile`) is a series of idempotent steps, so it is safe to run late, twice or by hand:
 
 1. **Issue statements** for the current Manila month for every active plan whose issue day has arrived, to every active member whose membership has started. Existing statements (including cancelled ones) are never touched.
 2. **Mark overdue**: unpaid statements whose due day has ended in Manila.
-3. **Queue emails** for statements that are still `UNPAID` or `OVERDUE`: "new statement" (for statements issued in the last 7 days, and only for this or last month: a back-filled old month isn't announced as news), "due tomorrow", "due today", and "overdue" the day after the due day, then weekly, **four notices at most** (so a member who left the group is not nagged forever). Paid, under-verification and cancelled statements get nothing, and a statement that goes back to unpaid after a declined payment resumes. Each notice has a dedupe key (`DUE_TODAY:<statementId>`, `OVERDUE:<statementId>:<daysLate>`), so repeating the job never repeats a message. A day that was missed entirely is not made up: the next reminder simply follows the calendar.
-4. **Prune** finished email rows and job history older than 90 days.
+3. **Queue emails** for statements that are still `UNPAID` or `OVERDUE`: "new statement" (for statements issued in the last 7 days, and only for this or last month: a back-filled old month isn't announced as news), "due tomorrow", "due today", and "overdue" the day after the due day, then weekly, **four notices at most** (so a member who left the group is not nagged forever). Paid, under-verification and cancelled statements get nothing, and a statement that goes back to unpaid after a declined payment resumes. Each notice has a dedupe key (`DUE_TODAY:<statementId>`, `OVERDUE:<daysLate>:<statementId>`), so repeating the job never repeats a message. A day that was missed entirely is not made up: the next reminder simply follows the calendar.
+4. **Prune** finished email rows and job history older than 90 days, and expired sessions and sign-in links.
 
 `job_run` records every run (trigger, status, summary, error). A scheduled run happens at most once per Manila day, a failed one is retried after 30 minutes (not every minute), and a run still marked running after 30 minutes is treated as crashed. An admin can also press **Run it now** on Admin → Statements; it can't overlap a run in progress.
+
+**Joining mid-month.** A member added (or reactivated) after their plan's due day is first billed **next** month, so they never get a statement that is overdue on arrival; the due day itself still counts as on time. Before the due day they are billed for the current month at the next daily run.
 
 Limits: statement generation covers only the current Manila month, so if the app is down for a plan's whole issue-day-to-month-end window, issue that month by hand with **Generate missing** (automatic back-filling could bill members for months they never owed); a run needs the web process to be up, which is the trade-off of having no external scheduler.
 

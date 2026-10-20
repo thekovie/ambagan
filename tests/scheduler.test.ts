@@ -294,6 +294,28 @@ describe("reconcile: housekeeping", () => {
   });
 });
 
+describe("reconcile: expired sign-in leftovers", () => {
+  it("removes expired sessions and sign-in links, and keeps live ones", () => {
+    const now = manila("2026-10-19T08:00:00");
+    const live = new Date(now.getTime() + 86_400_000);
+    const dead = new Date(now.getTime() - 86_400_000);
+    db.insert(s.sessions).values([
+      { sessionToken: "live-session", userId: ana.id, expires: live },
+      { sessionToken: "dead-session", userId: ana.id, expires: dead },
+    ]).run();
+    db.insert(s.verificationTokens).values([
+      { identifier: "ana@example.com", token: "live-link", expires: live },
+      { identifier: "nobody@example.com", token: "dead-link", expires: dead },
+    ]).run();
+
+    const summary = reconcile(db, now);
+
+    expect(summary.prunedAuth).toBe(2);
+    expect(db.select().from(s.sessions).all().map((r) => r.sessionToken)).toEqual(["live-session"]);
+    expect(db.select().from(s.verificationTokens).all().map((r) => r.token)).toEqual(["live-link"]);
+  });
+});
+
 describe("reconcile through runJob (end to end)", () => {
   it("a day's run issues statements once and a second tick that day does nothing", async () => {
     const T = manila("2026-10-01T08:00:00");

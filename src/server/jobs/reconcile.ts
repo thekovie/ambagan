@@ -4,6 +4,7 @@ import { daysBetween, manilaDateKey, previousPeriod } from "@/server/billing/per
 import { markOverdue } from "@/server/billing/statements";
 import type { Db } from "@/server/db/client";
 import { statements, subscriptions } from "@/server/db/schema";
+import { pruneExpiredAuth } from "@/server/auth/cleanup";
 import { notifyStatementEvent } from "@/server/email/notify";
 import { pruneEmails } from "@/server/email/queue";
 import { pruneJobRuns } from "./runner";
@@ -25,6 +26,8 @@ export interface ReconcileSummary {
   queued: number;
   prunedEmails: number;
   prunedJobRuns: number;
+  /** Expired sessions and sign-in links removed. */
+  prunedAuth: number;
   [key: string]: unknown;
 }
 
@@ -45,7 +48,7 @@ function reminderFor(dueAt: Date, today: string): { type: "DUE_TOMORROW" | "DUE_
  * 2. mark statements overdue once their due day has ended in Manila,
  * 3. queue "new statement" and due/overdue reminders, only for statements that still need paying
  *    (never paid, under verification or cancelled ones),
- * 4. prune old email log and job history rows.
+ * 4. prune old email log and job history rows, and expired sessions and sign-in links.
  */
 export function reconcile(db: Db, now: Date): ReconcileSummary {
   const today = manilaDateKey(now);
@@ -80,5 +83,6 @@ export function reconcile(db: Db, now: Date): ReconcileSummary {
     queued,
     prunedEmails: pruneEmails(db, now, EMAIL_RETENTION_DAYS),
     prunedJobRuns: pruneJobRuns(db, now, JOB_RETENTION_DAYS),
+    prunedAuth: pruneExpiredAuth(db, now),
   };
 }

@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { startBillingThisMonth } from "./db";
 import { linkIn, waitForMail } from "./mail";
 
 const BASE_URL = "http://localhost:3100";
@@ -98,6 +99,9 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
   });
 
   await test.step("the admin issues this month's statements; the member sees theirs", async () => {
+    // Joining after the plan's due day means first billing next month (a rule with its own unit tests), so on most
+    // days of the month this member would have nothing to pay yet. State the precondition: they joined earlier.
+    startBillingThisMonth(MEMBER);
     await admin.goto("/admin/statements");
     await admin.getByRole("button", { name: "Generate missing statements" }).click();
     await expect(admin.getByText(/Created 1 statement/)).toBeVisible();

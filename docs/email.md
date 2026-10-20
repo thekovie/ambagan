@@ -26,14 +26,16 @@ After deploying, open **Admin → Emails** and press **Send me a test email**. I
 | `PAYMENT_RECEIVED` | member | they reported a payment |
 | `ADMIN_VERIFY_REQUEST` | every active admin | a payment needs checking |
 | `PAYMENT_APPROVED`, `PAYMENT_DECLINED` | member | the admin decided (a decline includes the reason) |
+| `ADMIN_DUPLICATE_ATTEMPT` | every active admin | a member tried to report a reference that another member already reported (once per pair) |
+| `PAYMENT_DETAILS_CHANGED` | every other active member and admin | the account holder, number or QR of an active payment method changed, or a method was switched on (says what changed, never the new details) |
 | `TEST` | the admin | the test button |
 | `LOGIN`, `INVITATION` | the person | sent **directly**, see below |
 
-Deactivated members are not emailed. Payment notifications are written to the queue **inside the same database transaction** as the payment change: if the change rolls back there is no email, and if the mail server is down the change still stands.
+Deactivated members are not emailed. Whether a message is still worth sending is checked **twice**: when it is queued, and again right before it is sent, because it may have waited out an SMTP outage. If the statement has been paid, put under verification or cancelled meanwhile, a reminder is not sent; if the member was deactivated, nothing is sent; a "please verify" for a payment that has since been decided is not sent. Such messages end as **Skipped** (never retried) and show on the Emails page with the reason. Payment notifications are written to the queue **inside the same database transaction** as the payment change: if the change rolls back there is no email, and if the mail server is down the change still stands.
 
 ## The queue
 
-`email_log` rows move `PENDING → SENDING → SENT`, or back to `PENDING` with a delay after a failure, or to `FAILED` once attempts run out.
+`email_log` rows move `PENDING → SENDING → SENT`, or back to `PENDING` with a delay after a failure, or to `FAILED` once attempts run out, or to `SKIPPED` when the message stopped being relevant before it was sent.
 
 - **Dedupe:** every message has a unique `dedupe_key` such as `PAYMENT_APPROVED:<paymentId>`. Queuing the same event twice (a double-click, a re-run of a job) is silently ignored.
 - **Claiming:** a send run takes due messages in one immediate transaction and marks them `SENDING` with a 10-minute lease. Two runs can never take the same message. If the process dies mid-send, the message becomes claimable again when the lease expires.

@@ -3,13 +3,17 @@ import { getEnv } from "@/env";
 import { getDb } from "@/server/db/client";
 import { NOTIFICATION_TYPES, type NotificationPayload, type NotificationType } from "./notification-copy";
 import { renderNotification } from "./notification-email";
-import { processQueue, type ProcessResult, type QueuedEmail } from "./queue";
+import { processQueue, type DeliverOutcome, type ProcessResult, type QueuedEmail } from "./queue";
+import { skipReason } from "./relevance";
 import { sendMail } from "./transport";
 
 const isNotification = (type: string): type is NotificationType => (NOTIFICATION_TYPES as readonly string[]).includes(type);
 
 /** Renders a queued message and hands it to SMTP. Throws on failure so the queue can retry. */
-async function deliver(email: QueuedEmail): Promise<void> {
+async function deliver(email: QueuedEmail): Promise<DeliverOutcome> {
+  // Checked at send time, not just when queued: it may have waited out an SMTP outage while the world moved on.
+  const reason = skipReason(getDb(), email);
+  if (reason) return { skip: reason };
   if (!isNotification(email.type)) throw new Error(`${email.type} mail is not sent from the queue`);
   const { html, text } = await renderNotification(email.type, JSON.parse(email.payload) as NotificationPayload, getEnv().APP_URL);
   await sendMail({ to: email.toEmail, subject: email.subject, html, text });

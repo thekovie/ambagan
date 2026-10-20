@@ -1,4 +1,4 @@
-import { Check, Hourglass, Send, TriangleAlert } from "lucide-react";
+import { Ban, Check, Hourglass, Send, TriangleAlert } from "lucide-react";
 import type { EmailStatus } from "@/lib/enums";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,8 @@ const META: Record<EmailStatus, { label: string; statementStatus: string; Icon: 
   SENDING: { label: "Sending", statementStatus: "UNDER_VERIFICATION", Icon: Send },
   SENT: { label: "Sent", statementStatus: "PAID", Icon: Check },
   FAILED: { label: "Failed", statementStatus: "OVERDUE", Icon: TriangleAlert },
+  // Not sent on purpose (the statement was paid meanwhile, the member was deactivated): neutral, not an error.
+  SKIPPED: { label: "Skipped", statementStatus: "CANCELLED", Icon: Ban },
 };
 
 /** Status capsule for a queued email. Word + icon + colour, never colour alone. */

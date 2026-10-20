@@ -7,6 +7,7 @@ import { requireAdmin } from "@/server/auth/session";
 import { getEnv } from "@/env";
 import { MANUAL_BACKUP_COOLDOWN_MS, backupDirFor, backupTooRecent, listBackups } from "@/server/backup/backup";
 import { runBackupJob } from "@/server/backup/run";
+import { recordAudit } from "@/server/audit";
 import { getDb } from "@/server/db/client";
 import { savePaymentMethod, type QrChange } from "@/server/payments/methods";
 
@@ -117,11 +118,17 @@ export interface BackupState {
 
 /** Takes a backup right now. The copy is verified before it counts, and old ones are rotated as usual. */
 export async function backUpNowAction(): Promise<BackupState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   // Every backup counts toward rotation: without a cooldown, repeated clicks would push out the daily history.
-  if (backupTooRecent(listBackups(backupDirFor(getEnv())), new Date(), MANUAL_BACKUP_COOLDOWN_MS)) {
-    return { error: "A backup was taken a moment ago. Wait a few minutes before taking another." };
+  // (An unreadable folder just means no cooldown; the backup itself will then report what is wrong.)
+  let recent = false;
+  try {
+    recent = backupTooRecent(listBackups(backupDirFor(getEnv())), new Date(), MANUAL_BACKUP_COOLDOWN_MS);
+  } catch {
+    recent = false;
   }
+  if (recent) return { error: "A backup was taken a moment ago. Wait a few minutes before taking another." };
+  recordAudit(getDb(), { actorId: admin.id, action: "backup.started_by_hand", entityType: "backup" });
   const result = await runBackupJob("MANUAL");
   revalidatePath("/admin/settings");
   if (!result.ran) return { error: "A backup is already running. Try again in a minute." };

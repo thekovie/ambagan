@@ -149,16 +149,25 @@ describe("processQueue", () => {
     const result = await processQueue(db, async (row) => {
       if (row.toEmail === "bad@example.com") throw new Error("550 mailbox unavailable");
     }, { now: at(1000) });
-    expect(result).toEqual({ sent: 1, retrying: 1, failed: 0 });
+    expect(result).toEqual({ sent: 1, retrying: 1, failed: 0, skipped: 0 });
     expect(rowOf(ok).status).toBe("SENT");
     expect(rowOf(bad)).toMatchObject({ status: "PENDING", attempts: 1, lastError: "550 mailbox unavailable" });
+  });
+
+  it("records a message the sender says is no longer relevant as SKIPPED: final, counted, never retried", async () => {
+    const id = queue("DUE_TODAY", "D:1");
+    const result = await processQueue(db, async () => ({ skip: "The statement is no longer owed" }), { now: at(1000) });
+    expect(result).toEqual({ sent: 0, retrying: 0, failed: 0, skipped: 1 });
+    expect(rowOf(id)).toMatchObject({ status: "SKIPPED", lastError: "The statement is no longer owed", sentAt: null, attempts: 1 });
+    expect(claimDueEmails(db, at(365 * 24 * 3600_000), 10)).toEqual([]);
+    expect(emailCounts(db).SKIPPED).toBe(1);
   });
 
   it("counts a final failure separately", async () => {
     const id = queue("DUE_TODAY", "D:1");
     db.update(s.emailLogs).set({ attempts: MAX_ATTEMPTS - 1 }).where(eq(s.emailLogs.id, id)).run();
     const result = await processQueue(db, async () => { throw new Error("nope"); }, { now: at(1000) });
-    expect(result).toEqual({ sent: 0, retrying: 0, failed: 1 });
+    expect(result).toEqual({ sent: 0, retrying: 0, failed: 1, skipped: 0 });
     expect(rowOf(id).status).toBe("FAILED");
   });
 
@@ -267,6 +276,6 @@ describe("listEmails / emailCounts", () => {
     markEmailSent(db, a, at(2000));
     expect(listEmails(db, { limit: 10 }).map((r) => r.dedupeKey)).toEqual(["D:2", "D:1"]);
     expect(listEmails(db, { status: "SENT", limit: 10 })).toHaveLength(1);
-    expect(emailCounts(db)).toEqual({ PENDING: 1, SENDING: 0, SENT: 1, FAILED: 0 });
+    expect(emailCounts(db)).toEqual({ PENDING: 1, SENDING: 0, SENT: 1, FAILED: 0, SKIPPED: 0 });
   });
 });

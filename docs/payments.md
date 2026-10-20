@@ -19,7 +19,7 @@ One immediate transaction:
 
 Backed by the database: partial unique indexes allow **one pending payment per statement** and **a reference only once among non-declined payments** (a decline releases it). A different amount is allowed but flagged to the member and to the admin.
 
-Validation: the date must survive a round trip (JavaScript silently rolls Sep 31 forward to Oct 1, so impossible dates are explicitly rejected); amount greater than 0 and at most PHP 1,000,000; reference 6+ alphanumerics (letters, digits, spaces, dashes); transaction time not more than 24 h ahead and within 180 days; sending app 1-40 characters; note up to 300.
+Validation: the date must survive a round trip (JavaScript silently rolls Sep 31 forward to Oct 1, so impossible dates are explicitly rejected); amount greater than 0 and at most PHP 1,000,000; reference 6+ alphanumerics (letters, digits, spaces, dashes, dots and underscores); transaction time not more than 24 h ahead and within 180 days; sending app 1-40 characters; note up to 300.
 
 ## Verification (`approvePayment` / `declinePayment`)
 
@@ -41,11 +41,16 @@ Both actions need a two-step confirm in the UI.
 
 ## Tests
 
-`tests/payments.test.ts` (35), `tests/verification.test.ts` (21), plus parser/apply/OCR and payment-method suites.
+`tests/payments.test.ts` (35), `tests/verification.test.ts` (25), `tests/email-notifications.test.ts` (the emails around each step), plus parser/apply/OCR and payment-method suites.
+
+## Duplicate references and changed details
+
+The database lets a transaction reference be reported **once** among non-declined payments, so the first reporter wins. To stop "report someone else's receipt first" from looking like ownership, a blocked attempt by a *different* member is recorded in the audit log and emails every active admin naming both members (once per pair), so the admin can check in their own account who really sent it. The member just sees "already reported".
+
+Separately, when an active payment method's account holder, account number or QR changes (or a method is switched on), every other active member and admin gets an email saying *what* changed (never the new details), so a swapped account number can't go unnoticed. See [email.md](email.md).
 
 ## Known limitations
 
-- Notifications for submit/approve/decline are added with the email queue milestone; until then the member page says "check back here for the result".
+- Each step sends an email (member confirmation and admin request on submit; member result on approve/decline). They are queued in the same transaction as the change and sent afterwards, so a mail outage never blocks a payment: see [email.md](email.md).
 - An admin who is also a member could approve their own report. Approver identity is audited, so this is left as a policy choice (a six-person group with one admin); reject `payment.userId === adminId` if you want separation of duties.
 - No automatic matching with bank/e-wallet data: verification is manual by design.
-- Members get no notice when payment details change.

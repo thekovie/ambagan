@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import type { PaymentMethodKind } from "@/lib/enums";
 import { recordAudit } from "@/server/audit";
+import { notifyPaymentDetailsChanged } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
 import { paymentMethods } from "@/server/db/schema";
 
@@ -92,6 +93,20 @@ export function savePaymentMethod(
       entityId: id,
       metadata: { kind: current.kind, changed: changed.filter((key) => key !== "qrMime") },
     });
+    // People pay whatever is shown here, so a change to where the money goes (or switching a method on) is announced.
+    const labels: string[] = [];
+    if (changed.includes("accountName")) labels.push("account holder");
+    if (changed.includes("accountNumber")) labels.push("account number");
+    if (changed.includes("qrFile")) labels.push("QR code");
+    const becameActive = next.isActive && !current.isActive;
+    if (next.isActive && (labels.length > 0 || becameActive)) {
+      notifyPaymentDetailsChanged(t, {
+        method: { id: current.id, label: next.label },
+        changed: labels.length > 0 ? labels : ["availability"],
+        actorId,
+        now: new Date(),
+      });
+    }
     return { ok: true, previous: current.qrFile && current.qrFile !== next.qrFile ? current.qrFile : null };
   });
 }

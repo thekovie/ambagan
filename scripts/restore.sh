@@ -80,7 +80,7 @@ $COMPOSE run --rm --no-deps -T -e RESTORE_NAME="$NAME" --entrypoint sh app -c '
     [ "$created_assets" = 1 ] && rm -rf /data/assets
     for f in ambagan.db ambagan.db-wal ambagan.db-shm; do [ -e "$safety/$f" ] && mv "$safety/$f" "/data/$f"; done
     [ -d "$safety/assets" ] && mv "$safety/assets" /data/assets
-    rmdir "$safety" 2>/dev/null
+    rmdir "$safety" 2>/dev/null || true
     return 0
   }
 

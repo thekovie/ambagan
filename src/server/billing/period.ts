@@ -73,3 +73,14 @@ export function periodLabel(period: string): string {
 export function periodStub(period: string): string {
   return MONTHS[split(period)[1] - 1].slice(0, 3).toUpperCase();
 }
+
+/**
+ * The first month a newly added (or reactivated) member should be billed for. Normally the current month, but once the
+ * plan's due day has passed in Manila that month is already late: starting them next month avoids a statement that is
+ * overdue the moment it is issued. The due day itself still counts as on time.
+ */
+export function firstBillablePeriod(now: Date, dueDay: number): string {
+  const today = manilaDateKey(now);
+  const period = today.slice(0, 7);
+  return Number(today.slice(8)) > dueDay ? nextPeriod(period) : period;
+}

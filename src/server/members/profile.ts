@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { cleanDisplayName } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
 import { users } from "@/server/db/schema";
@@ -9,7 +10,7 @@ export type RenameResult = { ok: true } | { ok: false; error: "INVALID_NAME" | "
 
 /** A member changing their own display name. The only profile field members may edit. */
 export function updateOwnName(db: Db, input: { userId: string; name: string }): RenameResult {
-  const name = input.name.trim();
+  const name = cleanDisplayName(input.name);
   if (name.length < 1 || name.length > MAX_NAME_LENGTH) return { ok: false, error: "INVALID_NAME" };
 
   return db.transaction((tx): RenameResult => {

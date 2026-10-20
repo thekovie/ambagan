@@ -10,19 +10,14 @@ import {
   type EmailActionState,
 } from "./actions";
 
+/** Always mounted, so screen readers announce the text when it appears. */
 function Result({ state }: { state: EmailActionState }) {
-  if (state.error) {
-    return (
-      <p role="alert" className="text-sm font-semibold text-destructive">
-        {state.error}
-      </p>
-    );
-  }
-  return state.message ? (
-    <p role="status" className="text-sm font-semibold">
-      {state.message}
-    </p>
-  ) : null;
+  return (
+    <div aria-live="polite" className="empty:hidden">
+      {state.error ? <p className="text-sm font-semibold text-destructive">{state.error}</p> : null}
+      {state.message ? <p className="text-sm font-semibold">{state.message}</p> : null}
+    </div>
+  );
 }
 
 /** Two admin tools: prove SMTP works, and send whatever is waiting without waiting for the next run. */

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { formatDate } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { periodLabel } from "@/server/billing/period";
 import type { Db } from "@/server/db/client";
-import { users, type payments, type statements } from "@/server/db/schema";
+import { users, type paymentMethods, type payments, type statements } from "@/server/db/schema";
 import { copyFor, type NotificationPayload, type NotificationType } from "./notification-copy";
 import { enqueueEmail } from "./queue";
 
@@ -155,4 +155,68 @@ export function notifyStatementEvent(
     statement.id,
     now,
   );
+}
+
+/**
+ * A member tried to report a reference that another member had already reported. The database refuses the second
+ * report (first reporter wins), so the admins are told: otherwise whoever reports a receipt first, honestly or not,
+ * would look like its owner. Once per pair, however often they retry.
+ */
+export function notifyDuplicateAttempt(
+  db: Db,
+  args: { existing: Payment; attemptedBy: string; statement: Statement; transactionRef: string; now: Date },
+): void {
+  const { existing, attemptedBy, statement, transactionRef, now } = args;
+  const nameOf = (id: string) => {
+    const user = db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, id)).get();
+    return user?.name || user?.email || "A member";
+  };
+  const memberName = nameOf(attemptedBy);
+  const otherMemberName = nameOf(existing.userId);
+  for (const admin of activeAdmins(db)) {
+    queueFor(
+      db,
+      "ADMIN_DUPLICATE_ATTEMPT",
+      admin,
+      () => ({
+        ...statementPayload(statement, existing.amountMinor),
+        memberName,
+        otherMemberName,
+        transactionRef,
+        path: "/admin/payments",
+      }),
+      `ADMIN_DUPLICATE_ATTEMPT:${existing.id}:${attemptedBy}:${admin.id}`,
+      statement.id,
+      now,
+    );
+  }
+}
+
+/**
+ * Where people send money changed. Everyone else is told what changed (never the new values), so a swapped account
+ * number, from a hijacked admin session for instance, doesn't go unnoticed until someone's money is gone.
+ */
+export function notifyPaymentDetailsChanged(
+  db: Db,
+  args: { method: Pick<typeof paymentMethods.$inferSelect, "id" | "label">; changed: string[]; actorId: string; now: Date },
+): void {
+  const { method, changed, actorId, now } = args;
+  const actor = db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, actorId)).get();
+  const actorName = actor?.name || actor?.email || "an admin";
+  const recipients = db
+    .select({ id: users.id, email: users.email, name: users.name })
+    .from(users)
+    .where(and(eq(users.isActive, true), ne(users.id, actorId)))
+    .all();
+  for (const person of recipients) {
+    queueFor(
+      db,
+      "PAYMENT_DETAILS_CHANGED",
+      person,
+      () => ({ destination: method.label, changed: changed.join(" and "), actorName }),
+      `PAYMENT_DETAILS_CHANGED:${method.id}:${now.getTime()}:${person.id}`,
+      null,
+      now,
+    );
+  }
 }
