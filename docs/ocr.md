@@ -37,7 +37,14 @@ Deployment notes: serve `/ocr/*` as static files; the Content-Security-Policy th
 - **Reference:** by label ("Ref No.", "Reference ID/Number", "Transaction ID", "Trace No."), either digit groups (GCash style) or a single alphanumeric token of 8+ characters; the value may be on the next line.
 - **Date:** month-first, day-first, ISO and unambiguous numeric formats, 12- or 24-hour, read as Manila time; impossible dates and ambiguous orders (10/11/2026) are refused.
 - **OCR repair:** `O`, `l`, `I` become digits only inside numeric tokens; any repair lowers confidence to "medium".
-- **Unrecognised receipts** are capped at "low" so nothing is pre-filled from, say, a grocery receipt.
+- **Unrecognised receipts** are capped at "low" so nothing is pre-filled from, say, a grocery receipt. (This is the payment parser; shop and restaurant receipts have their own, below.)
+
+## Bill scanning (`parse-bill.ts`)
+The "By items" builder has an optional **Scan a receipt** step for shop and restaurant receipts. It uses the same in-browser engine and the same guarantees: the photo is read on the device only, the raw text is parsed immediately and dropped, errors are not logged, and the server has no endpoint that takes an image. Differences: the engine reads the page as one block and keeps column spacing (`recognizeText(..., { layout: true })`), and the image may be larger (3200 px on the long side) because small print on a long receipt needs the pixels.
+- **What it reads:** lines ending in a price are items (a leading quantity becomes "×N"; a `2 @ 150.00  300.00` line takes the line total and the name from the line above); service charge, tip, delivery, discount and tax lines become extras; the printed total goes into "Total on the receipt". Payment lines (cash, change, card) and VAT breakdown lines are ignored. Prices need centavos (`600.00`): a bare `600` is not read, because it cannot be told from a table number.
+- **Tax is never charged twice.** Philippine receipts usually print VAT as already inside the prices. The extras are kept only when the numbers prove it: items alone equal the total (VAT included, no extras added), items plus all extras equal it, or items plus everything except tax equal it. Anything else adds no extras, still fills the total, and the screen says the items and the total disagree so the admin looks for a missing line.
+- **The admin always decides who shared what.** Scanned items start with nobody chosen, and nothing is saved until the admin has checked the form and chosen people.
+- Accuracy depends on the photo (flat, well lit, in focus). It is unmeasured on real receipts: the repo has no real receipts, only synthetic text and a drawn receipt in the end-to-end test.
 
 ## Testing
 

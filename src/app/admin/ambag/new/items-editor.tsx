@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { EXTRA_KINDS, type DraftExtra, type DraftItem, type ExtraKind } from "@/lib/split";
+import type { BillScan } from "@/lib/ocr/parse-bill";
 import { cn } from "@/lib/utils";
+import { BillScanner } from "./bill-scanner";
 
 interface Person {
   id: string;
@@ -24,6 +26,8 @@ interface ItemsEditorProps {
   onExtras: Dispatch<SetStateAction<DraftExtra[]>>;
   receiptText: string;
   onReceipt: (text: string) => void;
+  /** A receipt was read: the builder puts it into the fields. */
+  onScanned: (scan: BillScan) => void;
 }
 
 const EXTRA_LABEL: Record<ExtraKind, string> = {
@@ -51,7 +55,7 @@ const chip =
   "flex min-h-11 items-center rounded-full border-2 px-4 text-sm font-bold transition-colors outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 /** The itemised form: each receipt line with the people who shared it, then tax, service, tip, delivery and discounts. */
-export function ItemsEditor({ people, items, onItems, extras, onExtras, receiptText, onReceipt }: ItemsEditorProps) {
+export function ItemsEditor({ people, items, onItems, extras, onExtras, receiptText, onReceipt, onScanned }: ItemsEditorProps) {
   const patchItem = (id: string, patch: Partial<DraftItem>) => onItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   const patchExtra = (id: string, patch: Partial<DraftExtra>) => onExtras((current) => current.map((extra) => (extra.id === id ? { ...extra, ...patch } : extra)));
   const toggle = (id: string, personId: string) =>
@@ -65,6 +69,7 @@ export function ItemsEditor({ people, items, onItems, extras, onExtras, receiptT
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <h3 className="font-display text-xl">Items</h3>
+        <BillScanner onScanned={onScanned} />
         <ul className="flex flex-col gap-3">
           {items.map((item, index) => {
             const name = item.label.trim() || `item ${index + 1}`;
