@@ -172,6 +172,8 @@ export interface PendingPaymentRow {
   subscriptionName: string;
   /** "YYYY-MM" */
   period: string;
+  /** Set when the statement is a share of an ambag bill. */
+  billId: string | null;
   currency: string;
   /** What the statement still owes. */
   expectedMinor: number;
@@ -236,6 +238,7 @@ export function listPendingPayments(db: Db): PendingPaymentRow[] {
       statementReference: statement.reference,
       subscriptionName: statement.subscriptionName,
       period: statement.period,
+      billId: statement.billId,
       currency: statement.currency,
       expectedMinor: statement.outstandingMinor,
       submittedMinor: payment.amountMinor,
@@ -264,6 +267,8 @@ export interface ReviewedPaymentRow {
   currency: string;
   period: string;
   subscriptionName: string;
+  /** Set when the statement is a share of an ambag bill. */
+  billId: string | null;
   transactionRef: string;
   reviewedAt: Date | null;
 }
@@ -284,6 +289,7 @@ export function listReviewedPayments(db: Db, limit: number): ReviewedPaymentRow[
       currency: statements.currency,
       period: statements.period,
       subscriptionName: statements.subscriptionName,
+      billId: statements.billId,
       transactionRef: payments.transactionRef,
       reviewedAt: payments.reviewedAt,
     })

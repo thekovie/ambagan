@@ -25,7 +25,7 @@ export default async function StatementsPage() {
         <EmptyState
           icon={<ReceiptText />}
           title="No statements yet"
-          description="Your first statement shows up here as soon as it's issued, and we'll email you when it lands."
+          description="Your first statement or ambag shows up here as soon as it's issued, and we'll email you when it lands."
         />
       ) : (
         <div className="sticker-sheet max-w-2xl">

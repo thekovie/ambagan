@@ -13,7 +13,7 @@ Next.js 16 App Router, TypeScript, Tailwind CSS v4, shadcn/ui, Lucide React. Fix
 An admin (the owner, who holds the shared Spotify plan) and roughly 3–6 close friends who split it. Members mostly open the app on their phones, usually from an email link, to see what they owe and pay via GCash, Maya or MariBank QR. Admin verifies payments against the receiving account.
 
 ## Product Purpose
-Track the monthly share of a shared subscription: issue a Statement of Account (SOA) per member, show how to pay, let members report a payment (optionally by scanning a receipt in the browser), and let the admin verify it. Success: everyone knows what they owe and by when, the admin never chases payments by chat, and history stays accurate.
+Ambagan is friends chipping in for something they share. Two kinds of bill: the monthly share of a shared subscription, and one-off **ambag** the admin fronted (dinner, the internet, a gift) split equally, by shares, by percent, by exact amounts or by receipt items. Friends without an account get a private link to view and pay their share. For each bill: track the share: issue a Statement of Account (SOA) per member, show how to pay, let members report a payment (optionally by scanning a receipt in the browser), and let the admin verify it. Success: everyone knows what they owe and by when, the admin never chases payments by chat, and history stays accurate.
 
 ## Positioning
 A tiny private billing portal for a friend group, not a SaaS product. Real statements, references and due dates with the warmth of a group chat. Receipt screenshots never leave the phone.

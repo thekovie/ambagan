@@ -55,7 +55,7 @@ Besides the monthly plans, the admin can split a one-off bill (dinner, the inter
 
 ## Access
 
-- Members read only their own statements: ownership is part of the query, so another member's id is a 404.
+- Members read only their own statements: ownership is part of the query, so another member's id is a 404. For a share of an ambag, the statement page also shows **How this was split** (the bill's note, the total, the method and only that member's own lines, from `getShareForStatement`) and is titled by the bill ("Dinner · Ambag") instead of a month.
 - Admin pages (`/admin/statements`) re-check the admin role in the page and in each server action.
 - The member detail page has a print layout (`print:` styles hide the shell and show a letterhead).
 

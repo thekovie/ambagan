@@ -3,23 +3,14 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { PaymentForm } from "@/app/(member)/pay/[statementId]/payment-form";
 import { PaymentMethodsList } from "@/components/payment-methods-list";
+import { ShareBreakdown } from "@/components/share-breakdown";
 import { Sticker } from "@/components/sticker";
 import { toLocalInputValue } from "@/lib/dates";
-import { formatMinor } from "@/lib/money";
-import type { SplitMethod } from "@/lib/split";
 import { stickerProps } from "@/lib/statement-view";
 import { getDb } from "@/server/db/client";
 import { requireShareAccess } from "@/server/share/access";
 import { getShareLinkView } from "@/server/share/view";
 import { submitSharedPaymentAction } from "./actions";
-
-const HOW: Record<SplitMethod, string> = {
-  EQUAL: "split equally",
-  SHARES: "split by shares",
-  PERCENT: "split by percentage",
-  EXACT: "split by set amounts",
-  ITEMS: "split by what each person had",
-};
 
 function Notice({ icon, children, tone = "info" }: { icon: ReactNode; children: ReactNode; tone?: "info" | "warn" }) {
   return (
@@ -80,34 +71,7 @@ export default async function SharePage({ params, searchParams }: PageProps<"/s/
         </Notice>
       ) : null}
 
-      <section aria-labelledby="split" className="sheet flex flex-col gap-3 p-5 sm:p-6">
-        <h2 id="split" className="font-display text-title">
-          How this was split
-        </h2>
-        {share.note ? <p className="whitespace-pre-line">{share.note}</p> : null}
-        <p className="text-muted-foreground">
-          {formatMinor(share.totalMinor, view.statement.currency)} in total, {HOW[share.method]} between {share.participantCount}{" "}
-          {share.participantCount === 1 ? "person" : "people"}.
-        </p>
-        <ul className="flex flex-col divide-y divide-border">
-          {share.lines.map((line, index) => (
-            <li key={index} className="flex items-baseline justify-between gap-4 py-2">
-              <span>
-                <span className="font-semibold">{line.label}</span>
-                {line.note ? <span className="block text-sm text-muted-foreground">{line.note}</span> : null}
-              </span>
-              <span className="font-bold">
-                {line.amountMinor < 0 ? "−" : ""}
-                {formatMinor(Math.abs(line.amountMinor), view.statement.currency)}
-              </span>
-            </li>
-          ))}
-          <li className="flex items-baseline justify-between gap-4 pt-3 text-lg font-bold">
-            <span>Your share</span>
-            <span>{formatMinor(share.amountMinor, view.statement.currency)}</span>
-          </li>
-        </ul>
-      </section>
+      <ShareBreakdown share={share} currency={view.statement.currency} />
 
       {view.payable ? (
         view.methods.length === 0 ? (

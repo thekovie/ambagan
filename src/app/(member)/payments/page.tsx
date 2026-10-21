@@ -6,7 +6,7 @@ import { PaymentPill } from "@/components/payment-pill";
 import { formatDateTime } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { requireUser } from "@/server/auth/session";
-import { periodLabel } from "@/server/billing/period";
+import { statementTitle } from "@/lib/statement-view";
 import { getDb } from "@/server/db/client";
 import { listPaymentsForUser } from "@/server/payments/history";
 
@@ -50,7 +50,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/payment
                     href={`/statements/${row.statementId}`}
                     className="font-semibold underline underline-offset-4"
                   >
-                    {row.subscriptionName} · {periodLabel(row.period)}
+                    {statementTitle(row)}
                   </Link>
                 </div>
                 <PaymentPill status={row.status} />

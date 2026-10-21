@@ -14,6 +14,7 @@ export function AuthFrame({ children }: { children: ReactNode }) {
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
           <Wordmark />
           <p className="font-display text-title">split it, settle it.</p>
+          <p className="max-w-[34ch] text-sm text-muted-foreground">Ambagan is friends chipping in together for something they share.</p>
         </div>
         <div className="sheet p-6 sm:p-8">{children}</div>
       </div>
