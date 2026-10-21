@@ -214,7 +214,7 @@ The dock is a floating capsule of 48px items. The active item fills lilac and sh
 An empty sticker slot: 2px dashed border at the sticker radius, a lilac round icon chip, a title, a muted 38ch description, and an optional action.
 
 ### Wordmark
-Lowercase "ambagan" in the display face with a small rose sticker glyph whose corner is peeled.
+Lowercase "ambagan" in the display face beside the mark: a coin cut into four sticker slices (rose, butter, mint, sky) with a plum outline, one slice lifted out to the upper right with a small tilt, as a friend takes their share. It is drawn once (`src/components/brand/logo-mark.tsx`) and reused for the link-preview card, the home-screen icon and the tab icon (`src/app/icon.svg`). It uses only four flat colours and a thick outline so it still reads at 16px.
 
 ## Do's and Don'ts
 
