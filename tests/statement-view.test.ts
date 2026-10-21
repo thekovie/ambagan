@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectiveStatus, stickerProps, statementDateLabel } from "@/lib/statement-view";
+import { effectiveStatus, stickerProps, statementDateLabel, statementTitle } from "@/lib/statement-view";
 
 const base = {
   reference: "SPOT-202610-A1B2C3",
@@ -55,3 +55,12 @@ describe("stickerProps", () => {
     });
   });
 });
+
+describe("statementTitle", () => {
+  it("names a monthly statement by its plan and month, and an ambag by its title and the word Ambag", () => {
+    expect(statementTitle({ subscriptionName: "Spotify", period: "2026-10", billId: null })).toBe("Spotify · October 2026");
+    expect(statementTitle({ subscriptionName: "Spotify", period: "2026-10" })).toBe("Spotify · October 2026");
+    expect(statementTitle({ subscriptionName: "Dinner at Gerry's", period: "2026-10", billId: "b1" })).toBe("Dinner at Gerry's · Ambag");
+  });
+});
+

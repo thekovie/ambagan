@@ -6,7 +6,7 @@ import { PaymentPill } from "@/components/payment-pill";
 import { formatDateTime } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { requireAdmin } from "@/server/auth/session";
-import { periodLabel } from "@/server/billing/period";
+import { statementTitle } from "@/lib/statement-view";
 import { getDb } from "@/server/db/client";
 import { listPendingPayments, listReviewedPayments } from "@/server/payments/verify";
 import { ReviewActions } from "./review-actions";
@@ -51,7 +51,7 @@ export default async function AdminPaymentsPage() {
                   <div className="bg-st-butter px-5 py-4 text-st-ink sm:px-6">
                     <p className="font-display text-title">{name}</p>
                     <p className="text-sm">
-                      {p.subscriptionName} · {periodLabel(p.period)} ·{" "}
+                      {statementTitle(p)} ·{" "}
                       <span className="font-mono">{p.statementReference}</span>
                     </p>
                   </div>
@@ -143,8 +143,7 @@ export default async function AdminPaymentsPage() {
               <li key={r.id} className="sheet flex flex-col gap-1 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="font-bold">
-                    {r.memberName || r.memberEmail} · {formatMinor(r.amountMinor, r.currency)} · {r.subscriptionName}{" "}
-                    {periodLabel(r.period)}
+                    {r.memberName || r.memberEmail} · {formatMinor(r.amountMinor, r.currency)} · {statementTitle(r)}
                   </p>
                   <PaymentPill status={r.status} />
                 </div>

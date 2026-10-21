@@ -34,6 +34,11 @@ export function statementDateLabel(st: Pick<StatementLike, "status" | "dueAt" | 
   }
 }
 
+/** What a statement is called in lists: "Spotify · October 2026", or "Dinner at Gerry's · Ambag" for a share of a bill. */
+export function statementTitle(st: Pick<StatementLike, "subscriptionName" | "period" | "billId">): string {
+  return `${st.subscriptionName} · ${st.billId ? "Ambag" : periodLabel(st.period)}`;
+}
+
 export type StatementStickerProps = Pick<
   StickerProps,
   "status" | "subscriptionName" | "periodLabel" | "amountMinor" | "currency" | "dateLabel" | "reference"

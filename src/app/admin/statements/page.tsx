@@ -111,7 +111,7 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
                     </div>
                     <div>
                       <p className="font-bold">
-                        {periodLabel(row.period)} · {row.subscriptionName}
+                        {row.billId ? `${row.subscriptionName} · Ambag` : `${periodLabel(row.period)} · ${row.subscriptionName}`}
                       </p>
                       <p className="text-sm">
                         {formatMinor(row.amountMinor, row.currency)}

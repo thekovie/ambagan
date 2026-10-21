@@ -590,3 +590,18 @@ The builder gains **By items**, for splitting a receipt: each item with the peop
 
 ### Verification
 585 tests, typecheck, lint, production build, e2e journey. No independent review for this PR: it is a form over the engine reviewed in PR 1 and the builder reviewed in PR 4, and the new logic is covered by the parity test.
+
+## 2026-10-22 — Ambag, PR 6 of 6: member view and the words (feat/ambag-member-and-words)
+
+### What changed
+- **Members see how their share was worked out.** A signed-in member's statement page for an ambag shows "How this was split": the bill's note, the total, the method, and only their own lines (the same slice the private link shows, via `getShareForStatement`). It is one shared component (`ShareBreakdown`) used by both pages, so they cannot drift apart. The page is titled by the bill and says "Ambag" instead of "Subscription / Billing period".
+- **No more "Subscription · October 2026" on a bill.** One helper (`statementTitle`) names a statement "Plan · Month" or "Bill title · Ambag"; the member payments list, admin Verify queue (pending and reviewed) and admin Statements list use it. `billId` was added to the payment-history and verify rows to support this.
+- **Words that serve the name.** Sign-in screen explains "Ambagan is friends chipping in together for something they share."; member empty states say "statement or ambag"; PRODUCT.md and docs/billing.md describe both kinds of bill.
+- Removed the unused `periodStub` and its test line.
+- e2e: the itemised step now also checks Ana's own view (title, "How this was split", her lines, ₱660.00, no "Billing period").
+
+### Verification
+586 tests, typecheck, lint, production build, e2e journey. No new auth surface (the member page already used the ownership-checked statement query), so no separate security review.
+
+### Left for later (not in this plan)
+Show-everyone toggle, recurring variable bills, any-member collectors, a "reported via private link" flag in the verify queue.

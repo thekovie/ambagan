@@ -19,6 +19,8 @@ export interface PaymentHistoryRow {
   /** "YYYY-MM" of the statement this payment was for. */
   period: string;
   subscriptionName: string;
+  /** Set when the statement is a share of an ambag bill. */
+  billId: string | null;
 }
 
 /** A member's own payment reports, newest first. Declined ones are kept: nothing is ever overwritten. */
@@ -39,6 +41,7 @@ export function listPaymentsForUser(db: Db, userId: string): PaymentHistoryRow[]
       statementReference: statements.reference,
       period: statements.period,
       subscriptionName: statements.subscriptionName,
+      billId: statements.billId,
     })
     .from(payments)
     .innerJoin(statements, eq(statements.id, payments.statementId))

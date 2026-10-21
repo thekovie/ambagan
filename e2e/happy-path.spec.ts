@@ -264,6 +264,18 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(admin.getByRole("heading", { level: 1, name: "Pizza night" })).toBeVisible();
     // Ana had half the pizza (300) and all the beer (300), plus 10% service: 660. The admin's share is 300 + 30 = 330.
     await expect(admin.getByText("Your own share").locator("..").getByText("₱330.00")).toBeVisible();
+
+    // Ana sees how her own share was worked out, and only hers.
+    await member.goto("/statements");
+    await expect(member.getByText("Pizza night · Ambag")).toBeVisible();
+    await member.getByRole("link", { name: /Pizza night/ }).click();
+    await expect(member.getByRole("heading", { level: 1, name: "Pizza night" })).toBeVisible();
+    await expect(member.getByRole("heading", { name: "How this was split" })).toBeVisible();
+    await expect(member.getByText("Large pizza")).toBeVisible();
+    await expect(member.getByText("Beer bucket")).toBeVisible();
+    await expect(member.getByText("Service charge")).toBeVisible();
+    await expect(member.getByText("₱660.00").first()).toBeVisible();
+    await expect(member.getByText("Billing period")).toHaveCount(0);
   });
 
   await test.step("the admin's email log shows what was sent", async () => {

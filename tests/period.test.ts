@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstBillablePeriod, nextPeriod, periodLabel, periodOf, periodStub, recentPeriods } from "@/server/billing/period";
+import { firstBillablePeriod, nextPeriod, periodLabel, periodOf, recentPeriods } from "@/server/billing/period";
 
 describe("recentPeriods", () => {
   it("lists the current Manila period first, then earlier ones across year boundaries", () => {
@@ -25,9 +25,8 @@ describe("nextPeriod", () => {
 });
 
 describe("labels", () => {
-  it("formats the long label and three-letter stub", () => {
+  it("formats the long label", () => {
     expect(periodLabel("2026-10")).toBe("October 2026");
-    expect(periodStub("2026-03")).toBe("MAR");
   });
 });
 

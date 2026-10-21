@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { PaymentMethodsList, methodCard } from "@/components/payment-methods-list";
+import { ShareBreakdown } from "@/components/share-breakdown";
 import { PrintButton } from "@/components/print-button";
 import { Sticker } from "@/components/sticker";
 import { StatementAction } from "@/components/statement-action";
@@ -14,6 +15,7 @@ import { effectiveStatus, stickerProps } from "@/lib/statement-view";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/auth/session";
 import { periodLabel } from "@/server/billing/period";
+import { getShareForStatement } from "@/server/bills";
 import { getStatementForUser } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
 import { subscriptions } from "@/server/db/schema";
@@ -30,14 +32,17 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
   if (!statement) notFound();
 
   const plan = db.select().from(subscriptions).where(eq(subscriptions.id, statement.subscriptionId)).get();
+  // A share of an ambag bill: how it was split (only this person's own lines) and the bill's note stand in for a plan's instructions.
+  const share = statement.billId ? getShareForStatement(db, user.id, statement.id) : null;
   const shown = effectiveStatus(statement);
   const payable = shown === "UNPAID" || shown === "OVERDUE";
   const methods = payable ? listPaymentMethods(db, { activeOnly: true }) : [];
 
   const details: [string, string][] = [
     ["Reference", statement.reference],
-    ["Subscription", statement.subscriptionName],
-    ["Billing period", periodLabel(statement.period)],
+    ...(share
+      ? ([["Ambag", statement.subscriptionName]] as [string, string][])
+      : ([["Subscription", statement.subscriptionName], ["Billing period", periodLabel(statement.period)]] as [string, string][])),
     ["Issued", formatLongDate(statement.issuedAt)],
     ["Due", formatLongDate(statement.dueAt)],
     ["Amount", formatMinor(statement.amountMinor, statement.currency)],
@@ -59,12 +64,18 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
         <Link href="/statements" className="text-sm font-semibold text-muted-foreground underline underline-offset-4">
           All statements
         </Link>
-        <h1 className="font-display mt-2 text-display">{periodLabel(statement.period)}</h1>
+        <h1 className="font-display mt-2 text-display">{share ? statement.subscriptionName : periodLabel(statement.period)}</h1>
       </header>
 
       <Sticker className="max-w-2xl print:hidden" {...stickerProps(statement)}>
         <StatementAction statement={statement} omitView />
       </Sticker>
+
+      {share ? (
+        <div className="max-w-2xl print:hidden">
+          <ShareBreakdown share={share} currency={statement.currency} />
+        </div>
+      ) : null}
 
       <section aria-labelledby="details" className="sheet flex max-w-2xl flex-col gap-2 p-5 sm:p-6">
         <h2 id="details" className="font-display text-title">
