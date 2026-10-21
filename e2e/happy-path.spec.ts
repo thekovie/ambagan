@@ -57,6 +57,31 @@ async function receiptPng(page: Page, amount: string, reference: string): Promis
   return Buffer.from(dataUrl.split(",")[1], "base64");
 }
 
+/** A shop receipt drawn in the browser: item names on the left, prices right-aligned like a printed column. */
+async function billPng(page: Page, rows: [string, string][]): Promise<Buffer> {
+  const dataUrl = await page.evaluate(
+    ({ rows }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 900;
+      canvas.height = 120 + rows.length * 80;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 40px Arial";
+      rows.forEach(([label, price], i) => {
+        ctx.textAlign = "left";
+        ctx.fillText(label, 40, 80 + i * 80);
+        ctx.textAlign = "right";
+        ctx.fillText(price, 860, 80 + i * 80);
+      });
+      return canvas.toDataURL("image/png");
+    },
+    { rows },
+  );
+  return Buffer.from(dataUrl.split(",")[1], "base64");
+}
+
 test.describe.configure({ mode: "serial" });
 
 test("a member is invited, pays with a scanned receipt, and the admin verifies it", async ({ browser }) => {
@@ -276,6 +301,29 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(member.getByText("Service charge")).toBeVisible();
     await expect(member.getByText("₱660.00").first()).toBeVisible();
     await expect(member.getByText("Billing period")).toHaveCount(0);
+  });
+
+  await test.step("a photo of a receipt pre-fills the items, the service charge and the receipt total", async () => {
+    await admin.goto("/admin/ambag/new");
+    await admin.getByText("By items", { exact: true }).click();
+    // Items 350.00 + 285.50 + 60.00 = 695.50, plus 10% service charge 69.55, makes 765.05 in all.
+    await admin.locator('section[aria-labelledby="bill-scan-heading"] input[type=file]').setInputFiles({
+      name: "bill.png",
+      mimeType: "image/png",
+      buffer: await billPng(admin, [
+        ["Sisig", "350.00"],
+        ["Adobo", "285.50"],
+        ["Rice", "60.00"],
+        ["Service Charge 10%", "69.55"],
+        ["TOTAL", "765.05"],
+      ]),
+    });
+    await expect(admin.getByText(/Read 3 items and a total of ₱765\.05/)).toBeVisible({ timeout: 90_000 });
+    await expect(admin.getByLabel("Total on the receipt (optional)")).toHaveValue("765.05");
+    await expect(admin.getByLabel("Price of Sisig in pesos")).toHaveValue("350.00");
+    await expect(admin.getByRole("button", { name: /^Remove Service charge/i })).toBeVisible();
+    // Nobody is chosen for the scanned items yet: that is the admin's call.
+    await expect(admin.getByText("Choose who shared").first()).toBeVisible();
   });
 
   await test.step("the admin's email log shows what was sent", async () => {

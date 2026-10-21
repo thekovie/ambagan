@@ -620,3 +620,12 @@ The old mark (a rose sticker with a heart) was cute but said nothing about chipp
 - A test checks the static tab icon uses the same shapes and colours as the app's mark, so they cannot drift apart.
 - Meta tags unchanged from the link-preview PR except the image; the private link and invitation previews stay generic.
 - Checked in the browser at 16/24/32/64px and as the wordmark in light and dark; preview card rendered and viewed. Not checked: how WhatsApp/Messenger actually draw the card (they cache old previews, so paste a fresh link after deploy).
+
+## 2026-10-22 — Scan a receipt to pre-fill the items (feat/ambag-receipt-scan)
+
+Typing every receipt line is the slow part of "By items". The builder now has an optional **Scan a receipt**: pick a photo, it is read on the phone (same Tesseract setup as the payment scanner, nothing uploaded, raw text dropped, errors not logged), and the items, the service/tip/delivery/discount lines and the printed total fill the form for the admin to check.
+- **Decision (owner):** phone only, no cloud AI, because receipts never leave the device. Fills items, extras and the receipt total. Who shared each item stays the admin's tap (scanned items start with nobody chosen, so a wrong guess can never bill the wrong person).
+- **Tax is never charged twice.** PH receipts usually print VAT inside the prices. `reconcile` keeps extras only when the numbers prove it (items = total, items + extras = total, or items + extras without tax = total). Otherwise it adds none, still fills the total, and says the items and total disagree. Unit-tested.
+- Reused the engine; added `recognizeText(..., { layout: true })` (one block, column spacing kept) and a larger image size for long receipts. The shared flow moved into `useImageOcr`, and the payment scanner now uses it with no visible change.
+- **Not measured:** accuracy on real receipts. The repo has none; tests use synthetic text and the e2e draws a receipt and reads it with the real OCR. Prices need centavos (`600.00`); a bare `600` is skipped. After trying real receipts on the demo, the mistakes become test fixtures.
+- Verified: 29 new parser and apply tests (617 in all), typecheck, lint, e2e (real OCR of a drawn receipt, payment scan still passes), viewed at 390px.

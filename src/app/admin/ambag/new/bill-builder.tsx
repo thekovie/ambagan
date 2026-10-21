@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import type { Participant } from "@/server/bills";
 import { createBillAction, type CreateBillState } from "../actions";
 import { GuestForm, type AddedGuest } from "../guest-form";
+import { applyBillScan, pesosText } from "@/lib/ocr/apply-bill";
+import type { BillScan } from "@/lib/ocr/parse-bill";
 import { ItemsEditor } from "./items-editor";
 
 type Method = DraftMethod | "ITEMS";
@@ -85,6 +87,19 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
     method === "ITEMS"
       ? buildItemsSplitInput({ people: draftPeople, items, extras, receiptText })
       : buildSplitInput({ method, totalText, people: draftPeople });
+
+  // Functional updates, because a scan takes a while and the admin may keep typing meanwhile. The ids are made once
+  // here so each update (React may run one twice) produces the same fields.
+  function applyScan(scan: BillScan) {
+    const ids = Array.from({ length: scan.items.length + scan.extras.length }, () => crypto.randomUUID());
+    const idSource = () => {
+      let n = 0;
+      return () => ids[n++];
+    };
+    setItems((current) => applyBillScan({ items: current, extras: [] }, scan, idSource()).items);
+    setExtras((current) => applyBillScan({ items: [], extras: current }, scan, idSource()).extras);
+    if (scan.totalMinor !== null) setReceiptText(pesosText(scan.totalMinor));
+  }
 
   const outcome = "input" in draft ? computeSplit(draft.input, billId) : null;
   const amounts = new Map(outcome?.ok ? outcome.result.shares.map((s) => [s.userId, s.amountMinor]) : []);
@@ -199,6 +214,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
             onExtras={setExtras}
             receiptText={receiptText}
             onReceipt={setReceiptText}
+            onScanned={applyScan}
           />
         ) : null}
 

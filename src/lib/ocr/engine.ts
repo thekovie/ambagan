@@ -25,13 +25,19 @@ export class OcrCancelledError extends Error {
   }
 }
 
+export interface RecognizeOptions {
+  /** Read the page as one block and keep the spacing between columns, so a price stays on its item's line. */
+  layout?: boolean;
+}
+
 /** Returns the recognised text. The caller parses it and then drops it: raw text is never stored or logged. */
 export async function recognizeText(
   image: Blob,
   onProgress: (progress: OcrProgress) => void,
   signal?: AbortSignal,
+  options: RecognizeOptions = {},
 ): Promise<string> {
-  const { createWorker } = await import("tesseract.js");
+  const { createWorker, PSM } = await import("tesseract.js");
   if (signal?.aborted) throw new OcrCancelledError();
 
   const worker = await createWorker("eng", 1, {
@@ -40,6 +46,8 @@ export async function recognizeText(
     langPath: "/ocr/lang",
     logger: (message) => onProgress({ label: STAGE_LABELS[message.status] ?? "Working…", fraction: message.progress }),
   });
+
+  if (options.layout) await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK, preserve_interword_spaces: "1" });
 
   const cancel = () => void worker.terminate();
   signal?.addEventListener("abort", cancel, { once: true });

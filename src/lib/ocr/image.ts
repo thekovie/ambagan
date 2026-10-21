@@ -1,6 +1,8 @@
 /** Browser-only. The image never leaves memory: it is decoded, optionally shrunk, and handed to OCR. */
 
 const MAX_SIDE = 2200;
+/** A long, narrow shop receipt needs more pixels than a phone screenshot to keep small print readable. */
+export const BILL_MAX_SIDE = 3200;
 
 export class UnreadableImageError extends Error {
   constructor() {
@@ -13,7 +15,7 @@ export class UnreadableImageError extends Error {
  * Decodes the screenshot and scales a very large one down so recognition stays quick on a phone.
  * Redrawing also drops any metadata (such as location) the original carried.
  */
-export async function prepareImage(file: File): Promise<Blob> {
+export async function prepareImage(file: File, maxSide: number = MAX_SIDE): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
@@ -23,7 +25,7 @@ export async function prepareImage(file: File): Promise<Blob> {
   }
 
   try {
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));

@@ -58,7 +58,7 @@ function detectProvider(text: string): { provider: Provider; name: string | null
 // ---- numeric repair -------------------------------------------------------------------------
 
 /** Repairs letter look-alikes in a token that is meant to be digits. Returns whether it changed. */
-function repairDigits(token: string): { text: string; repaired: boolean } {
+export function repairDigits(token: string): { text: string; repaired: boolean } {
   const text = token.replace(/[Oo]/g, "0").replace(/[lI]/g, "1");
   return { text, repaired: text !== token };
 }
@@ -66,15 +66,15 @@ function repairDigits(token: string): { text: string; repaired: boolean } {
 // ---- amount ---------------------------------------------------------------------------------
 
 // A money token: optional currency marker, then digits (with OCR look-alikes) and optional decimals.
-const MONEY = /(₱|PHP|Php|php|P)?\s?(\d[\dOolI,]*(?:\.[\dOolI]{1,2})?)/g;
+export const MONEY = /(₱|PHP|Php|php|P)?\s?(\d[\dOolI,]*(?:\.[\dOolI]{1,2})?)/g;
 
-interface Money {
+export interface Money {
   minor: number;
   repaired: boolean;
   hasMarkerOrDecimals: boolean;
 }
 
-function readMoney(token: string, marker: string | undefined): Money | null {
+export function readMoney(token: string, marker: string | undefined): Money | null {
   const { text, repaired } = repairDigits(token);
   const minor = parsePesosToMinor(text);
   if (minor === null) return null;
