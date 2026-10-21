@@ -612,3 +612,11 @@ Sending an ambagan link in a chat showed no image and a plain "ambagan" title. N
 - **Private links stay generic.** `/s/<token>` previews say only "Your share of a bill on ambagan, and how to pay it." No name, amount or bill title, because chat apps store previews. Invitation links likewise.
 - **Still not indexed.** The whole app keeps `noindex`: it is private, and unfurl bots (WhatsApp, Messenger, Telegram, Slack) read Open Graph tags regardless of robots, so previews work. We did not add a sitemap or robots.txt.
 - Checked: tags rendered on `/login`, image and icon routes return 200 `image/png`.
+
+## 2026-10-22 — A logo that says ambagan (feat/logo)
+
+The old mark (a rose sticker with a heart) was cute but said nothing about chipping in. New mark: **a coin cut into four sticker slices (rose, butter, mint, sky), one slice lifted out** as a friend takes their share. Four flat colours and a thin plum outline so it still reads at 16px.
+- Drawn once in `src/components/brand/logo-mark.tsx` and reused by the wordmark (app bar, sign-in, private links, print letterhead), the link-preview card (`opengraph-image.tsx`, now the big mark beside "ambagan / split it, settle it."), the home-screen icon (`apple-icon.tsx`) and the new tab icon (`src/app/icon.svg`). The old `favicon.ico` was removed so the heart icon no longer overrides it.
+- A test checks the static tab icon uses the same shapes and colours as the app's mark, so they cannot drift apart.
+- Meta tags unchanged from the link-preview PR except the image; the private link and invitation previews stay generic.
+- Checked in the browser at 16/24/32/64px and as the wordmark in light and dark; preview card rendered and viewed. Not checked: how WhatsApp/Messenger actually draw the card (they cache old previews, so paste a fresh link after deploy).
