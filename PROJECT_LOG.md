@@ -605,3 +605,10 @@ The builder gains **By items**, for splitting a receipt: each item with the peop
 
 ### Left for later (not in this plan)
 Show-everyone toggle, recurring variable bills, any-member collectors, a "reported via private link" flag in the verify queue.
+
+## 2026-10-22 — Link previews and meta tags (feat/link-previews)
+
+Sending an ambagan link in a chat showed no image and a plain "ambagan" title. Now: `metadataBase` from `APP_URL` (so image URLs are absolute whatever proxy is in front), Open Graph and Twitter cards with a generated 1200x630 preview (`opengraph-image.tsx`, pastel sticker with the wordmark and tagline), an Apple home-screen icon, a real description, and `applicationName`.
+- **Private links stay generic.** `/s/<token>` previews say only "Your share of a bill on ambagan, and how to pay it." No name, amount or bill title, because chat apps store previews. Invitation links likewise.
+- **Still not indexed.** The whole app keeps `noindex`: it is private, and unfurl bots (WhatsApp, Messenger, Telegram, Slack) read Open Graph tags regardless of robots, so previews work. We did not add a sitemap or robots.txt.
+- Checked: tags rendered on `/login`, image and icon routes return 200 `image/png`.

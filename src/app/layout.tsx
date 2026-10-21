@@ -10,10 +10,19 @@ const nunito = Nunito({
   display: "swap",
 });
 
+const TITLE = "ambagan · split it, settle it";
+const DESCRIPTION = "Friends chipping in together: shared subscriptions and one-off bills, split fairly, with a clear share to pay.";
+
+// Relative image and canonical URLs resolve against APP_URL (not the request: behind a proxy that carries the proxy's host).
 export const metadata: Metadata = {
-  title: { default: "ambagan", template: "%s · ambagan" },
-  description: "Split it, settle it. Shared subscription statements and payments for friends.",
+  metadataBase: process.env.APP_URL ? new URL(process.env.APP_URL) : undefined,
+  title: { default: TITLE, template: "%s · ambagan" },
+  description: DESCRIPTION,
+  applicationName: "ambagan",
+  // A private app: out of search engines. Link previews (chat apps) still work, they do not follow robots.
   robots: { index: false, follow: false },
+  openGraph: { type: "website", siteName: "ambagan", title: TITLE, description: DESCRIPTION, locale: "en_PH" },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {
