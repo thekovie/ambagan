@@ -5,7 +5,12 @@ import { findInvitation } from "@/server/auth/invitations";
 import { getDb } from "@/server/db/client";
 import { acceptInvite } from "./actions";
 
-export const metadata: Metadata = { title: "You're invited" };
+export const metadata: Metadata = {
+  title: "You're invited",
+  description: "You've been invited to ambagan, where friends split shared bills.",
+  openGraph: { title: "You're invited · ambagan", description: "You've been invited to ambagan, where friends split shared bills." },
+  twitter: { title: "You're invited · ambagan", description: "You've been invited to ambagan, where friends split shared bills." },
+};
 
 export default async function InvitePage({ params }: PageProps<"/invite/[token]">) {
   const { token } = await params;

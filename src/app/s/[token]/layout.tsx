@@ -5,6 +5,10 @@ import { Wordmark } from "@/components/brand/wordmark";
 // A private link is for one person: keep it out of search engines and never leak it in a Referer header.
 export const metadata: Metadata = {
   title: "Your ambag",
+  // Generic on purpose: chat apps store link previews, so no name, amount or bill title goes in them.
+  description: "Your share of a bill on ambagan, and how to pay it.",
+  openGraph: { title: "Your ambag · ambagan", description: "Your share of a bill on ambagan, and how to pay it." },
+  twitter: { title: "Your ambag · ambagan", description: "Your share of a bill on ambagan, and how to pay it." },
   robots: { index: false, follow: false, nocache: true },
   referrer: "same-origin",
 };
