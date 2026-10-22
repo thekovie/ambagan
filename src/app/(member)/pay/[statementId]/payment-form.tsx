@@ -91,34 +91,57 @@ export function PaymentForm({ action: submit, statementId, currency, outstanding
 
       <ReceiptScanner knownApps={APPS} onDetected={onDetected} />
 
-      <fieldset className="flex flex-col gap-3" aria-describedby={describe("destinationMethodId")}>
-        <legend className="mb-1 text-sm font-semibold">Where did you send it?</legend>
-        {methods.map((method) => (
-          <label
-            key={method.id}
-            className={cn(
-              "flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/40",
-              fields.destination === method.id ? "border-foreground bg-secondary" : "border-input",
-            )}
-          >
-            <input
-              type="radio"
-              name="destinationMethodId"
-              value={method.id}
-              checked={fields.destination === method.id}
-              onChange={set("destination")}
-              className="size-5 accent-candy"
-            />
-            <span>
-              <span className="block font-bold">{method.label}</span>
-              {method.accountName ? <span className="block text-sm text-muted-foreground">{method.accountName}</span> : null}
-            </span>
-          </label>
-        ))}
-        <FieldError id={`${id("destinationMethodId")}-error`} message={errors.destinationMethodId} />
-      </fieldset>
+      {methods.length === 1 ? (
+        // Only one place to pay: nothing to choose, so nothing to ask.
+        <input type="hidden" name="destinationMethodId" value={methods[0].id} />
+      ) : (
+        <fieldset className="flex flex-col gap-3" aria-describedby={describe("destinationMethodId")}>
+          <legend className="mb-1 text-sm font-semibold">Where did you send it?</legend>
+          {methods.map((method) => (
+            <label
+              key={method.id}
+              className={cn(
+                "flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/40",
+                fields.destination === method.id ? "border-foreground bg-secondary" : "border-input",
+              )}
+            >
+              <input
+                type="radio"
+                name="destinationMethodId"
+                value={method.id}
+                checked={fields.destination === method.id}
+                onChange={set("destination")}
+                className="size-5 accent-candy"
+              />
+              <span>
+                <span className="block font-bold">{method.label}</span>
+                {method.accountName ? <span className="block text-sm text-muted-foreground">{method.accountName}</span> : null}
+              </span>
+            </label>
+          ))}
+          <FieldError id={`${id("destinationMethodId")}-error`} message={errors.destinationMethodId} />
+        </fieldset>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <Label htmlFor={id("reference")}>Reference number</Label>
+          <Input
+            id={id("reference")}
+            name="transactionRef"
+            value={fields.reference}
+            onChange={set("reference")}
+            autoComplete="off"
+            autoCapitalize="characters"
+            maxLength={64}
+            placeholder="From your receipt"
+            aria-invalid={bad("transactionRef")}
+            aria-describedby={describe("transactionRef")}
+          />
+          <FromReceipt show={detected.includes("reference")} />
+          <FieldError id={`${id("transactionRef")}-error`} message={errors.transactionRef} />
+        </div>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor={id("app")}>Paid from</Label>
           <NativeSelect
@@ -193,38 +216,25 @@ export function PaymentForm({ action: submit, statementId, currency, outstanding
           <FieldError id={`${id("transactionDate")}-error`} message={errors.transactionDate} />
         </div>
 
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor={id("reference")}>Reference number</Label>
-          <Input
-            id={id("reference")}
-            name="transactionRef"
-            value={fields.reference}
-            onChange={set("reference")}
-            autoComplete="off"
-            autoCapitalize="characters"
-            maxLength={64}
-            placeholder="From your receipt"
-            aria-invalid={bad("transactionRef")}
-            aria-describedby={describe("transactionRef")}
-          />
-          <FromReceipt show={detected.includes("reference")} />
-          <FieldError id={`${id("transactionRef")}-error`} message={errors.transactionRef} />
-        </div>
-
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor={id("notes")}>Note for the admin (optional)</Label>
-          <Textarea
-            id={id("notes")}
-            name="notes"
-            value={fields.notes}
-            onChange={set("notes")}
-            maxLength={300}
-            className="min-h-20"
-            aria-invalid={bad("notes")}
-            aria-describedby={describe("notes")}
-          />
-          <FieldError id={`${id("notes")}-error`} message={errors.notes} />
-        </div>
+        <details className="sm:col-span-2" open={fields.notes.length > 0 || errors.notes ? true : undefined}>
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold underline underline-offset-4">Add a note for the admin (optional)</summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <Label htmlFor={id("notes")} className="sr-only">
+              Note for the admin
+            </Label>
+            <Textarea
+              id={id("notes")}
+              name="notes"
+              value={fields.notes}
+              onChange={set("notes")}
+              maxLength={300}
+              className="min-h-20"
+              aria-invalid={bad("notes")}
+              aria-describedby={describe("notes")}
+            />
+            <FieldError id={`${id("notes")}-error`} message={errors.notes} />
+          </div>
+        </details>
       </div>
 
       {state.error ? (

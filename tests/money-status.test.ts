@@ -54,8 +54,8 @@ describe("STATUS_META", () => {
 
 describe("statusAction", () => {
   it("maps statuses to the contextual action from the brief", () => {
-    expect(statusAction("UNPAID")).toEqual({ kind: "submit", label: "Submit payment" });
-    expect(statusAction("OVERDUE")).toEqual({ kind: "submit", label: "Submit payment" });
+    expect(statusAction("UNPAID")).toEqual({ kind: "submit", label: "Pay now" });
+    expect(statusAction("OVERDUE")).toEqual({ kind: "submit", label: "Pay now" });
     expect(statusAction("UNDER_VERIFICATION").label).toBe("View submission");
     expect(statusAction("PAID").label).toBe("View payment details");
     expect(statusAction("CANCELLED").label).toBe("View statement");

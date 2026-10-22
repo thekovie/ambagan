@@ -17,7 +17,7 @@ export function statusAction(status: StatementStatus): StatusAction {
   switch (status) {
     case "UNPAID":
     case "OVERDUE":
-      return { kind: "submit", label: "Submit payment" };
+      return { kind: "submit", label: "Pay now" };
     case "UNDER_VERIFICATION":
       return { kind: "view-submission", label: "View submission" };
     case "PAID":

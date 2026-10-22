@@ -656,3 +656,9 @@ Audit finding 1: the form was one 2.4-screen page (3.5 for "By items") with the 
 - Next is disabled with the reason written beside it ("Say what it was for.", "Choose who's in."); finished steps are buttons, so going back to fix the total is one tap and nothing typed is lost (hidden steps stay mounted, so a half-done receipt scan survives too). Each step puts focus on its heading. Next stays in view above the dock on long lists.
 - The last step recaps "Pizza night · ₱1,500.00 · 4 people · due ..." so the common equal split is: name, total, tick people, Create.
 - Step rules are a small pure module (`steps.ts`) with tests; the e2e flows now click through the steps and check blocking, focus and that going back keeps what was typed.
+
+## 2026-10-22 — Verify cards and the payment report, simpler (feat/ux-verify-and-pay)
+
+Audit findings 2 and 3.
+- **Verify queue:** when the reported amount matches, the card shows one amount with a "Matches what they owe" tick instead of the same number twice. Account and paid-from sit side by side, the two times share a line, and the intro is two lines. A card is about a third shorter, so Approve is on screen sooner. A mismatch still shows both amounts and the warning.
+- **Payment report (members and private-link payers):** a single place to pay no longer shows a one-option picker, the reference number (the one thing everyone must type) comes first, and the optional note is behind a link. The main button now says **Pay now** instead of "Submit payment", since the next page starts with how to send the money.
