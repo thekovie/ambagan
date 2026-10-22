@@ -137,7 +137,7 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
   });
 
   await test.step("the member scans a receipt and sends the payment for checking", async () => {
-    await member.getByRole("link", { name: /Submit payment/ }).first().click();
+    await member.getByRole("link", { name: /Pay now/ }).first().click();
     await expect(member.getByRole("heading", { name: /Scan your receipt/ })).toBeVisible();
     await member.locator('input[type="file"]').setInputFiles({
       name: "receipt.png",
@@ -148,7 +148,8 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(member.getByLabel("Amount sent (₱)")).toHaveValue("50.00");
     await expect(member.getByLabel("Reference number")).not.toHaveValue("");
 
-    await member.getByRole("radio", { name: /GCash/ }).check();
+    // Only one place to pay: there is nothing to choose, so the form does not ask.
+    await expect(member.getByRole("radio", { name: /GCash/ })).toHaveCount(0);
     await member.getByRole("button", { name: "Send for checking" }).click();
     await expect(member).toHaveURL(/\/payments\?sent=1/);
     await expect(member.getByText("Waiting for check")).toBeVisible();
