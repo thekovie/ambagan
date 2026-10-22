@@ -26,8 +26,8 @@ export default async function MembersPage() {
       <header>
         <h1 className="font-display text-display">Members</h1>
         <p className="mt-3 text-muted-foreground">
-          Invite friends, pick their plan, and pause anyone who leaves. Deactivating keeps their history and stops new
-          statements.
+          Invite friends so they can sign in, or add people who just need a link. Deactivating someone keeps their history
+          and stops new statements.
         </p>
       </header>
 
@@ -36,6 +36,13 @@ export default async function MembersPage() {
           Add a friend
         </h2>
         <AddMemberForm plans={plans} />
+        <p className="text-sm text-muted-foreground">
+          Friend doesn&apos;t need to sign in?{" "}
+          <a href="#guests" className="font-semibold text-foreground underline underline-offset-4">
+            Add them with just a name
+          </a>
+          , and they pay through a private link.
+        </p>
       </section>
 
       <section aria-labelledby="everyone" className="flex flex-col gap-4">

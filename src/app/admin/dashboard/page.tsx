@@ -12,6 +12,8 @@ import { requireAdmin } from "@/server/auth/session";
 import { periodLabel } from "@/server/billing/period";
 import { getAdminOverview } from "@/server/billing/overview";
 import { getDb } from "@/server/db/client";
+import { SetupChecklist } from "@/components/setup-checklist";
+import { getSetupProgress } from "@/server/setup/progress";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -28,6 +30,7 @@ export default async function AdminDashboardPage() {
   await requireAdmin();
   const now = new Date();
   const overview = getAdminOverview(getDb(), now);
+  const setup = getSetupProgress(getDb());
   const { cycle, tickets } = overview;
   const month = periodLabel(overview.period);
   const currency = tickets[0]?.statement.currency ?? "PHP";
@@ -50,7 +53,10 @@ export default async function AdminDashboardPage() {
         <p className="mt-3 text-muted-foreground">{month}</p>
       </header>
 
-      {cycle.count === 0 ? (
+      <SetupChecklist progress={setup} />
+
+      {/* Before setup is done the checklist above is the whole story: no empty state and no row of zeros. */}
+      {cycle.count === 0 && setup.complete ? (
         <EmptyState
           icon={<ReceiptText />}
           title={`Nothing issued for ${month} yet`}
@@ -61,7 +67,9 @@ export default async function AdminDashboardPage() {
             </Link>
           }
         />
-      ) : (
+      ) : null}
+
+      {cycle.count > 0 ? (
         <section aria-labelledby="collected" className="flex max-w-3xl flex-col gap-4">
           <h2 id="collected" className="sr-only">
             Collections for {month}
@@ -91,28 +99,30 @@ export default async function AdminDashboardPage() {
             ))}
           </ul>
         </section>
-      )}
+      ) : null}
 
-      <section aria-labelledby="needs" className="flex max-w-2xl flex-col gap-2">
-        <h2 id="needs" className="font-display text-title">
-          At a glance
-        </h2>
-        <ul className="divide-y divide-border">
-          {attention.map((row) => (
-            <li key={row.label}>
-              <Link href={row.href} className="flex min-h-14 items-center justify-between gap-4 py-2 hover:bg-muted/60">
-                <span className="font-semibold">{row.label}</span>
-                <span className="flex items-center gap-2">
-                  <span className={row.urgent ? "font-display rounded-full bg-candy px-3 py-1 text-2xl text-on-candy" : "font-display text-2xl"}>
-                    {row.value}
+      {setup.complete || cycle.count > 0 ? (
+        <section aria-labelledby="needs" className="flex max-w-2xl flex-col gap-2">
+          <h2 id="needs" className="font-display text-title">
+            At a glance
+          </h2>
+          <ul className="divide-y divide-border">
+            {attention.map((row) => (
+              <li key={row.label}>
+                <Link href={row.href} className="flex min-h-14 items-center justify-between gap-4 py-2 hover:bg-muted/60">
+                  <span className="font-semibold">{row.label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={row.urgent ? "font-display rounded-full bg-candy px-3 py-1 text-2xl text-on-candy" : "font-display text-2xl"}>
+                      {row.value}
+                    </span>
+                    <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
                   </span>
-                  <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {tickets.length > 0 ? (
         <section aria-labelledby="month-stickers" className="flex flex-col gap-5">

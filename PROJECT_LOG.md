@@ -662,3 +662,11 @@ Audit finding 1: the form was one 2.4-screen page (3.5 for "By items") with the 
 Audit findings 2 and 3.
 - **Verify queue:** when the reported amount matches, the card shows one amount with a "Matches what they owe" tick instead of the same number twice. Account and paid-from sit side by side, the two times share a line, and the intro is two lines. A card is about a third shorter, so Approve is on screen sooner. A mismatch still shows both amounts and the warning.
 - **Payment report (members and private-link payers):** a single place to pay no longer shows a one-option picker, the reference number (the one thing everyone must type) comes first, and the optional note is behind a link. The main button now says **Pay now** instead of "Submit payment", since the next page starts with how to send the money.
+
+## 2026-10-22 — Admin setup guide, tidy settings, clearer members (feat/ux-admin-setup)
+
+Audit findings 4 and 6.
+- **"Get set up" on Overview** (a guided checklist, shown only until done): 1 add how friends pay you, 2 add your friends, 3 make your first bill. Only the next step is opened up with its explanation and one button, so a new admin always knows what is next. It reads the real state (`getSetupProgress`: a payment method switched on, anyone besides the admin including guests, any ambag or statement) and disappears when all three are true. While it is showing and nothing has been issued, the empty "Nothing issued" card and the row of zeros are hidden so the checklist is the whole page.
+- **Settings:** payment methods that are switched off collapse to one row ("Maya · Off · set up") instead of a full six-field form each; switched-on ones stay open. About 8 screens down to about 3 for a typical setup.
+- **Members:** the intro and a line under the invite form say when to use "Add a friend" (they sign in) and when to just add someone with a name (a private link).
+- Not done: a "send all invites" bulk button and merging the two add-a-friend forms. Worth doing if the group is large; skipped to keep this change small.
