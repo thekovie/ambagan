@@ -208,13 +208,26 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
   await test.step("an ambag: the admin splits a bill with a friend who has no account, who pays through a private link", async () => {
     await admin.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await admin.goto("/admin/ambag/new");
-    await admin.getByLabel("What was it for?").fill("Karaoke night");
+    // A wizard: one step at a time, and it says what is missing instead of letting you go on half-filled.
+    await expect(admin.getByRole("heading", { name: "What was it for?" })).toBeVisible();
+    await expect(admin.getByRole("button", { name: "Next" })).toBeDisabled();
+    await expect(admin.getByText("Say what it was for.")).toBeVisible();
+    await admin.getByLabel("Name it so friends recognise it").fill("Karaoke night");
     await admin.getByLabel("Total you paid (₱)").fill("600");
+    await admin.getByRole("button", { name: "Next" }).click();
+    await expect(admin.getByRole("heading", { name: "Who's in?" })).toBeFocused();
     await admin.getByRole("checkbox", { name: "Ana Reyes" }).check();
     await admin.getByText("Add a friend who has no account").click();
     await admin.getByLabel("Name", { exact: true }).fill("Tito Boy");
     await admin.getByRole("button", { name: "Add friend" }).click();
     await expect(admin.getByRole("checkbox", { name: /Tito Boy/ })).toBeChecked();
+    await admin.getByRole("button", { name: "Next" }).click();
+    // The last step recaps the bill, and going back keeps what was typed.
+    await expect(admin.getByText(/Karaoke night · ₱600\.00 · 3 people/)).toBeVisible();
+    await admin.getByRole("button", { name: /^The bill/ }).click();
+    await expect(admin.getByLabel("Name it so friends recognise it")).toHaveValue("Karaoke night");
+    await admin.getByRole("button", { name: "Next" }).click();
+    await admin.getByRole("button", { name: "Next" }).click();
     // Admin, Ana and Tito split it equally: 200 each, and the form says so before anything is sent.
     await expect(admin.getByText("Balanced: ₱600.00 split between 3").first()).toBeVisible();
     await admin.getByRole("button", { name: "Create ambag" }).click();
@@ -270,8 +283,10 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
 
   await test.step("an itemised ambag: each person pays for what they had, with service and delivery shared", async () => {
     await admin.goto("/admin/ambag/new");
-    await admin.getByLabel("What was it for?").fill("Pizza night");
+    await admin.getByLabel("Name it so friends recognise it").fill("Pizza night");
+    await admin.getByRole("button", { name: "Next" }).click();
     await admin.getByRole("checkbox", { name: "Ana Reyes" }).check();
+    await admin.getByRole("button", { name: "Next" }).click();
     await admin.getByText("By items", { exact: true }).click();
     await admin.getByLabel("Name of item 1").fill("Large pizza");
     await admin.getByLabel("Price of Large pizza in pesos").fill("600");
@@ -306,6 +321,9 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
 
   await test.step("a photo of a receipt pre-fills the items, the service charge and the receipt total", async () => {
     await admin.goto("/admin/ambag/new");
+    await admin.getByLabel("Name it so friends recognise it").fill("Lunch");
+    await admin.getByRole("button", { name: "Next" }).click();
+    await admin.getByRole("button", { name: "Next" }).click();
     await admin.getByText("By items", { exact: true }).click();
     // Items 350.00 + 285.50 + 60.00 = 695.50, plus 10% service charge 69.55, makes 765.05 in all.
     await admin.locator('section[aria-labelledby="bill-scan-heading"] input[type=file]').setInputFiles({
