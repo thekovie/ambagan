@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
+import { isPlaceholderEmail } from "@/lib/guest";
 import { getBillDetail } from "@/server/bills";
 import { getDb } from "@/server/db/client";
 import { shareLinkPath } from "@/server/share/token";
@@ -110,6 +111,9 @@ export default async function AmbagDetailPage({ params, searchParams }: PageProp
                   url={url}
                   message={message}
                   open={row.status === "UNPAID" || row.status === "OVERDUE"}
+                  userId={row.userId}
+                  email={isPlaceholderEmail(row.memberEmail) ? null : row.memberEmail}
+                  isGuest={row.isGuest}
                 />
               </li>
             );

@@ -48,6 +48,32 @@ export function addGuest(db: Db, input: { name: string; email?: string | null; a
   }, { behavior: "immediate" });
 }
 
+export type SetGuestEmailResult =
+  | { ok: true; user: UserRow }
+  | { ok: false; error: "FORBIDDEN" | "NOT_A_GUEST" | "EMAIL_INVALID" | "EMAIL_TAKEN" };
+
+/**
+ * Gives a guest a real email address (or corrects one), so they can be emailed payment requests and reminders with
+ * their private link. They stay a guest: no account, no sign-in. Unlike "Invite to join" it asks nothing of them.
+ */
+export function setGuestEmail(db: Db, input: { userId: string; email: string; actorId: string }): SetGuestEmailResult {
+  if (!isActiveAdmin(db, input.actorId)) return { ok: false, error: "FORBIDDEN" };
+  const email = normalizeEmail(input.email ?? "");
+  if (!email || !emailSchema.safeParse(email).success) return { ok: false, error: "EMAIL_INVALID" };
+
+  return db.transaction((tx): SetGuestEmailResult => {
+    const t = asDb(tx);
+    const guest = t.select().from(users).where(eq(users.id, input.userId)).get();
+    if (!guest?.isGuest) return { ok: false, error: "NOT_A_GUEST" };
+    const owner = t.select({ id: users.id }).from(users).where(eq(users.email, email)).get();
+    if (owner && owner.id !== guest.id) return { ok: false, error: "EMAIL_TAKEN" };
+
+    const user = t.update(users).set({ email }).where(eq(users.id, guest.id)).returning().get();
+    recordAudit(t, { actorId: input.actorId, action: "guest.email_set", entityType: "user", entityId: user.id });
+    return { ok: true, user };
+  }, { behavior: "immediate" });
+}
+
 export type PromoteGuestResult =
   | { ok: true; user: UserRow; invitation: { token: string; expiresAt: Date } }
   | { ok: false; error: "FORBIDDEN" | "NOT_A_GUEST" | "INACTIVE" | "EMAIL_REQUIRED" | "EMAIL_INVALID" | "EMAIL_TAKEN" };

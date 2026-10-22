@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { avatarClass } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
-import { resendInviteAction, setActiveAction, type MemberActionState } from "./actions";
+import { resendInviteAction, setActiveAction, setGuestEmailAction, type MemberActionState } from "./actions";
 
 export interface MemberView {
   id: string;
@@ -43,9 +43,10 @@ interface MemberRowProps {
 export function MemberRow({ member, promote }: MemberRowProps) {
   const [resend, resendAction, resending] = useActionState<MemberActionState, FormData>(resendInviteAction, {});
   const [toggle, toggleAction] = useActionState<MemberActionState, FormData>(setActiveAction, {});
+  const [emailState, saveEmailAction] = useActionState<MemberActionState, FormData>(setGuestEmailAction, {});
   const display = member.name || member.email;
   const needsInvite = member.isActive && !member.hasSignedIn && !member.isGuest;
-  const error = resend.error ?? toggle.error;
+  const error = resend.error ?? toggle.error ?? emailState.error;
   const invite = resend.invite;
 
   return (
@@ -104,6 +105,12 @@ export function MemberRow({ member, promote }: MemberRowProps) {
             <input type="hidden" name="userId" value={member.id} />
             {member.hasRealEmail ? null : (
               <Input name="email" type="email" inputMode="email" autoComplete="off" required placeholder="Their email" aria-label={`Email for ${display}`} className="h-10 w-56" />
+            )}
+            {member.hasRealEmail ? null : (
+              <Button type="submit" formAction={saveEmailAction} variant="outline" size="sm">
+                Save email only
+                <span className="sr-only"> for {display}</span>
+              </Button>
             )}
             <Button type="submit" variant="secondary" size="sm" disabled={promote.pending}>
               <UserCheck data-icon="inline-start" />
