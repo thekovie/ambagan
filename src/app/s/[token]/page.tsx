@@ -71,7 +71,7 @@ export default async function SharePage({ params, searchParams }: PageProps<"/s/
         </Notice>
       ) : null}
 
-      <ShareBreakdown share={share} currency={view.statement.currency} />
+      <ShareBreakdown share={share} currency={view.statement.currency} collapsed />
 
       {view.payable ? (
         view.methods.length === 0 ? (

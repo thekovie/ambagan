@@ -50,7 +50,7 @@ export function MemberRow({ member, promote }: MemberRowProps) {
   const invite = resend.invite;
 
   return (
-    <li className={cn("sheet flex flex-col gap-4 p-4 sm:p-5", !member.isActive && "opacity-80")}>
+    <li className={cn("sheet flex flex-col gap-3 p-4 sm:p-5", !member.isActive && "opacity-80")}>
       <div className="flex items-start gap-4">
         <span
           aria-hidden="true"
@@ -88,7 +88,7 @@ export function MemberRow({ member, promote }: MemberRowProps) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 sm:pl-16">
+      <div className="flex flex-wrap items-center gap-2 empty:hidden sm:pl-16">
         {needsInvite ? (
           <form action={resendAction}>
             <input type="hidden" name="userId" value={member.id} />
@@ -126,7 +126,7 @@ export function MemberRow({ member, promote }: MemberRowProps) {
             <input type="hidden" name="active" value={member.isActive ? "false" : "true"} />
             {member.isActive ? (
               <ConfirmButton
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 confirmLabel={
                   <>
@@ -137,7 +137,7 @@ export function MemberRow({ member, promote }: MemberRowProps) {
                 Deactivate<span className="sr-only"> {display}</span>
               </ConfirmButton>
             ) : (
-              <Button type="submit" variant="outline" size="sm">
+              <Button type="submit" variant="ghost" size="sm">
                 <RotateCcw data-icon="inline-start" /> Reactivate
                 <span className="sr-only"> {display}</span>
               </Button>

@@ -678,3 +678,10 @@ Owner: add an email for guests too, so a payment request can be sent by email.
 - **Email request** (`sendPaymentRequest`): a button on every unpaid share that has an email, sending the "your ambag is ready" message now instead of waiting for the daily reminders. Admin-only, only for an unpaid share of a bill; pressing twice within five minutes sends one, later presses send another as a nudge. A guest's email links to their private page (the link is made when the email is sent, never stored), a member's to their signed-in statement.
 - Risk to know: a mistyped address sends that person's private link to a stranger. "New link" on the same row replaces it.
 - Tests: 8 new (guest email rules, request rules, double-press, flag-not-link); e2e adds an email to a guest, checks the email arrives with a private-page link, and that "Invite to join" then needs nothing more.
+
+## 2026-10-22 — Audit of the Members page and the private-link page (feat/ux-members-and-link-page)
+
+Follow-up audit asked for after the guest-email change.
+- **Private-link page:** "Your share ₱400.00" appeared three times (the card, a line, a total row), and "How this was split" sat above "Send the money" even though paying is what the visitor came for. Now the total row is dropped when a single line already is the whole share, and the explainer is a collapsed row with a chevron under the amount card, so "Send the money" comes first. Members' signed-in statement page keeps it open (it is a reading page).
+- **Members page:** a new **"Invite the N not invited yet"** button replaces pressing Send invite on every row (the list is worked out on the server, never taken from the browser; failures name the person and point to their row for a link to share). Deactivate is now a quiet button so it is not as loud as the useful ones, the admin's row no longer has an empty action strip, and rows are slightly tighter.
+- Not done: the two add-a-friend forms are still separate (the line under the invite form points between them); worth revisiting if people keep picking the wrong one.
