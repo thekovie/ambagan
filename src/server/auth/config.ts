@@ -11,6 +11,8 @@ import { sendMail } from "@/server/email/transport";
 import { checkSignIn } from "./access";
 
 const DAY_S = 24 * 60 * 60;
+/** A sign-in link is a password for as long as it is valid: long enough to open the email, short enough not to sit in an inbox. */
+const SIGN_IN_LINK_S = 30 * 60;
 
 function buildConfig(): NextAuthConfig {
   const env = getEnv();
@@ -35,7 +37,7 @@ function buildConfig(): NextAuthConfig {
         // Mail goes out through our own transport below; this value is never used for delivery.
         server: { jsonTransport: true },
         from: env.smtp?.fromEmail ?? "noreply@localhost",
-        maxAge: DAY_S,
+        maxAge: SIGN_IN_LINK_S,
         async sendVerificationRequest({ identifier, url }) {
           // No account enumeration: unknown or deactivated addresses get the same "check your email" page, minus the email.
           if (!checkSignIn(db, identifier, env.ADMIN_EMAIL).ok) return;

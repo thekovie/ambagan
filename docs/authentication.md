@@ -12,7 +12,7 @@ Invitation-only, passwordless. Members sign in with a one-time email link; there
 
 1. **Admin invites a member** (Admin → Members): a `user` row (`MEMBER`) is created and `createInvitation()` issues a 256-bit token. Only its SHA-256 is stored (`invitation.token_hash`). Links expire after 7 days; a new invitation revokes older pending ones for that member.
 2. The member opens `/invite/<token>`. A valid link shows a confirm button; `acceptInvite` marks the invitation used (single use, conditional update) and requests a sign-in link for the member's address.
-3. **Sign-in link** (`/login` or step 2): `requestLoginLink` validates the email with Zod, applies rate limits, and calls Auth.js `signIn("nodemailer")`. The link works once and lasts 24 hours. Opening it sets `emailVerified`, creates a session and redirects to `/dashboard`.
+3. **Sign-in link** (`/login` or step 2): `requestLoginLink` validates the email with Zod, applies rate limits, and calls Auth.js `signIn("nodemailer")`. The link works once and lasts 30 minutes (a link is as good as a password while it is valid; asking again is one tap). Asking again within a minute shows the same "check your email" page and sends nothing, because the link emailed a moment ago still works; this is a cooldown, never an error, so nobody can use it to lock someone else out. Opening it sets `emailVerified`, creates a session and redirects to `/dashboard`.
 4. **Sign out** deletes the session row (`signOutAction`).
 
 ## Who may sign in (`checkSignIn`)

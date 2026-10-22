@@ -685,3 +685,19 @@ Follow-up audit asked for after the guest-email change.
 - **Private-link page:** "Your share ₱400.00" appeared three times (the card, a line, a total row), and "How this was split" sat above "Send the money" even though paying is what the visitor came for. Now the total row is dropped when a single line already is the whole share, and the explainer is a collapsed row with a chevron under the amount card, so "Send the money" comes first. Members' signed-in statement page keeps it open (it is a reading page).
 - **Members page:** a new **"Invite the N not invited yet"** button replaces pressing Send invite on every row (the list is worked out on the server, never taken from the browser; failures name the person and point to their row for a link to share). Deactivate is now a quiet button so it is not as loud as the useful ones, the admin's row no longer has an empty action strip, and rows are slightly tighter.
 - Not done: the two add-a-friend forms are still separate (the line under the invite form points between them); worth revisiting if people keep picking the wrong one.
+
+## 2026-10-22 — Security audit and hardening, part 1: code (fix/security-hardening)
+
+Three independent read-only reviews (authentication and authorization; input handling and web hardening; secrets, dependencies, deployment) plus my own re-read of the code. **No Critical or High findings.** Verified sound: every server action and route authorizes before doing work and ownership is in the SQL (no IDOR); share-link tokens are HMAC with a derived key, constant-time compared, one statement per link; sessions and tokens are DB-backed or hashed and deactivation logs people out; QR uploads are sniffed (no SVG), randomly named and served sandboxed; no raw SQL on user input; nonce CSP and the usual headers; no secrets in the tree or in 81 commits; `pnpm audit --prod` clean; non-root, read-only, loopback-bound container.
+
+Fixed in this PR:
+1. **Anyone could lock a known person out of signing in (Medium, all three reviews).** The limit was 5 link requests per address per 15 minutes and returned an error, so a stranger who knew the admin's email could use it up. Now the per-address limit is a one-minute cooldown that never shows an error (a link emailed seconds ago still works, so nobody is left without one) and the real limit is per client, checked first so one client cannot use up other people's cooldowns. Checked in a browser: two quick requests, one email, same "Check your email" page.
+2. **Sign-in links now last 30 minutes, not 24 hours (Medium).** Email copy and docs updated.
+3. **IPv6 clients are keyed by their /64 block (Low)**, so rotating addresses cannot dodge a limit or flush other people's counters from the table.
+4. **Invitation links have their own limiter and only bad ones count (Low)**, so people behind one address cannot block each other.
+5. **`/login/error?error=__proto__` could render an object (Low).** Fixed with `Object.hasOwn`; checked on the running app.
+6. **Hidden and right-to-left characters in titles, notes and reasons (Low)** could spoof email subjects. One `cleanFreeText` helper now cleans the bill title/note, decline, cancel and adjustment reasons and payment notes.
+7. **Headers (Low):** `X-Powered-By` removed; `/invite/*` now gets the secret-URL headers (same-origin referrer, no indexing, no caching) like `/s/*`. Checked with curl.
+8. **Placeholder `AUTH_SECRET` refused in production (Low):** share links are derived from it. CI and the e2e run now generate a random one instead of a committed dummy.
+9. **Defence in depth (Low):** adding, inviting and deactivating members re-check that the caller is an active admin, like approvals and bills already did.
+Part 2 (guard test, data-at-rest, docs, supply chain) follows. Left alone on purpose: Auth.js beta pin, first-reporter-wins on a payment reference, 30-day sessions, no "forget this person" yet (see the plan).

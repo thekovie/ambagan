@@ -21,9 +21,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # A throwaway random secret: production start-up refuses placeholder secrets, and none should live in the repo.
+      - run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: pnpm build
         env:
-          AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only
           APP_URL: http://localhost:3000
           ADMIN_EMAIL: ci@example.com
   docker:
@@ -35,7 +36,7 @@ jobs:
       - name: Start it and wait for the health check
         run: |
           docker run -d --name ambagan -p 3000:3000 \
-            -e AUTH_SECRET=ci-only-secret-ci-only-secret-ci-only \
+            -e AUTH_SECRET="$(openssl rand -base64 32)" \
             -e APP_URL=http://localhost:3000 \
             -e ADMIN_EMAIL=ci@example.com \
             -e SMTP_HOST=localhost -e SMTP_FROM_EMAIL=ci@example.com \

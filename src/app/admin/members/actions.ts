@@ -26,6 +26,7 @@ export interface MemberActionState {
 }
 
 const ERRORS = {
+  FORBIDDEN: "Only an admin can do that.",
   EMAIL_TAKEN: "That email is already on the list.",
   SUBSCRIPTION_NOT_FOUND: "That plan no longer exists. Refresh and try again.",
   SUBSCRIPTION_INACTIVE: "That plan is switched off. Turn it on in Plans, or pick another.",

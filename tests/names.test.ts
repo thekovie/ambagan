@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanDisplayName } from "@/lib/names";
+import { cleanDisplayName, cleanFreeText } from "@/lib/names";
 
 describe("cleanDisplayName", () => {
   it("keeps ordinary names, accents, apostrophes and emoji as they are", () => {
@@ -28,3 +28,20 @@ describe("cleanDisplayName", () => {
     expect(cleanDisplayName(" ​ \n ")).toBe("");
   });
 });
+
+describe("cleanFreeText (titles, notes and reasons that end up in emails)", () => {
+  it("removes hidden and reordering characters but keeps line breaks and ordinary text", () => {
+    expect(cleanFreeText("Dinner\u202Esdrawkcab\u200B")).toBe("Dinnersdrawkcab");
+    expect(cleanFreeText("Line one\nLine two\r\nLine three")).toBe("Line one\nLine two\nLine three");
+    expect(cleanFreeText("Salamat, Niño! 🎉")).toBe("Salamat, Niño! 🎉");
+  });
+
+  it("drops other control characters and trims", () => {
+    expect(cleanFreeText("  a\u0000b\u0007c  ")).toBe("abc");
+  });
+
+  it("does not let more than one blank line through", () => {
+    expect(cleanFreeText("a\n\n\n\nb")).toBe("a\n\nb");
+  });
+});
+

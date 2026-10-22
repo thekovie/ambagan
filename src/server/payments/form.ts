@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { toLocalInputValue } from "@/lib/dates";
 import { parsePesosToMinor } from "@/lib/money";
+import { cleanFreeText } from "@/lib/names";
 
 /** References compare equal ignoring case, spaces and punctuation: "7034 512 840193" == "7034-512-840193". */
 export const normalizeReference = (reference: string): string => reference.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -39,7 +40,7 @@ const schema = z.object({
     .refine((value) => normalizeReference(value).length >= MIN_REFERENCE_LENGTH, "That reference looks too short"),
   // <input type="datetime-local"> value, read as Asia/Manila time.
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Enter the date and time of the payment"),
-  notes: z.string().trim().max(300, "Keep notes under 300 characters").optional(),
+  notes: z.string().transform(cleanFreeText).pipe(z.string().max(300, "Keep notes under 300 characters")).optional(),
 });
 
 export type PaymentFormResult = { ok: true; value: PaymentInput } | { ok: false; errors: Record<string, string> };

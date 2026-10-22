@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { PaymentStatus } from "@/lib/enums";
 import { displayEmail } from "@/lib/guest";
+import { cleanFreeText } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { notifyPaymentDecided } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
@@ -55,7 +56,7 @@ export function approvePayment(
     if (!statement || statement.status !== "UNDER_VERIFICATION") return { ok: false, error: "NOT_PENDING" };
 
     const mismatch = payment.amountMinor !== statement.outstandingMinor;
-    const note = args.adjustmentNote?.trim() || null;
+    const note = (args.adjustmentNote ? cleanFreeText(args.adjustmentNote) : "") || null;
     if (mismatch && !note) {
       return {
         ok: false,
@@ -112,7 +113,7 @@ export function declinePayment(
   args: { paymentId: string; adminId: string; reason: string; now?: Date },
 ): DeclineResult {
   const now = args.now ?? new Date();
-  const reason = args.reason.trim();
+  const reason = cleanFreeText(args.reason);
 
   return db.transaction((tx): DeclineResult => {
     const t = asDb(tx);

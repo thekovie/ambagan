@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
+// A URL that is itself a credential (a private share link, an invitation): it must never reach a search engine, a cache or another site.
+const SECRET_URL_HEADERS = [
+  // same-origin (not no-referrer): the link never reaches another site, but a form post without JavaScript still carries a real Origin.
+  { key: "Referrer-Policy", value: "same-origin" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+  { key: "Cache-Control", value: "private, no-store" },
+];
+
 const nextConfig: NextConfig = {
+  // Do not tell the world which framework is running.
+  poweredByHeader: false,
   // Self-contained server (.next/standalone) for the Docker image; the image copies static files and migrations next to it.
   output: "standalone",
   // Every route behind sign-in is per-user and dynamic, so the app does not use
@@ -27,16 +37,8 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
-      {
-        // Private share links: the URL is the credential, so it must never reach a search engine, a cache or another site.
-        source: "/s/:path*",
-        headers: [
-          // same-origin (not no-referrer): the link never reaches another site, but a form post without JavaScript still carries a real Origin.
-          { key: "Referrer-Policy", value: "same-origin" },
-          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
-          { key: "Cache-Control", value: "private, no-store" },
-        ],
-      },
+      { source: "/s/:path*", headers: SECRET_URL_HEADERS },
+      { source: "/invite/:path*", headers: SECRET_URL_HEADERS },
     ];
   },
   turbopack: {

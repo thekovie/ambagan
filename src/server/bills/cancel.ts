@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { StatementStatus } from "@/lib/enums";
+import { cleanFreeText } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { CANCELLABLE, MAX_REASON_LENGTH, MIN_REASON_LENGTH, cancelStatementIn } from "@/server/billing/statements";
 import type { Db } from "@/server/db/client";
@@ -28,7 +29,7 @@ export function cancelBill(
   db: Db,
   input: { billId: string; actorId: string; reason: string; now?: Date },
 ): CancelBillResult {
-  const reason = input.reason.trim();
+  const reason = cleanFreeText(input.reason);
   const now = input.now ?? new Date();
 
   if (!isActiveAdmin(db, input.actorId)) return { ok: false, error: "FORBIDDEN" };

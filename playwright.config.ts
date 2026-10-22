@@ -1,5 +1,8 @@
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+
+process.env.E2E_AUTH_SECRET ??= randomBytes(32).toString("base64");
 
 const PORT = 3100;
 const SMTP_PORT = 2465;
@@ -30,7 +33,8 @@ export default defineConfig({
     env: {
       ...(process.env as Record<string, string>),
       APP_URL: BASE_URL,
-      AUTH_SECRET: "e2e-secret-e2e-secret-e2e-secret-e2e",
+      // Random per run (set before Playwright starts its workers, so they all agree): production start-up refuses placeholder secrets.
+      AUTH_SECRET: process.env.E2E_AUTH_SECRET,
       ADMIN_EMAIL: "admin@e2e.test",
       DATABASE_PATH: path.join(TMP, "ambagan.db"),
       ASSETS_DIR: path.join(TMP, "assets"),

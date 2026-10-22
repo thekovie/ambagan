@@ -7,7 +7,7 @@ describe("auth email templates", () => {
     expect(mail.subject).toBe("Your ambagan sign-in link");
     expect(mail.text).toContain("https://app.example.com/api/auth/callback/nodemailer?token=abc&x=1");
     expect(mail.html).toContain("token=abc&amp;x=1");
-    expect(mail.text).toMatch(/24 hours/);
+    expect(mail.text).toMatch(/30 minutes/);
   });
 
   it("invitation email greets the member and links to the invite page", () => {

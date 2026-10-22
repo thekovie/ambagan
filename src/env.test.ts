@@ -3,7 +3,7 @@ import { parseEnv } from "@/env";
 
 const base = {
   DATABASE_PATH: "./data/ambagan.db",
-  AUTH_SECRET: "x".repeat(32),
+  AUTH_SECRET: "q3J9vX2mZk8LpWs4TnYb7HcRdEa1UfGo5IiNtOy0Pj6=",
   APP_URL: "http://localhost:3000",
   ADMIN_EMAIL: "admin@example.com",
 };
@@ -41,6 +41,20 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...base, BACKUP_KEEP: "30" }).BACKUP_KEEP).toBe(30);
     expect(() => parseEnv({ ...base, BACKUP_KEEP: "0" })).toThrow(/BACKUP_KEEP/);
     expect(() => parseEnv({ ...base, BACKUP_KEEP: "many" })).toThrow(/BACKUP_KEEP/);
+  });
+
+  describe("AUTH_SECRET in production", () => {
+    const prod = { ...base, NODE_ENV: "production", SMTP_HOST: "smtp.example.com", SMTP_FROM_EMAIL: "from@example.com", APP_URL: "https://pay.example.com" };
+    it("refuses obviously weak or documented placeholder secrets, since share links are derived from it", () => {
+      for (const weak of ["x".repeat(40), "ci-only-secret-ci-only-secret-ci-only", "e2e-secret-e2e-secret-e2e-secret-12", "dev-secret-dev-secret-dev-secret-12", "changeme-changeme-changeme-changeme"]) {
+        expect(() => parseEnv({ ...prod, AUTH_SECRET: weak }), weak).toThrow(/AUTH_SECRET[\s\S]*openssl rand -base64 32/);
+      }
+    });
+    it("accepts a random one, and does not nag in development", () => {
+      expect(parseEnv({ ...prod, AUTH_SECRET: "Zk8LpWs4TnYb7HcRdEa1UfGo5IiNtOy0Pj6q3J9vX2m=" }).AUTH_SECRET).toHaveLength(44);
+      // A quick local try-out may use anything long enough.
+      expect(parseEnv({ ...base, NODE_ENV: "development", AUTH_SECRET: "x".repeat(32) }).AUTH_SECRET).toBe("x".repeat(32));
+    });
   });
 
   describe("APP_URL in production", () => {

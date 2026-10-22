@@ -29,10 +29,10 @@ export function loginEmail({ url }: { url: string }): MailContent {
   const footnote = "If you didn't ask for this, you can ignore this email.";
   return {
     subject: "Your ambagan sign-in link",
-    text: `Tap the link below to sign in to ambagan. It works once and expires in 24 hours.\n\n${url}\n\n${footnote}`,
+    text: `Tap the link below to sign in to ambagan. It works once and expires in 30 minutes.\n\n${url}\n\n${footnote}`,
     html: shell(
       "Sign in to ambagan",
-      ["Tap the button to sign in. The link works once and expires in 24 hours."],
+      ["Tap the button to sign in. The link works once and expires in 30 minutes."],
       { label: "Sign in", url },
       footnote,
     ),
