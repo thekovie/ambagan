@@ -188,3 +188,9 @@ export function listMembers(db: Db, now = new Date()): MemberRow[] {
     invite: inviteByUser.get(p.id) ?? "none",
   }));
 }
+
+/** Friends an "invite everyone" would email: active, not a guest, never invited and never signed in. */
+export function listUninvited(db: Db, now = new Date()): MemberRow[] {
+  return listMembers(db, now).filter((m) => m.isActive && !m.isGuest && m.role !== "ADMIN" && !m.hasSignedIn && m.invite === "none");
+}
+

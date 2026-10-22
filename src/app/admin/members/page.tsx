@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import { EmptyState } from "@/components/empty-state";
 import { requireAdmin } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
-import { listMembers } from "@/server/members/service";
+import { listMembers, listUninvited } from "@/server/members/service";
 import { listSubscriptions } from "@/server/subscriptions/service";
 import { AddMemberForm } from "./add-member-form";
 import { GuestsSection } from "./guests-section";
+import { InviteAll } from "./invite-all";
 import { MemberRow } from "./member-row";
 
 export const metadata: Metadata = { title: "Members" };
@@ -17,6 +18,7 @@ export default async function MembersPage() {
   const everyone = listMembers(db);
   const members = everyone.filter((m) => !m.isGuest);
   const guests = everyone.filter((m) => m.isGuest);
+  const uninvited = listUninvited(db).length;
   const plans = listSubscriptions(db)
     .filter((p) => p.isActive)
     .map((p) => ({ id: p.id, name: p.name }));
@@ -49,6 +51,7 @@ export default async function MembersPage() {
         <h2 id="everyone" className="font-display text-title">
           Everyone ({members.length})
         </h2>
+        <InviteAll count={uninvited} />
         {members.length === 0 ? (
           <EmptyState icon={<Users />} title="No members yet" description="Add your first friend above and we'll email them an invitation." />
         ) : (

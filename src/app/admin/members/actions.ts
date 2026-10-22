@@ -9,7 +9,7 @@ import { invitationEmail } from "@/server/email/auth-templates";
 import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
 import { promoteGuest, setGuestEmail } from "@/server/members/guests";
-import { addMember, resendInvitation, setMemberActive } from "@/server/members/service";
+import { addMember, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
 
 export interface InviteResult {
   email: string;
@@ -94,6 +94,29 @@ export async function resendInviteAction(_prev: MemberActionState, formData: For
   const invite = await deliverInvite(result.user, result.invitation.token);
   revalidatePath("/admin/members");
   return { invite };
+}
+
+export interface InviteAllState {
+  sent?: number;
+  /** Names the email could not be sent to: their row's "Send invite" gives a link to share instead. */
+  failed?: string[];
+}
+
+/** Invites every friend who has not been invited yet, in one go. The list is worked out here, never taken from the browser. */
+export async function inviteAllAction(): Promise<InviteAllState> {
+  const admin = await requireAdmin();
+  const db = getDb();
+  let sent = 0;
+  const failed: string[] = [];
+  for (const person of listUninvited(db)) {
+    const result = resendInvitation(db, { userId: person.id, actorId: admin.id });
+    if (!result.ok) continue;
+    const invite = await deliverInvite(result.user, result.invitation.token);
+    if (invite.emailSent) sent += 1;
+    else failed.push(person.name || person.email);
+  }
+  revalidatePath("/admin/members");
+  return { sent, failed };
 }
 
 const PROMOTE_ERRORS = {

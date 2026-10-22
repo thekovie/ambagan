@@ -4,7 +4,7 @@ import { findInvitation } from "@/server/auth/invitations";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import { updateOwnName } from "@/server/members/profile";
-import { addMember, listMembers, resendInvitation, setMemberActive } from "@/server/members/service";
+import { addMember, listMembers, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
 import { createTestDb } from "./helpers/db";
 
 let db: Db;
@@ -203,3 +203,23 @@ describe("listMembers", () => {
     expect(rows.find((r) => r.email === "ben@example.com")?.invite).toBe("accepted");
   });
 });
+
+describe("listUninvited (who 'invite everyone' would email)", () => {
+  const add = (email: string, over: Partial<typeof s.users.$inferInsert> = {}) => db.insert(s.users).values({ email, name: email, ...over }).returning().get();
+
+  it("is active friends who have never been invited and never signed in, not the admin, guests or anyone already invited", () => {
+    const fresh = add("fresh@example.com");
+    add("signedin@example.com", { emailVerified: NOW });
+    add("inactive@example.com", { isActive: false });
+    add("guest@example.com", { isGuest: true });
+    const invited = add("invited@example.com");
+    resendInvitation(db, { userId: invited.id, actorId: admin.id, now: NOW });
+
+    expect(listUninvited(db, NOW).map((m) => m.id)).toEqual([fresh.id]);
+  });
+
+  it("is empty when everyone has been dealt with", () => {
+    expect(listUninvited(db, NOW)).toEqual([]);
+  });
+});
+
