@@ -5,14 +5,14 @@ import { createRateLimiter } from "@/server/auth/rate-limit";
 function setup() {
   let t = 1_000_000;
   const limiters = {
-    email: createRateLimiter({ limit: 1, windowMs: 60_000, now: () => t }),
+    email: createRateLimiter({ limit: 1, windowMs: 2 * 60_000, now: () => t }),
     ip: createRateLimiter({ limit: 3, windowMs: 15 * 60_000, now: () => t }),
   };
   return { limiters, advance: (ms: number) => (t += ms) };
 }
 
 describe("decideLoginAttempt", () => {
-  it("sends the first link for an address, and quietly sends nothing on a repeat within the minute (never an error)", () => {
+  it("sends the first link for an address, and quietly sends nothing on a repeat within the cooldown (never an error)", () => {
     const { limiters } = setup();
     expect(decideLoginAttempt("ana@example.com", "1.1.1.1", limiters)).toBe("SEND");
     // The first link is already in their inbox and works for a while, so a repeat needs nothing sent and nothing said.
@@ -23,7 +23,7 @@ describe("decideLoginAttempt", () => {
   it("lets the same address have another link after the cooldown", () => {
     const { limiters, advance } = setup();
     decideLoginAttempt("ana@example.com", "1.1.1.1", limiters);
-    advance(61_000);
+    advance(121_000);
     expect(decideLoginAttempt("ana@example.com", "1.1.1.1", limiters)).toBe("SEND");
   });
 

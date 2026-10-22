@@ -701,3 +701,10 @@ Fixed in this PR:
 8. **Placeholder `AUTH_SECRET` refused in production (Low):** share links are derived from it. CI and the e2e run now generate a random one instead of a committed dummy.
 9. **Defence in depth (Low):** adding, inviting and deactivating members re-check that the caller is an active admin, like approvals and bills already did.
 Part 2 (guard test, data-at-rest, docs, supply chain) follows. Left alone on purpose: Auth.js beta pin, first-reporter-wins on a payment reference, 30-day sessions, no "forget this person" yet (see the plan).
+
+Follow-up from the independent security review of part 1 (no Critical or High; four fixes):
+- The "check your email" page still said links last 24 hours; now 30 minutes. Docs updated.
+- The quiet path went to a slightly different address than the normal one, which would let someone see when an address was last asked for a link. It now goes to the same address.
+- The per-address cooldown is two minutes (not one), to keep the ceiling on mail sent to one person low while staying well under the link's 30-minute life (so a working link is always in the inbox). Do not add a longer quiet cap: it would let an attacker burn the sends early and leave a person without a live link.
+- `cleanFreeText` and `cleanDisplayName` now also remove line/paragraph separators, soft hyphens, tag characters and blank-looking filler letters, but keep the zero-width joiner emoji sequences need. Plan names and payment-method labels (which reach email subjects) are cleaned too.
+Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can use up the visible per-client limit (20 requests per 15 minutes) for their neighbours; raise it if it ever happens in practice.

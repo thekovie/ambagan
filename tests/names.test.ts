@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { cleanDisplayName, cleanFreeText } from "@/lib/names";
 
+describe("cleanDisplayName also hides invisible fillers", () => {
+  it("removes blank-looking and formatting characters but keeps emoji joiners", () => {
+    expect(cleanDisplayName("Ana\u3164 \u2800Reyes\u00AD")).toBe("Ana Reyes");
+    expect(cleanDisplayName("Pamilya 👨‍👩‍👧")).toBe("Pamilya 👨‍👩‍👧");
+  });
+});
+
 describe("cleanDisplayName", () => {
   it("keeps ordinary names, accents, apostrophes and emoji as they are", () => {
     expect(cleanDisplayName("Ana R. Reyes")).toBe("Ana R. Reyes");
@@ -38,6 +45,13 @@ describe("cleanFreeText (titles, notes and reasons that end up in emails)", () =
 
   it("drops other control characters and trims", () => {
     expect(cleanFreeText("  a\u0000b\u0007c  ")).toBe("abc");
+  });
+
+  it("also removes line separators, invisible formatting characters and blank-looking fillers", () => {
+    expect(cleanFreeText("a\u2028b\u2029c")).toBe("abc");
+    expect(cleanFreeText("a\u00ADb\u3164c\u2800d\u180Ee\u{E0041}")).toBe("abcde");
+    // But not the joiner that emoji sequences are built from.
+    expect(cleanFreeText("Family 👨‍👩‍👧")).toBe("Family 👨‍👩‍👧");
   });
 
   it("does not let more than one blank line through", () => {
