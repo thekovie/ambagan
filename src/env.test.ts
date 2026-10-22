@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseEnv } from "@/env";
 
+// Built here rather than written out, so no secret-shaped literal sits in the repository (and nothing for a scanner to flag).
+const randomLooking = (seed: number) => Buffer.from(Array.from({ length: 32 }, (_, i) => (i * 37 + seed * 101 + 11) % 251)).toString("base64");
+
 const base = {
   DATABASE_PATH: "./data/ambagan.db",
-  AUTH_SECRET: "q3J9vX2mZk8LpWs4TnYb7HcRdEa1UfGo5IiNtOy0Pj6=",
+  AUTH_SECRET: randomLooking(1),
   APP_URL: "http://localhost:3000",
   ADMIN_EMAIL: "admin@example.com",
 };
@@ -51,7 +54,7 @@ describe("parseEnv", () => {
       }
     });
     it("accepts a random one, and does not nag in development", () => {
-      expect(parseEnv({ ...prod, AUTH_SECRET: "Zk8LpWs4TnYb7HcRdEa1UfGo5IiNtOy0Pj6q3J9vX2m=" }).AUTH_SECRET).toHaveLength(44);
+      expect(parseEnv({ ...prod, AUTH_SECRET: randomLooking(2) }).AUTH_SECRET).toHaveLength(44);
       // A quick local try-out may use anything long enough.
       expect(parseEnv({ ...base, NODE_ENV: "development", AUTH_SECRET: "x".repeat(32) }).AUTH_SECRET).toBe("x".repeat(32));
     });

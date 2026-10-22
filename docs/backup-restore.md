@@ -59,7 +59,7 @@ Things to know:
 - A backup from an older version of ambagan is upgraded automatically when the app starts (migrations run at startup). A backup from a *newer* version is refused by the script.
 - If the copy step fails (disk full, permissions), the script puts your previous data back and starts the app again. If it is interrupted by something else, the app is left stopped and the message says where your previous data is.
 - To restore from a copy you keep elsewhere, put the folder back into `/data/backups` (or your `BACKUP_DIR`) first, then run the script.
-- `restore-safety` folders are never cleaned up automatically; delete old ones once you're sure.
+- `restore-safety` folders are never cleaned up automatically; delete old ones once you're sure. They are kept private to the app's user (mode 700) because, unlike regular backups, they still hold live sign-in sessions.
 - To undo a restore: stop the app, move the files from `/data/restore-safety/<time>/` back to `/data`, start it.
 
 ### Practise it

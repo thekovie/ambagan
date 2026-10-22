@@ -44,7 +44,7 @@ The app backs up the database and QR images itself every day and keeps the lates
 
 Any TLS-terminating proxy works. The requirements:
 
-1. **Forward the original `Host` and set `X-Forwarded-For`.** Rate limiting trusts the **last** `X-Forwarded-For` entry, which is what exactly one proxy in front adds. Do not stack a second proxy that doesn't overwrite it.
+1. **Forward the original `Host` and set `X-Forwarded-For`.** Rate limiting trusts the **last** `X-Forwarded-For` entry, which is what exactly one proxy in front adds. Do not stack a second proxy that doesn't overwrite it: with a CDN in front of your proxy (Cloudflare plus Caddy, say) the last entry is the CDN, every visitor shares a few rate-limit buckets and they limit each other. An IPv6 visitor counts as their whole /64 block.
 2. **Allow request bodies of at least 2 MB** (QR image uploads; many proxies default to 1 MB).
 3. Serve the app only over HTTPS and keep `APP_URL` in sync with the public address.
 
@@ -74,7 +74,7 @@ location / {
 
 ## Private share links at the proxy
 
-Private links (`/s/<token>` and `/api/s/<token>/...`) carry their credential in the URL. At the reverse proxy, (1) limit request bodies for `/s/*` to about 64 KB (the app's 2 MB limit is for admin QR uploads), and (2) leave those paths out of access logs. The app already sends `Referrer-Policy: same-origin`, `X-Robots-Tag: noindex` and `Cache-Control: no-store` for them. Rotating `AUTH_SECRET` signs everyone out and invalidates every private link.
+Some URLs are credentials: private links (`/s/<token>` and `/api/s/<token>/...`), invitations (`/invite/<token>`) and the sign-in link callback (`/api/auth/callback/...?token=...`). At the reverse proxy, (1) limit request bodies to about 64 KB everywhere except `/admin/settings` (the app's 2 MB limit is only for admin QR uploads, but it also applies to the public sign-in and invitation actions), and (2) leave those paths out of access logs. The app already sends `Referrer-Policy: same-origin`, `X-Robots-Tag: noindex` and `Cache-Control: no-store` for them. Rotating `AUTH_SECRET` signs everyone out and invalidates every private link.
 
 ## Security headers
 

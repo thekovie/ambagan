@@ -10,6 +10,6 @@ fs.mkdirSync(path.join(tmp, "mail"), { recursive: true });
 
 execFileSync(
   "openssl",
-  ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", path.join(tmp, "key.pem"), "-out", path.join(tmp, "cert.pem"), "-days", "2", "-subj", "/CN=localhost"],
+  ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", path.join(tmp, "key.pem"), "-out", path.join(tmp, "cert.pem"), "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"],
   { stdio: "ignore" },
 );

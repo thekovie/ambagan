@@ -43,8 +43,8 @@ export default defineConfig({
       SMTP_PORT: String(SMTP_PORT),
       SMTP_SECURE: "true",
       SMTP_FROM_EMAIL: "noreply@e2e.test",
-      // The sink's certificate is self-signed.
-      NODE_TLS_REJECT_UNAUTHORIZED: "0",
+      // The sink's certificate is self-signed: trust exactly that one (it names 127.0.0.1), rather than switching off TLS checks.
+      NODE_EXTRA_CA_CERTS: path.join(TMP, "cert.pem"),
     },
   },
 });

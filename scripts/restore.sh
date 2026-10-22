@@ -86,6 +86,8 @@ $COMPOSE run --rm --no-deps -T -e RESTORE_NAME="$NAME" --entrypoint sh app -c '
 
   swap() {
     mkdir -p "$safety" || return 1
+    # The kept copy holds live sign-in sessions (regular backups strip them), so it is private to this user.
+    chmod 700 /data/restore-safety "$safety" || return 1
     for f in ambagan.db ambagan.db-wal ambagan.db-shm; do
       if [ -e "/data/$f" ]; then mv "/data/$f" "$safety/" || return 1; fi
     done
