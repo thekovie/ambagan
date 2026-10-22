@@ -15,6 +15,16 @@ const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle");
 export function openDb(file: string): Db {
   if (file !== ":memory:") fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
   const sqlite = new Database(file);
+  // Member emails, payment references and account numbers live in here: keep the file to its owner. SQLite gives the
+  // write-ahead files the same permissions as the database file, so tightening it covers them too, and this also
+  // fixes a file that an older version created world-readable. Best effort: a mount that cannot chmod still works.
+  if (file !== ":memory:") {
+    try {
+      fs.chmodSync(file, 0o600);
+    } catch {
+      /* not ours to change (some network or bind mounts): leave it */
+    }
+  }
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("busy_timeout = 5000");

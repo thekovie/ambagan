@@ -1,0 +1,17 @@
+# Weekly update pull requests, so a fixed vulnerability or a moved action tag does not go unnoticed.
+# next-auth is pinned to an exact beta on purpose: its pull requests are the way a security release there gets seen.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
