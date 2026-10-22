@@ -670,3 +670,11 @@ Audit findings 4 and 6.
 - **Settings:** payment methods that are switched off collapse to one row ("Maya · Off · set up") instead of a full six-field form each; switched-on ones stay open. About 8 screens down to about 3 for a typical setup.
 - **Members:** the intro and a line under the invite form say when to use "Add a friend" (they sign in) and when to just add someone with a name (a private link).
 - Not done: a "send all invites" bulk button and merging the two add-a-friend forms. Worth doing if the group is large; skipped to keep this change small.
+
+## 2026-10-22 — Guests can have an email and be sent a payment request (feat/guest-email-requests)
+
+Owner: add an email for guests too, so a payment request can be sent by email.
+- **Add an email to a guest later, as a guest** (`setGuestEmail`): no account, no sign-in, nothing asked of them (unlike "Invite to join"). On the ambag page a guest with no email has "Add their email to send this by email" (saves it and emails the request in one step); on the Members page a guest row has "Save email only". Adding an email at the start was already possible; its label now says what it is for.
+- **Email request** (`sendPaymentRequest`): a button on every unpaid share that has an email, sending the "your ambag is ready" message now instead of waiting for the daily reminders. Admin-only, only for an unpaid share of a bill; pressing twice within five minutes sends one, later presses send another as a nudge. A guest's email links to their private page (the link is made when the email is sent, never stored), a member's to their signed-in statement.
+- Risk to know: a mistyped address sends that person's private link to a stranger. "New link" on the same row replaces it.
+- Tests: 8 new (guest email rules, request rules, double-press, flag-not-link); e2e adds an email to a guest, checks the email arrives with a private-page link, and that "Invite to join" then needs nothing more.

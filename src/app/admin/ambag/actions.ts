@@ -6,9 +6,10 @@ import { isPlaceholderEmail } from "@/lib/guest";
 import type { SplitIssue } from "@/lib/split";
 import { requireAdmin } from "@/server/auth/session";
 import { cancelBill, createBill, type CreateBillResult } from "@/server/bills";
+import { sendPaymentRequest } from "@/server/bills/request";
 import { getDb } from "@/server/db/client";
 import { kickEmailQueue } from "@/server/email/worker";
-import { addGuest } from "@/server/members/guests";
+import { addGuest, setGuestEmail } from "@/server/members/guests";
 import { rotateShareLink } from "@/server/share/token";
 
 export interface CreateBillState {
@@ -125,3 +126,42 @@ export async function addGuestInlineAction(_prev: AddGuestState, formData: FormD
   revalidatePath("/admin/members");
   return { guest: { id: result.user.id, name: result.user.name ?? "", email: isPlaceholderEmail(result.user.email) ? null : result.user.email } };
 }
+
+export interface RequestState {
+  error?: string;
+  /** What happened, in a sentence, for the admin to read. */
+  message?: string;
+}
+
+const REQUEST_ERRORS = {
+  FORBIDDEN: "Only an admin can send a payment request.",
+  NOT_FOUND: "That share no longer exists.",
+  NOT_OWED: "That share is already settled, so there is nothing to ask for.",
+  NO_EMAIL: "They don't have an email yet. Add one, or copy their link instead.",
+} as const;
+
+/** Emails one person their share (and how to pay) right now, instead of waiting for the daily reminders. */
+export async function sendRequestAction(_prev: RequestState, formData: FormData): Promise<RequestState> {
+  const admin = await requireAdmin();
+  const result = sendPaymentRequest(getDb(), { statementId: String(formData.get("statementId") ?? ""), actorId: admin.id });
+  if (!result.ok) return { error: REQUEST_ERRORS[result.error] };
+  kickEmailQueue();
+  return { message: `Emailed to ${result.email}.` };
+}
+
+/** Gives a guest an email (they stay a guest) and emails them their share straight away. */
+export async function addGuestEmailAction(_prev: RequestState, formData: FormData): Promise<RequestState> {
+  const admin = await requireAdmin();
+  const db = getDb();
+  const saved = setGuestEmail(db, { userId: String(formData.get("userId") ?? ""), email: String(formData.get("email") ?? ""), actorId: admin.id });
+  if (!saved.ok) {
+    return { error: saved.error === "NOT_A_GUEST" ? "Only a friend without an account can be given an email this way." : saved.error === "FORBIDDEN" ? GUEST_ERRORS.FORBIDDEN : GUEST_ERRORS[saved.error] };
+  }
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/ambag/${String(formData.get("billId") ?? "")}`);
+  const sent = sendPaymentRequest(db, { statementId: String(formData.get("statementId") ?? ""), actorId: admin.id });
+  if (!sent.ok) return { message: "Email saved." };
+  kickEmailQueue();
+  return { message: `Saved, and emailed to ${sent.email}.` };
+}
+

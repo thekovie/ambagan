@@ -8,7 +8,7 @@ import { getDb } from "@/server/db/client";
 import { invitationEmail } from "@/server/email/auth-templates";
 import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
-import { promoteGuest } from "@/server/members/guests";
+import { promoteGuest, setGuestEmail } from "@/server/members/guests";
 import { addMember, resendInvitation, setMemberActive } from "@/server/members/service";
 
 export interface InviteResult {
@@ -118,6 +118,26 @@ export async function promoteGuestAction(_prev: MemberActionState, formData: For
   const invite = await deliverInvite(result.user, result.invitation.token);
   revalidatePath("/admin/members");
   return { invite };
+}
+
+const EMAIL_ERRORS = {
+  FORBIDDEN: "Only an admin can do that.",
+  NOT_A_GUEST: "Only a friend without an account can be given an email this way.",
+  EMAIL_INVALID: "That doesn't look like an email address.",
+  EMAIL_TAKEN: "That email is already on the list.",
+} as const;
+
+/** Adds or corrects a guest's email so they get payment requests and reminders. They stay a guest, with no account. */
+export async function setGuestEmailAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {
+  const admin = await requireAdmin();
+  const result = setGuestEmail(getDb(), {
+    userId: String(formData.get("userId") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    actorId: admin.id,
+  });
+  if (!result.ok) return { error: EMAIL_ERRORS[result.error] };
+  revalidatePath("/admin/members");
+  return {};
 }
 
 export async function setActiveAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {

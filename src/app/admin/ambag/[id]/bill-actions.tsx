@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, Copy, Link2, MessageSquareText, TriangleAlert } from "lucide-react";
+import { Check, Copy, Link2, Mail, MessageSquareText, TriangleAlert } from "lucide-react";
 import { useActionState, useState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Button } from "@/components/ui/button";
 import { CopyField } from "@/components/copy-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cancelBillAction, replaceLinkAction, type CancelBillState } from "../actions";
+import { addGuestEmailAction, cancelBillAction, replaceLinkAction, sendRequestAction, type CancelBillState, type RequestState } from "../actions";
 
 function useCopy() {
   const [copied, setCopied] = useState<string | null>(null);
@@ -34,10 +34,14 @@ interface ShareActionsProps {
   message: string;
   /** Only while the share is still unpaid: a settled or cancelled share has nothing left to send. */
   open: boolean;
+  userId: string;
+  /** Their real email, or null for a friend who has none (guests may start without one). */
+  email: string | null;
+  isGuest: boolean;
 }
 
 /** Copy this person's link or a ready-made chat message, or replace the link if it went to the wrong chat. */
-export function ShareActions({ billId, statementId, name, url, message, open }: ShareActionsProps) {
+export function ShareActions({ billId, statementId, name, url, message, open, userId, email, isGuest }: ShareActionsProps) {
   const { copied, copy } = useCopy();
   const [state, replace] = useActionState<CancelBillState, FormData>(replaceLinkAction, {});
 
@@ -74,6 +78,56 @@ export function ShareActions({ billId, statementId, name, url, message, open }: 
       {state.error ? (
         <p role="alert" className="w-full text-sm font-semibold text-destructive">
           {state.error}
+        </p>
+      ) : null}
+      {open ? <RequestControls billId={billId} statementId={statementId} name={name} userId={userId} email={email} isGuest={isGuest} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Email this person their payment request now. A friend with an email gets one button; a guest with none gets a small
+ * form to add an address (they stay a guest) and the request goes out in the same step.
+ */
+function RequestControls({ billId, statementId, name, userId, email, isGuest }: { billId: string; statementId: string; name: string; userId: string; email: string | null; isGuest: boolean }) {
+  const [sent, sendAction, sending] = useActionState<RequestState, FormData>(sendRequestAction, {});
+  const [added, addAction, adding] = useActionState<RequestState, FormData>(addGuestEmailAction, {});
+  const result = added.message || added.error ? added : sent;
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      {email ? (
+        <form action={sendAction}>
+          <input type="hidden" name="statementId" value={statementId} />
+          <Button type="submit" size="sm" variant="secondary" disabled={sending}>
+            <Mail data-icon="inline-start" />
+            {sending ? "Sending…" : "Email request"}
+            <span className="sr-only"> to {name}</span>
+          </Button>
+        </form>
+      ) : isGuest ? (
+        <details className="[&[open]>summary]:mb-2">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold underline underline-offset-4">
+            <Mail className="size-4" aria-hidden="true" /> Add their email to send this by email
+            <span className="sr-only"> for {name}</span>
+          </summary>
+          <form action={addAction} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="billId" value={billId} />
+            <input type="hidden" name="statementId" value={statementId} />
+            <input type="hidden" name="userId" value={userId} />
+            <Input name="email" type="email" inputMode="email" autoComplete="off" required placeholder="name@example.com" aria-label={`Email for ${name}`} className="h-10 w-64" />
+            <Button type="submit" size="sm" variant="secondary" disabled={adding}>
+              {adding ? "Sending…" : "Save and email"}
+            </Button>
+          </form>
+        </details>
+      ) : null}
+      <div role="status" aria-live="polite" className="text-sm font-semibold empty:hidden">
+        {result.message ?? null}
+      </div>
+      {result.error ? (
+        <p role="alert" className="text-sm font-semibold text-destructive">
+          {result.error}
         </p>
       ) : null}
     </div>

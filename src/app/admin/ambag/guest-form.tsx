@@ -43,7 +43,7 @@ export function GuestForm({ onAdded }: { onAdded?: (guest: AddedGuest) => void }
             <Input id="guest-name" name="name" autoComplete="off" required placeholder="Tito Boy" defaultValue={state.values?.name} aria-invalid={state.errorField === "name" ? true : undefined} aria-describedby={state.errorField === "name" ? "guest-error" : undefined} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="guest-email">Email (optional)</Label>
+            <Label htmlFor="guest-email">Email (optional, to email them their share)</Label>
             <Input id="guest-email" name="email" type="email" inputMode="email" autoComplete="off" placeholder="name@example.com" defaultValue={state.values?.email} aria-invalid={state.errorField === "email" ? true : undefined} aria-describedby={state.errorField === "email" ? "guest-error" : undefined} />
           </div>
         </div>

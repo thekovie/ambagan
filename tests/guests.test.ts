@@ -6,7 +6,7 @@ import { createBill, listParticipants } from "@/server/bills";
 import { listStatements } from "@/server/billing/statements";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
-import { addGuest, promoteGuest } from "@/server/members/guests";
+import { addGuest, promoteGuest, setGuestEmail } from "@/server/members/guests";
 import { listMembers, resendInvitation } from "@/server/members/service";
 import { createTestDb } from "./helpers/db";
 
@@ -133,3 +133,37 @@ describe("who can be put in a bill", () => {
     expect(rows.find((r) => r.name === "Ana")).toMatchObject({ isGuest: false, hasRealEmail: true });
   });
 });
+
+describe("setGuestEmail (add an email to a guest, who stays a guest)", () => {
+  const guest = (email?: string) => {
+    const result = addGuest(db, { name: "Tito", email, actorId: admin.id });
+    if (!result.ok) throw new Error(result.error);
+    return result.user;
+  };
+
+  it("gives a guest with no email a real one, lowercased, without making them a member", () => {
+    const tito = guest();
+    const result = setGuestEmail(db, { userId: tito.id, email: " Tito@Example.com ", actorId: admin.id });
+    expect(result.ok && result.user).toMatchObject({ id: tito.id, email: "tito@example.com", isGuest: true });
+    expect(db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "guest.email_set")).all()).toHaveLength(1);
+    // Still no way in: a guest never signs in, whatever address they have.
+    expect(checkSignIn(db, "tito@example.com", "boss@example.com")).toEqual({ ok: false, reason: "unknown" });
+  });
+
+  it("can change an address that was typed wrong", () => {
+    const tito = guest("tito@exmaple.com");
+    const result = setGuestEmail(db, { userId: tito.id, email: "tito@example.com", actorId: admin.id });
+    expect(result.ok && result.user.email).toBe("tito@example.com");
+  });
+
+  it("refuses a bad address, one already in use, a member, and anyone who is not an admin", () => {
+    const tito = guest();
+    expect(setGuestEmail(db, { userId: tito.id, email: "nope", actorId: admin.id })).toEqual({ ok: false, error: "EMAIL_INVALID" });
+    expect(setGuestEmail(db, { userId: tito.id, email: "", actorId: admin.id })).toEqual({ ok: false, error: "EMAIL_INVALID" });
+    expect(setGuestEmail(db, { userId: tito.id, email: "ANA@example.com", actorId: admin.id })).toEqual({ ok: false, error: "EMAIL_TAKEN" });
+    expect(setGuestEmail(db, { userId: ana.id, email: "ana2@example.com", actorId: admin.id })).toEqual({ ok: false, error: "NOT_A_GUEST" });
+    expect(setGuestEmail(db, { userId: tito.id, email: "tito@example.com", actorId: ana.id })).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(db.select().from(s.users).where(eq(s.users.id, tito.id)).get()?.email).toMatch(/@guests\.invalid$/);
+  });
+});
+

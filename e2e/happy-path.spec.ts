@@ -244,6 +244,16 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(admin.getByRole("heading", { level: 1, name: "Karaoke night" })).toBeVisible();
     await expect(admin.getByText(/your own share is ₱200\.00/)).toBeVisible();
 
+    // Tito has no email yet. Adding one (he stays a guest) emails him his share at once, with his private page.
+    const titoRow = admin.getByRole("listitem").filter({ hasText: "Tito Boy" });
+    await titoRow.getByText(/Add their email/).click();
+    await titoRow.getByLabel("Email for Tito Boy").fill("tito@e2e.test");
+    await titoRow.getByRole("button", { name: "Save and email" }).click();
+    await expect(admin.getByText("Saved, and emailed to tito@e2e.test.")).toBeVisible();
+    const request = await waitForMail("tito@e2e.test", /Your ambag for Karaoke night/);
+    expect(linkIn(request, `${BASE_URL}/s/`)).toMatch(/\/s\//);
+    await expect(titoRow.getByRole("button", { name: /Email request/ })).toBeVisible();
+
     // The guest's link, copied the way the admin would.
     await admin.getByRole("button", { name: "Copy link for Tito Boy" }).click();
     const link = await admin.evaluate(() => navigator.clipboard.readText());
@@ -284,7 +294,7 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     // even though their row moves from the guests list to the members list.
     await admin.goto("/admin/members");
     const guestsSection = admin.getByRole("region", { name: /Friends without an account/ });
-    await guestsSection.getByLabel("Email for Tito Boy").fill("tito@e2e.test");
+    // He already has an email from the request above, so "Invite to join" needs nothing more.
     await guestsSection.getByRole("button", { name: /Invite to join/ }).click();
     await expect(admin.getByText(/Invitation emailed to tito@e2e\.test/)).toBeVisible();
     await expect(admin.getByRole("region", { name: /^Everyone/ }).getByRole("listitem").filter({ hasText: "Tito Boy" })).toBeVisible();
