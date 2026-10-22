@@ -35,6 +35,17 @@ export type Env = Omit<z.infer<typeof schema>, `SMTP_${string}`> & {
   } | null;
 };
 
+const PLACEHOLDERS = ["ci-only", "e2e-secret", "dev-secret", "changeme", "change-me", "your-secret", "example"];
+
+/**
+ * Whether a secret looks like one copied from a document or typed by hand. Sign-in sessions and the private share links
+ * are derived from it, so a guessable one would let someone forge links. A good one is random: `openssl rand -base64 32`.
+ */
+function isWeakSecret(secret: string): boolean {
+  const lower = secret.toLowerCase();
+  return PLACEHOLDERS.some((word) => lower.includes(word)) || new Set(secret).size <= 8;
+}
+
 /** Validates raw environment variables. SMTP is optional outside production. */
 export function parseEnv(source: Record<string, string | undefined>): Env {
   const parsed = schema.safeParse(source);
@@ -51,6 +62,9 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
     if (protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(hostname)) {
       throw new Error("Invalid environment:\nAPP_URL must use https in production (plain http is only allowed for localhost)");
     }
+  }
+  if (rest.NODE_ENV === "production" && isWeakSecret(rest.AUTH_SECRET)) {
+    throw new Error("Invalid environment:\nAUTH_SECRET looks like a placeholder or is too predictable. Generate a random one with: openssl rand -base64 32");
   }
   if (rest.NODE_ENV === "production" && (!SMTP_HOST || !SMTP_FROM_EMAIL)) {
     throw new Error("Invalid environment:\nSMTP_HOST and SMTP_FROM_EMAIL are required in production");

@@ -76,10 +76,11 @@ describe("addMember", () => {
   });
 
   it("is all-or-nothing: a failure after the user insert rolls everything back", () => {
-    // invited_by is a foreign key, so an unknown inviter makes the invitation insert fail after user + membership were written.
+    // Make the invitation insert fail, after the user and the membership were already written.
+    db.$client.exec("CREATE TRIGGER fail_invitation BEFORE INSERT ON invitation BEGIN SELECT RAISE(ABORT, 'boom'); END");
     expect(() =>
-      addMember(db, { name: "Ana", email: "ana@example.com", subscriptionId: spotify.id, invitedBy: "ghost", now: NOW }),
-    ).toThrow(/FOREIGN KEY/);
+      addMember(db, { name: "Ana", email: "ana@example.com", subscriptionId: spotify.id, invitedBy: admin.id, now: NOW }),
+    ).toThrow(/boom/);
     expect(db.select().from(s.users).all()).toHaveLength(1);
     expect(db.select().from(s.memberships).all()).toHaveLength(0);
     expect(db.select().from(s.invitations).all()).toHaveLength(0);
@@ -119,10 +120,10 @@ describe("setMemberActive", () => {
     expect(setMemberActive(db, { userId: other.id, active: false, actorId: admin.id })).toEqual({ ok: true });
   });
 
-  it("never removes the last active admin", () => {
-    // "boss" (admin) is the only active admin; an actor (another, already-deactivated admin record) targets them.
+  it("never removes the last active admin: nobody can deactivate themselves, and a stale admin record cannot act", () => {
     const stale = db.insert(s.users).values({ email: "stale@example.com", role: "ADMIN", isActive: false }).returning().get();
-    expect(setMemberActive(db, { userId: admin.id, active: false, actorId: stale.id })).toEqual({ ok: false, error: "LAST_ADMIN" });
+    expect(setMemberActive(db, { userId: admin.id, active: false, actorId: stale.id })).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(setMemberActive(db, { userId: admin.id, active: false, actorId: admin.id })).toEqual({ ok: false, error: "SELF" });
     expect(db.select().from(s.users).where(eq(s.users.id, admin.id)).get()?.isActive).toBe(true);
   });
 
@@ -220,6 +221,22 @@ describe("listUninvited (who 'invite everyone' would email)", () => {
 
   it("is empty when everyone has been dealt with", () => {
     expect(listUninvited(db, NOW)).toEqual([]);
+  });
+});
+
+describe("member management is for admins, even if a caller forgets to check", () => {
+  it("refuses to add, invite, deactivate or reactivate anyone for a plain member or a deactivated admin", () => {
+    const friend = db.insert(s.users).values({ email: "friend@example.com", name: "Friend" }).returning().get();
+    const target = db.insert(s.users).values({ email: "target@example.com", name: "Target" }).returning().get();
+    const retired = db.insert(s.users).values({ email: "retired@example.com", name: "Retired", role: "ADMIN", isActive: false }).returning().get();
+
+    for (const actor of [friend, retired]) {
+      expect(addMember(db, { name: "New", email: "new@example.com", subscriptionId: spotify.id, invitedBy: actor.id, now: NOW })).toEqual({ ok: false, error: "FORBIDDEN" });
+      expect(resendInvitation(db, { userId: target.id, actorId: actor.id, now: NOW })).toEqual({ ok: false, error: "FORBIDDEN" });
+      expect(setMemberActive(db, { userId: target.id, active: false, actorId: actor.id, now: NOW })).toEqual({ ok: false, error: "FORBIDDEN" });
+    }
+    expect(db.select().from(s.users).where(eq(s.users.email, "new@example.com")).all()).toHaveLength(0);
+    expect(db.select().from(s.users).where(eq(s.users.id, target.id)).get()?.isActive).toBe(true);
   });
 });
 

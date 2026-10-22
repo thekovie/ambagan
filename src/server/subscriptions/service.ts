@@ -1,3 +1,4 @@
+import { cleanDisplayName } from "@/lib/names";
 import { and, asc, count, eq } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
@@ -32,7 +33,7 @@ export function createSubscription(db: Db, input: SubscriptionInput, actorId: st
     if (t.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.refPrefix, input.refPrefix)).get()) {
       return { ok: false, error: "PREFIX_TAKEN" };
     }
-    const subscription = t.insert(subscriptions).values(input).returning().get();
+    const subscription = t.insert(subscriptions).values({ ...input, name: cleanDisplayName(input.name) }).returning().get();
     recordAudit(t, {
       actorId,
       action: "subscription.created",
@@ -71,7 +72,7 @@ export function updateSubscription(
     // Explicit fields (not `...input`): the refPrefix, or anything else extra at runtime, can never be written.
     t.update(subscriptions)
       .set({
-        name: input.name,
+        name: cleanDisplayName(input.name),
         feeMinor: input.feeMinor,
         issueDay: input.issueDay,
         dueDay: input.dueDay,

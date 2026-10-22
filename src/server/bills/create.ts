@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { cleanDisplayName, cleanFreeText } from "@/lib/names";
 import { computeSplit, splitInputSchema, type SplitIssue } from "@/lib/split";
 import { recordAudit } from "@/server/audit";
 import { endOfManilaDay } from "@/server/billing/dates";
@@ -80,10 +81,10 @@ export function createBill(db: Db, input: CreateBillInput): CreateBillResult {
   const already = billWithStatements(db, input.billId);
   if (already) return already.bill.cancelledAt ? { ok: false, error: "BILL_CANCELLED" } : { ok: true, created: false, ...already };
 
-  const title = input.title.trim();
+  const title = cleanDisplayName(input.title);
   if (title.length === 0) return { ok: false, error: "TITLE_REQUIRED" };
   if (title.length > MAX_TITLE_LENGTH) return { ok: false, error: "TITLE_TOO_LONG" };
-  const note = input.note?.trim() || null;
+  const note = (input.note ? cleanFreeText(input.note) : "") || null;
   if (note && note.length > MAX_NOTE_LENGTH) return { ok: false, error: "NOTE_TOO_LONG" };
   const dueAt = endOfManilaDay(input.dueDate);
   if (!dueAt) return { ok: false, error: "INVALID_DUE_DATE" };

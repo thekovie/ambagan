@@ -3,6 +3,7 @@ import { recordAudit } from "@/server/audit";
 import type { StatementStatus } from "@/lib/enums";
 import type { Db } from "@/server/db/client";
 import { displayEmail } from "@/lib/guest";
+import { cleanFreeText } from "@/lib/names";
 import { statements, users } from "@/server/db/schema";
 
 export type Statement = typeof statements.$inferSelect;
@@ -46,7 +47,7 @@ export function cancelStatementIn(
   t: Db,
   input: { statementId: string; actorId: string; reason: string; now?: Date },
 ): CancelResult {
-  const reason = input.reason.trim();
+  const reason = cleanFreeText(input.reason);
   const now = input.now ?? new Date();
 
   const current = t.select().from(statements).where(eq(statements.id, input.statementId)).get();

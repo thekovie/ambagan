@@ -1,3 +1,4 @@
+import { cleanFreeText } from "@/lib/names";
 import { asc, eq } from "drizzle-orm";
 import type { PaymentMethodKind } from "@/lib/enums";
 import { recordAudit } from "@/server/audit";
@@ -31,7 +32,8 @@ export function listPaymentMethods(db: Db, options: { activeOnly?: boolean }): P
     .all();
 }
 
-const clean = (value: string | null | undefined): string | null => value?.trim() || null;
+// Labels and instructions reach email subjects ("payment details changed"), so hidden characters are removed like anywhere else.
+const clean = (value: string | null | undefined): string | null => (value ? cleanFreeText(value) : "") || null;
 
 /** A method members can actually pay to needs a recipient and either an account number or a QR. */
 const isPayable = (m: { accountName: string | null; accountNumber: string | null; qrFile: string | null }) =>

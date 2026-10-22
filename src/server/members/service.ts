@@ -4,6 +4,7 @@ import { cleanDisplayName } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { normalizeEmail } from "@/server/auth/access";
 import { createInvitation } from "@/server/auth/invitations";
+import { isActiveAdmin } from "@/server/bills/create";
 import { firstBillablePeriod } from "@/server/billing/period";
 import type { Db } from "@/server/db/client";
 import { invitations, memberships, sessions, subscriptions, users } from "@/server/db/schema";
@@ -24,10 +25,12 @@ interface AddMemberInput {
 
 export type AddMemberResult =
   | { ok: true; user: UserRow; invitation: Invitation }
-  | { ok: false; error: "EMAIL_TAKEN" | "SUBSCRIPTION_NOT_FOUND" | "SUBSCRIPTION_INACTIVE" };
+  | { ok: false; error: "FORBIDDEN" | "EMAIL_TAKEN" | "SUBSCRIPTION_NOT_FOUND" | "SUBSCRIPTION_INACTIVE" };
 
 /** Creates the member, optionally enrols them in a plan, and issues their invitation, all or nothing. */
 export function addMember(db: Db, input: AddMemberInput): AddMemberResult {
+  // The action has already checked, but the rule lives here too so a forgotten check upstream cannot expose it.
+  if (!isActiveAdmin(db, input.invitedBy)) return { ok: false, error: "FORBIDDEN" };
   const now = input.now ?? new Date();
   const email = normalizeEmail(input.email);
 
@@ -62,7 +65,7 @@ export function addMember(db: Db, input: AddMemberInput): AddMemberResult {
   });
 }
 
-export type SetActiveResult = { ok: true } | { ok: false; error: "NOT_FOUND" | "SELF" | "LAST_ADMIN" };
+export type SetActiveResult = { ok: true } | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "SELF" | "LAST_ADMIN" };
 
 /**
  * Deactivating revokes sessions immediately and pauses billing (memberships inactive).
@@ -74,6 +77,7 @@ export function setMemberActive(
   input: { userId: string; active: boolean; actorId: string; now?: Date },
 ): SetActiveResult {
   const { userId, active, actorId, now = new Date() } = input;
+  if (!isActiveAdmin(db, actorId)) return { ok: false, error: "FORBIDDEN" };
 
   return db.transaction((tx): SetActiveResult => {
     const t = asDb(tx);
@@ -125,9 +129,10 @@ export function setMemberActive(
 
 export type ResendResult =
   | { ok: true; user: UserRow; invitation: Invitation }
-  | { ok: false; error: "NOT_FOUND" | "INACTIVE" | "GUEST" };
+  | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "INACTIVE" | "GUEST" };
 
 export function resendInvitation(db: Db, input: { userId: string; actorId: string; now?: Date }): ResendResult {
+  if (!isActiveAdmin(db, input.actorId)) return { ok: false, error: "FORBIDDEN" };
   return db.transaction((tx): ResendResult => {
     const t = asDb(tx);
     const user = t.select().from(users).where(eq(users.id, input.userId)).get();

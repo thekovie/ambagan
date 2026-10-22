@@ -2,18 +2,13 @@ import { TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { loginErrorMessage } from "@/lib/login-error";
 
 export const metadata: Metadata = { title: "Couldn't sign in" };
 
-const MESSAGES: Record<string, string> = {
-  Verification: "That sign-in link has expired or was already used. Request a new one and it'll work.",
-  AccessDenied: "This account can't sign in right now. If you think that's a mistake, ask the admin.",
-};
-const FALLBACK = "Something went wrong while signing you in. Please try again.";
-
 export default async function LoginErrorPage({ searchParams }: PageProps<"/login/error">) {
   const { error } = await searchParams;
-  const message = (typeof error === "string" && MESSAGES[error]) || FALLBACK;
+  const message = loginErrorMessage(error);
 
   return (
     <div className="flex flex-col items-start gap-6">

@@ -14,7 +14,7 @@ export default function CheckEmailPage() {
       <div>
         <h1 className="font-display text-display">Check your email</h1>
         <p className="mt-3 text-muted-foreground">
-          If that address is on the list, a sign-in link is on its way. It works once and lasts 24 hours. Nothing
+          If that address is on the list, a sign-in link is on its way. It works once and lasts 30 minutes. Nothing
           there? Check spam, or ask the admin.
         </p>
       </div>
