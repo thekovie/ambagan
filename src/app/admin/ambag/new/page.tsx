@@ -27,9 +27,7 @@ export default async function NewAmbagPage() {
           All ambag
         </Link>
         <h1 className="font-display text-display mt-2">New ambag</h1>
-        <p className="mt-3 text-muted-foreground">
-          You paid for something and the group chips in. Say what it was, who shares it and how, and everyone gets their own share to pay you back.
-        </p>
+        <p className="mt-2 text-muted-foreground">You paid, the group chips in. Three quick steps.</p>
       </header>
       <BillBuilder currentUserId={admin.id} billId={billId} defaultDueDate={defaultDueDate} people={people} />
     </div>

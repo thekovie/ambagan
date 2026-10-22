@@ -649,3 +649,10 @@ The owner asked for an in-depth look at whether the main tasks are easy, whether
 - PR 2: New ambag as a 3-step wizard.
 - PR 3: Verify cards compact; member payment report scan-first with the rarely used fields tucked away.
 - PR 4: Admin setup: a first-run checklist on Overview, payment methods collapsed until chosen, and one "Add someone" on Members.
+
+## 2026-10-22 — New ambag is a three-step wizard (feat/ux-ambag-wizard)
+
+Audit finding 1: the form was one 2.4-screen page (3.5 for "By items") with the Create button at the very bottom. Now three steps with a progress strip: **The bill** (name, total, due date, note behind a link) → **Who's in** → **Split & send** (how, live per-person amounts, the summary, Create).
+- Next is disabled with the reason written beside it ("Say what it was for.", "Choose who's in."); finished steps are buttons, so going back to fix the total is one tap and nothing typed is lost (hidden steps stay mounted, so a half-done receipt scan survives too). Each step puts focus on its heading. Next stays in view above the dock on long lists.
+- The last step recaps "Pizza night · ₱1,500.00 · 4 people · due ..." so the common equal split is: name, total, tick people, Create.
+- Step rules are a small pure module (`steps.ts`) with tests; the e2e flows now click through the steps and check blocking, focus and that going back keeps what was typed.

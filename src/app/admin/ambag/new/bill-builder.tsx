@@ -1,7 +1,7 @@
 "use client";
 
-import { HandCoins, TriangleAlert } from "lucide-react";
-import { useActionState, useCallback, useEffect, useId, useState } from "react";
+import { ArrowLeft, ArrowRight, HandCoins, TriangleAlert } from "lucide-react";
+import { useActionState, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,8 @@ import { GuestForm, type AddedGuest } from "../guest-form";
 import { applyBillScan, pesosText } from "@/lib/ocr/apply-bill";
 import type { BillScan } from "@/lib/ocr/parse-bill";
 import { ItemsEditor } from "./items-editor";
+import { Stepper } from "./stepper";
+import { LAST_STEP, STEPS, stepBlocker } from "./steps";
 
 type Method = DraftMethod | "ITEMS";
 
@@ -69,6 +71,18 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
   const [items, setItems] = useState<DraftItem[]>(() => [{ id: "first-item", label: "", priceText: "", assignees: [] }]);
   const [extras, setExtras] = useState<DraftExtra[]>([]);
   const [receiptText, setReceiptText] = useState("");
+  const [step, setStep] = useState(0);
+  const arrived = useRef(false);
+
+  // Moving to another step puts you at its top, with its heading read out, rather than leaving you mid-page.
+  useEffect(() => {
+    if (!arrived.current) {
+      arrived.current = true;
+      return;
+    }
+    window.scrollTo({ top: 0 });
+    document.getElementById(`${uid}-step-${step}`)?.focus();
+  }, [step, uid]);
 
   const update = (id: string, patch: Partial<Row>) => setRows((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
   const setAll = (included: boolean) => setRows((current) => Object.fromEntries(Object.entries(current).map(([id, row]) => [id, { ...row, included }])));
@@ -116,6 +130,9 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
   const ownShare = outcome?.ok ? (outcome.result.shares.find((s) => s.userId === adminId)?.amountMinor ?? 0) : 0;
   const ready = Boolean(outcome?.ok) && title.trim().length > 0 && dueDate.length > 0 && collecting.length > 0;
   const methodHint = METHODS.find((m) => m.value === method)?.hint;
+  const blockerFor = (forStep: number) => stepBlocker(forStep, { title, includedCount: included.length });
+  const next = () => setStep((current) => Math.min(LAST_STEP, current + 1));
+  const back = () => setStep((current) => Math.max(0, current - 1));
 
   return (
     <div className="flex flex-col gap-6">
@@ -128,12 +145,14 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
         <input type="hidden" name="split" value={"input" in draft ? JSON.stringify(draft.input) : "{}"} />
       </form>
 
-      <section aria-labelledby="bill" className="sheet flex flex-col gap-5 p-5 sm:p-6">
-        <h2 id="bill" className="font-display text-title">
-          The bill
+      <Stepper current={step} onGo={setStep} />
+
+      <section aria-labelledby={`${uid}-step-0`} hidden={step !== 0} className="sheet flex flex-col gap-5 p-5 sm:p-6">
+        <h2 id={`${uid}-step-0`} tabIndex={-1} className="font-display text-title outline-none">
+          {STEPS[0].heading}
         </h2>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={`${uid}-title`}>What was it for?</Label>
+          <Label htmlFor={`${uid}-title`}>Name it so friends recognise it</Label>
           <Input id={`${uid}-title`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} autoComplete="off" placeholder="Dinner at Gerry's" />
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -146,6 +165,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
             <div className="flex flex-col gap-2">
               <Label htmlFor={`${uid}-total`}>Total you paid (₱)</Label>
               <Input id={`${uid}-total`} value={totalText} onChange={(e) => setTotalText(e.target.value)} inputMode="decimal" autoComplete="off" placeholder="1,500.00" />
+              <p className="text-sm text-muted-foreground">Splitting a receipt by items? Leave this blank: it adds up from the items.</p>
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -153,16 +173,22 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
             <Input id={`${uid}-due`} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={`${uid}-note`}>Note for everyone (optional)</Label>
-          <Textarea id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Salamat sa lahat!" />
-        </div>
+        <details className="group" open={note.length > 0 || undefined}>
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold underline underline-offset-4">Add a note for everyone (optional)</summary>
+          <div className="mt-2 flex flex-col gap-2">
+            <Label htmlFor={`${uid}-note`} className="sr-only">
+              Note for everyone
+            </Label>
+            <Textarea id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Salamat sa lahat!" />
+          </div>
+        </details>
+        <StepNav onNext={next} blocker={blockerFor(0)} />
       </section>
 
-      <section aria-labelledby="who" className="sheet flex flex-col gap-4 p-5 sm:p-6">
+      <section aria-labelledby={`${uid}-step-1`} hidden={step !== 1} className="sheet flex flex-col gap-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="who" className="font-display text-title">
-            Who&apos;s in?
+          <h2 id={`${uid}-step-1`} tabIndex={-1} className="font-display text-title outline-none">
+            {STEPS[1].heading}
           </h2>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setAll(true)}>
@@ -186,12 +212,17 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
           ))}
         </ul>
         <GuestForm onAdded={addGuest} />
+        <StepNav onBack={back} onNext={next} blocker={blockerFor(1)} />
       </section>
 
-      <section aria-labelledby="how" className="sheet flex flex-col gap-4 p-5 sm:p-6">
-        <h2 id="how" className="font-display text-title">
-          How to split it
+      <section aria-labelledby={`${uid}-step-2`} hidden={step !== 2} className="sheet flex flex-col gap-4 p-5 sm:p-6">
+        <h2 id={`${uid}-step-2`} tabIndex={-1} className="font-display text-title outline-none">
+          {STEPS[2].heading}
         </h2>
+        <p className="text-sm text-muted-foreground">
+          {title.trim()} · {outcome?.ok ? formatMinor(outcome.result.totalMinor, "PHP") : totalText.trim() ? `₱${totalText.trim()}` : "no total yet"} · {included.length}{" "}
+          {included.length === 1 ? "person" : "people"} · due {dueDate}
+        </p>
         <fieldset className="flex flex-wrap gap-2">
           <legend className="sr-only">Split method</legend>
           {METHODS.map((m) => (
@@ -253,7 +284,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
         ) : null}
       </section>
 
-      <section aria-labelledby="summary" className="sheet flex flex-col gap-3 p-5 sm:p-6">
+      <section aria-labelledby="summary" hidden={step !== 2} className="sheet flex flex-col gap-3 p-5 sm:p-6">
         <h2 id="summary" className="font-display text-title">
           Before you send
         </h2>
@@ -272,7 +303,10 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
             {state.error}
           </p>
         ) : null}
-        <div>
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="ghost" size="lg" onClick={back}>
+            <ArrowLeft data-icon="inline-start" /> Back
+          </Button>
           <Button type="submit" form={formId} variant="candy" size="lg" disabled={!ready || pending}>
             <HandCoins data-icon="inline-start" /> {pending ? "Creating…" : "Create ambag"}
           </Button>
@@ -285,6 +319,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
       </p>
       <p
         aria-hidden="true"
+        hidden={step !== 2}
         className={cn(
           "sticky bottom-24 z-10 mx-auto w-fit max-w-full rounded-full px-4 py-2 text-sm font-bold shadow-[var(--sh-dock)]",
           outcome?.ok ? "bg-st-mint text-st-ink" : "bg-card text-foreground ring-1 ring-border",
@@ -292,6 +327,26 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
       >
         {balance}
       </p>
+    </div>
+  );
+}
+
+/** Back and Next at the foot of a step. When Next is not allowed yet, the reason is written next to it. */
+function StepNav({ onBack, onNext, blocker }: { onBack?: () => void; onNext: () => void; blocker: string | null }) {
+  return (
+    // Sticks just above the dock, so Next is never lost below a long list.
+    <div className="sticky bottom-24 z-10 -mx-2 flex flex-col gap-2 rounded-3xl bg-card/95 p-2 backdrop-blur">
+      {blocker ? <p className="px-2 text-sm text-muted-foreground">{blocker}</p> : null}
+      <div className="flex items-center gap-3">
+        {onBack ? (
+          <Button type="button" variant="ghost" size="lg" onClick={onBack}>
+            <ArrowLeft data-icon="inline-start" /> Back
+          </Button>
+        ) : null}
+        <Button type="button" variant="candy" size="lg" disabled={blocker !== null} onClick={onNext}>
+          Next <ArrowRight data-icon="inline-end" />
+        </Button>
+      </div>
     </div>
   );
 }
