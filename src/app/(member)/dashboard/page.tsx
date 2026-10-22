@@ -15,6 +15,9 @@ import { getDb } from "@/server/db/client";
 
 export const metadata: Metadata = { title: "Home" };
 
+// Home is for acting; the full history is one tap away.
+const ACTIVITY_SHOWN = 4;
+
 function StatementLink({ statement }: { statement: Statement }) {
   return (
     <Link href={`/statements/${statement.id}`} className="block rounded-lg outline-offset-4">
@@ -26,7 +29,7 @@ function StatementLink({ statement }: { statement: Statement }) {
 export default async function DashboardPage() {
   const user = await requireUser();
   const now = new Date();
-  const { primary, attention, recent, upcoming, activity } = getMemberDashboard(getDb(), user.id, now);
+  const { primary, attention, recent, owing, upcoming, activity } = getMemberDashboard(getDb(), user.id, now, { activityLimit: ACTIVITY_SHOWN });
   const firstName = user.name?.trim().split(/\s+/)[0];
 
   return (
@@ -34,6 +37,11 @@ export default async function DashboardPage() {
       <header>
         <p className="text-sm font-semibold text-muted-foreground">{greeting(now)}</p>
         <h1 className="font-display mt-1 text-display">{firstName ? `Hi, ${firstName}` : "Hi there"}</h1>
+        {owing && owing.count > 1 ? (
+          <p className="mt-2 text-lg">
+            You owe <strong className="font-bold">{formatMinor(owing.totalMinor, owing.currency)}</strong> in all, across {owing.count} bills.
+          </p>
+        ) : null}
       </header>
 
       <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]">
@@ -83,13 +91,11 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-12">
-          <section aria-labelledby="upcoming" className="flex flex-col gap-3">
-            <h2 id="upcoming" className="font-display text-title">
-              Coming up
-            </h2>
-            {upcoming.length === 0 ? (
-              <p className="text-muted-foreground">You&apos;re not on a plan right now, so nothing is scheduled.</p>
-            ) : (
+          {upcoming.length > 0 ? (
+            <section aria-labelledby="upcoming" className="flex flex-col gap-3">
+              <h2 id="upcoming" className="font-display text-title">
+                Coming up
+              </h2>
               <ul className="divide-y divide-border">
                 {upcoming.map((next) => (
                   <li key={`${next.planName}-${next.period}`} className="py-3">
@@ -102,16 +108,14 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          ) : null}
 
-          <section aria-labelledby="activity" className="flex flex-col gap-3">
-            <h2 id="activity" className="font-display text-title">
-              Recent activity
-            </h2>
-            {activity.length === 0 ? (
-              <p className="text-muted-foreground">Nothing yet. Statements and payments will show up here.</p>
-            ) : (
+          {activity.length > 0 ? (
+            <section aria-labelledby="activity" className="flex flex-col gap-3">
+              <h2 id="activity" className="font-display text-title">
+                Recent activity
+              </h2>
               <ul className="divide-y divide-border">
                 {activity.map((item) => (
                   <li key={`${item.kind}-${item.statementId}-${item.at.getTime()}`} className="py-3">
@@ -125,8 +129,8 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          ) : null}
 
           <section aria-labelledby="reminders" className="flex flex-col gap-2">
             <h2 id="reminders" className="font-display text-title">

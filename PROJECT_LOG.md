@@ -629,3 +629,23 @@ Typing every receipt line is the slow part of "By items". The builder now has an
 - Reused the engine; added `recognizeText(..., { layout: true })` (one block, column spacing kept) and a larger image size for long receipts. The shared flow moved into `useImageOcr`, and the payment scanner now uses it with no visible change.
 - **Not measured:** accuracy on real receipts. The repo has none; tests use synthetic text and the e2e draws a receipt and reads it with the real OCR. Prices need centavos (`600.00`); a bare `600` is skipped. After trying real receipts on the demo, the mistakes become test fixtures.
 - Verified: 29 new parser and apply tests (617 in all), typecheck, lint, e2e (real OCR of a drawn receipt, payment scan still passes), viewed at 390px.
+
+## 2026-10-22 — UX audit and usability pass (feat/ux-*)
+
+The owner asked for an in-depth look at whether the main tasks are easy, whether the information density is decent, and for wizards where a task overwhelms. Method: walked every main task by hand at 390px as admin and as a member, in the real app on demo data, counting fields, screens of scrolling and taps.
+
+### Findings (most important first)
+1. **New ambag is one long form**: four cards, 19 fields, 2.4 screens (3.5 for "By items"), and the Create button is at the very bottom. Right place for a wizard.
+2. **Member "Report your payment" has seven inputs** and a scan box, though most people only need: pay, scan, confirm. A single payment method is shown as a one-option radio.
+3. **Verify cards are about 1.3 screens each** for two payments: eight data rows, and "Statement owes" and "Member says" repeat the same number when they match. The approve button sits below the fold.
+4. **Admin Settings stacks three full payment-method forms** (about 8 screens), two of them unused. No first-run guidance anywhere: a new admin has to know to go to Settings, Plans, Members, then Ambag.
+5. **The headline feature was hidden**: Ambag was behind "More" while the monthly Statements page took a dock slot.
+6. **Members page has two "add a friend" ideas** (one with an invite and plan, a guest one at the bottom), plus tall rows and a per-person "Send invite".
+7. **Member home** had three sections that say "nothing yet" on a new account, six activity rows, and no total of what is owed when there are several bills.
+8. **Ambag detail**: four equal tiles lead with "You paid", and a share that is under verification had no way to act on it from that page.
+
+### Plan (one PR each, each tested and merged green)
+- PR 1 (this one): navigation and summaries. Ambag into the dock (Statements moves to More); member home shows what you owe in all and hides empty sections; ambag detail leads with collected / still to collect and links to review a reported payment.
+- PR 2: New ambag as a 3-step wizard.
+- PR 3: Verify cards compact; member payment report scan-first with the rarely used fields tucked away.
+- PR 4: Admin setup: a first-run checklist on Overview, payment methods collapsed until chosen, and one "Add someone" on Members.

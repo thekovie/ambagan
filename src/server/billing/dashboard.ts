@@ -31,6 +31,8 @@ export interface MemberDashboard {
   attention: Statement[];
   /** A few earlier statements for history, newest first. */
   recent: Statement[];
+  /** What still needs paying in all (not what is already reported and waiting for the admin), or null when nothing does. */
+  owing: { count: number; totalMinor: number; currency: string } | null;
   upcoming: UpcomingStatement[];
   activity: ActivityItem[];
 }
@@ -125,6 +127,7 @@ export function getMemberDashboard(
     primary,
     attention,
     recent: all.filter((st) => !shown.has(st.id)).slice(0, RECENT_LIMIT),
+    owing: needsPayment.length === 0 ? null : { count: needsPayment.length, totalMinor: needsPayment.reduce((sum, st) => sum + st.outstandingMinor, 0), currency: needsPayment[0].currency },
     upcoming: nextStatements(db, userId, all, now),
     activity: activityFor(db, userId, all, options.activityLimit ?? DEFAULT_ACTIVITY_LIMIT),
   };

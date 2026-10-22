@@ -190,3 +190,20 @@ describe("getMemberDashboard: activity", () => {
     expect(getMemberDashboard(db, ana.id, NOW).activity[0]).toMatchObject({ kind: "payment_declined", label: "Payment declined for October 2026" });
   });
 });
+
+describe("getMemberDashboard: what you owe in all", () => {
+  it("adds up everything that still needs paying, and leaves out what is under verification, paid or cancelled", () => {
+    addStatement("2026-08", "PAID");
+    addStatement("2026-09", "OVERDUE", { outstandingMinor: 4000 });
+    addStatement("2026-10", "UNPAID", { outstandingMinor: 5000 });
+    addStatement("2026-11", "UNDER_VERIFICATION");
+    const data = getMemberDashboard(db, ana.id, NOW);
+    expect(data.owing).toEqual({ count: 2, totalMinor: 9000, currency: "PHP" });
+  });
+
+  it("is null when nothing needs paying", () => {
+    addStatement("2026-10", "PAID");
+    expect(getMemberDashboard(db, ana.id, NOW).owing).toBeNull();
+  });
+});
+

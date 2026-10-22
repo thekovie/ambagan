@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StatusPill } from "@/components/status-pill";
+import { buttonVariants } from "@/components/ui/button";
 import { getEnv } from "@/env";
 import { formatDate } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth/session";
 import { getBillDetail } from "@/server/bills";
 import { getDb } from "@/server/db/client";
@@ -46,6 +48,9 @@ export default async function AmbagDetailPage({ params, searchParams }: PageProp
           {money(bill.totalMinor)} · {HOW[bill.splitMethod]} · due {formatDate(bill.dueAt)}
           {bill.cancelledAt ? " · Cancelled" : ""}
         </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          You paid {money(bill.totalMinor)}; your own share is {money(adminShareMinor)}.
+        </p>
         {bill.note ? <p className="mt-2 whitespace-pre-line">{bill.note}</p> : null}
       </header>
 
@@ -56,10 +61,8 @@ export default async function AmbagDetailPage({ params, searchParams }: PageProp
         </p>
       ) : null}
 
-      <section aria-label="Where it stands" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section aria-label="Where it stands" className="grid grid-cols-2 gap-3">
         {[
-          ["You paid", money(bill.totalMinor), "bg-st-sky"],
-          ["Your own share", money(adminShareMinor), "bg-st-lilac"],
           ["Collected", money(collectedMinor), "bg-st-mint"],
           ["Still to collect", money(owedMinor), "bg-st-butter"],
         ].map(([label, value, tone]) => (
@@ -92,6 +95,14 @@ export default async function AmbagDetailPage({ params, searchParams }: PageProp
                     <StatusPill status={row.status} />
                   </div>
                 </div>
+                {row.status === "UNDER_VERIFICATION" ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-muted-foreground">{first} says they paid. Check your account, then approve it.</p>
+                    <Link href="/admin/payments" className={cn(buttonVariants({ variant: "candy" }))}>
+                      Review payment
+                    </Link>
+                  </div>
+                ) : null}
                 <ShareActions
                   billId={bill.id}
                   statementId={row.id}
