@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- base: Node 22 LTS with pnpm (version pinned by package.json "packageManager") ----
-FROM node:22-bookworm-slim AS base
+FROM node:25-bookworm-slim AS base
 RUN corepack enable
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY . .
 RUN pnpm build
 
 # ---- runtime: the standalone server only, as a non-root user. App files stay root-owned (read-only to the app). ----
-FROM node:22-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
