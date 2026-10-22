@@ -93,11 +93,18 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await signIn(admin, ADMIN);
     await admin.goto("/admin/dashboard");
     await expect(admin.getByRole("heading", { level: 1 })).toBeVisible();
+    // A brand-new admin is told what to do first, one step at a time.
+    await expect(admin.getByRole("heading", { name: "Get set up" })).toBeVisible();
+    await expect(admin.getByText("0 of 3 done")).toBeVisible();
+    await expect(admin.getByRole("link", { name: /Add a payment method/ })).toBeVisible();
   });
 
   await test.step("the admin switches on a payment method members can pay", async () => {
     await admin.goto("/admin/settings");
     const gcash = admin.getByRole("region", { name: "GCash" });
+    // Methods that are off start as a single tidy row; opening it shows the form.
+    await expect(admin.getByRole("region", { name: "Maya" }).getByLabel("Account holder")).toBeHidden();
+    await gcash.getByText("Off · set up").click();
     await gcash.getByLabel("Account holder").fill("Kovie D.");
     await gcash.getByLabel("Account number or identifier").fill("09171234567");
     await gcash.getByLabel("Show this to members").check();
@@ -195,6 +202,8 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     const adminDock = admin.getByRole("navigation", { name: "Admin" });
     await expect(adminDock.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
     await expect(adminDock.getByRole("link", { name: "Ambag" })).toBeVisible();
+    // By now a payment method, a friend and statements exist, so the setup guide has done its job and goes away.
+    await expect(admin.getByRole("heading", { name: "Get set up" })).toBeHidden();
     await adminDock.getByRole("button", { name: "More" }).click();
     await admin.getByRole("navigation", { name: "More admin pages" }).getByRole("link", { name: "Members" }).click();
     await expect(admin).toHaveURL(/\/admin\/members$/);

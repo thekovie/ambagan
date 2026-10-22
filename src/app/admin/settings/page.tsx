@@ -42,21 +42,31 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="flex flex-col gap-6">
           {methods.map((method) => (
-            <section key={method.id} aria-labelledby={`method-${method.id}`} className="sheet p-5 sm:p-6 flex flex-col gap-5">
-              <h3 id={`method-${method.id}`} className="font-display text-title">
-                {method.label}
-              </h3>
-              <PaymentMethodForm
-                method={{
-                  id: method.id,
-                  label: method.label,
-                  accountName: method.accountName,
-                  accountNumber: method.accountNumber,
-                  instructions: method.instructions,
-                  isActive: method.isActive,
-                  hasQr: Boolean(method.qrFile),
-                }}
-              />
+            // Switched-on methods are open; the others are one tidy row until you want to set them up.
+            <section key={method.id} aria-labelledby={`method-${method.id}`} className="sheet">
+              <details open={method.isActive || undefined} className="group">
+                <summary className="flex min-h-16 cursor-pointer items-center justify-between gap-3 p-5 sm:px-6">
+                  <h3 id={`method-${method.id}`} className="font-display text-title">
+                    {method.label}
+                  </h3>
+                  <span className={method.isActive ? "rounded-full bg-st-mint px-3 py-1 text-xs font-bold text-st-ink" : "rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground"}>
+                    {method.isActive ? "Shown to members" : "Off · set up"}
+                  </span>
+                </summary>
+                <div className="flex flex-col gap-5 px-5 pb-5 sm:px-6 sm:pb-6">
+                  <PaymentMethodForm
+                    method={{
+                      id: method.id,
+                      label: method.label,
+                      accountName: method.accountName,
+                      accountNumber: method.accountNumber,
+                      instructions: method.instructions,
+                      isActive: method.isActive,
+                      hasQr: Boolean(method.qrFile),
+                    }}
+                  />
+                </div>
+              </details>
             </section>
           ))}
         </div>
