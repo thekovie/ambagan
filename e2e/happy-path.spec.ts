@@ -189,10 +189,11 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await memberDock.getByRole("link", { name: "History" }).click();
     await expect(member).toHaveURL(/\/payments$/);
 
-    // Admin: three destinations in the dock, the rest behind "More".
+    // Admin: the things done most (overview, ambag, verify) are in the dock, the rest behind "More".
     await admin.goto("/admin/dashboard");
     const adminDock = admin.getByRole("navigation", { name: "Admin" });
     await expect(adminDock.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    await expect(adminDock.getByRole("link", { name: "Ambag" })).toBeVisible();
     await adminDock.getByRole("button", { name: "More" }).click();
     await admin.getByRole("navigation", { name: "More admin pages" }).getByRole("link", { name: "Members" }).click();
     await expect(admin).toHaveURL(/\/admin\/members$/);
@@ -218,7 +219,7 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(admin.getByText("Balanced: ₱600.00 split between 3").first()).toBeVisible();
     await admin.getByRole("button", { name: "Create ambag" }).click();
     await expect(admin.getByRole("heading", { level: 1, name: "Karaoke night" })).toBeVisible();
-    await expect(admin.getByText("Your own share").locator("..").getByText("₱200.00")).toBeVisible();
+    await expect(admin.getByText(/your own share is ₱200\.00/)).toBeVisible();
 
     // The guest's link, copied the way the admin would.
     await admin.getByRole("button", { name: "Copy link for Tito Boy" }).click();
@@ -288,7 +289,7 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await admin.getByRole("button", { name: "Create ambag" }).click();
     await expect(admin.getByRole("heading", { level: 1, name: "Pizza night" })).toBeVisible();
     // Ana had half the pizza (300) and all the beer (300), plus 10% service: 660. The admin's share is 300 + 30 = 330.
-    await expect(admin.getByText("Your own share").locator("..").getByText("₱330.00")).toBeVisible();
+    await expect(admin.getByText(/your own share is ₱330\.00/)).toBeVisible();
 
     // Ana sees how her own share was worked out, and only hers.
     await member.goto("/statements");

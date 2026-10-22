@@ -40,11 +40,11 @@ export const NAV: Record<ShellVariant, { primary: NavItem[]; more: NavItem[] }> 
   admin: {
     primary: [
       { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
+      { href: "/admin/ambag", label: "Ambag", icon: HandCoins },
       { href: "/admin/payments", label: "Verify", icon: BadgeCheck, badge: "pending" },
-      { href: "/admin/statements", label: "Statements", icon: ReceiptText },
     ],
     more: [
-      { href: "/admin/ambag", label: "Ambag", icon: HandCoins },
+      { href: "/admin/statements", label: "Statements", icon: ReceiptText },
       { href: "/admin/members", label: "Members", icon: Users },
       { href: "/admin/subscriptions", label: "Plans", icon: Repeat },
       { href: "/admin/notifications", label: "Emails", icon: Mail },
