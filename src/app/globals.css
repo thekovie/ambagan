@@ -591,6 +591,26 @@
   }
 }
 
+/* The 404's lost slice drifts gently, as if it were looking for the way back. */
+@media (prefers-reduced-motion: no-preference) {
+  .not-found-wanderer {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: wander 3.2s ease-in-out infinite;
+  }
+  @keyframes wander {
+    0%,
+    100% {
+      translate: 0 0;
+      rotate: 0deg;
+    }
+    50% {
+      translate: 0.8px -1.4px;
+      rotate: 6deg;
+    }
+  }
+}
+
 @media print {
   .sticker {
     transform: none;
