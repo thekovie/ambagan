@@ -817,3 +817,11 @@ Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can 
   - Button focus rings are 2.8:1 on the light theme (the button's own fill carries the rest); inputs have a 6:1 border change. Not changed.
   - The native file chooser is unstyled (it works, shows the name, and now checks the size first).
   - Lighthouse "is-crawlable" fails on purpose: the portal is private and marked noindex.
+
+## 2026-10-24 — README for a public repo (docs/readme)
+
+- **What changed:** the README now opens with the logo, tagline, CI and stack badges and a hero screenshot, then why it exists, what you get, a screenshot gallery (desktop light, phone, dark), how it works, run it (Docker, Coolify-style platforms, a configuration table), development, the stack, the daily run, docs, troubleshooting and known limitations.
+- **Screenshots:** 11 images in `docs/screenshots/`, taken from the demo database (made-up names and `example.com` addresses, no real data) with the dev indicator hidden. The pay form is left out: its demo QR is a flat placeholder. Total about 1.5 MB, so no image tooling was needed.
+- **Stale facts fixed:** the stack line still named React Email (removed in the email PR) and the test count said 433; both corrected in the README and `docs/testing.md`.
+- **Open for the owner:** the repo has no LICENSE file. A public repo without one is "all rights reserved" by default, so others may not legally reuse it. Left for the owner to choose (MIT is the usual pick for something like this); the README deliberately has no license badge or section until then.
+- **Not verified:** the README's Coolify steps (Dockerfile build, port 3000, volume at `/data`) follow the Dockerfile; there is still no Coolify-specific guide or tested restore procedure.

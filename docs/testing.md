@@ -4,7 +4,7 @@ Three layers, from fast and many to slow and few, plus manual drills for the thi
 
 | Layer | What | Command | Size |
 |---|---|---|---|
-| Unit and integration | Domain logic against a real SQLite, parsers, helpers | `pnpm test` | 433 tests, about 3 s |
+| Unit and integration | Domain logic against a real SQLite, parsers, helpers | `pnpm test` | 718 tests, about 3 s |
 | End to end | The whole payment journey in a real browser against the production build | `pnpm e2e` | 1 journey, about 15 s |
 | Drills | Docker, backup/restore, shutdown, bad config | by hand, logged in PROJECT_LOG.md | n/a |
 
