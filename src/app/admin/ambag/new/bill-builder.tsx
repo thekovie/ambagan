@@ -16,7 +16,9 @@ import { applyBillScan, pesosText } from "@/lib/ocr/apply-bill";
 import type { BillScan } from "@/lib/ocr/parse-bill";
 import { ItemsEditor } from "./items-editor";
 import { Stepper } from "./stepper";
-import { LAST_STEP, STEPS, stepBlocker } from "./steps";
+import { LAST_STEP, STEPS, stepBlocker, totalProblem } from "./steps";
+import { formatDate } from "@/lib/dates";
+import { endOfManilaDay } from "@/server/billing/dates";
 
 type Method = DraftMethod | "ITEMS";
 
@@ -67,6 +69,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
   const [note, setNote] = useState("");
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [totalText, setTotalText] = useState("");
+  const [totalTouched, setTotalTouched] = useState(false);
   const [method, setMethod] = useState<Method>("EQUAL");
   const [items, setItems] = useState<DraftItem[]>(() => [{ id: "first-item", label: "", priceText: "", assignees: [] }]);
   const [extras, setExtras] = useState<DraftExtra[]>([]);
@@ -80,8 +83,8 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
       arrived.current = true;
       return;
     }
-    window.scrollTo({ top: 0 });
-    document.getElementById(`${uid}-step-${step}`)?.focus();
+    document.getElementById(`${uid}-progress`)?.scrollIntoView({ block: "start" });
+    document.getElementById(`${uid}-step-${step}`)?.focus({ preventScroll: true });
   }, [step, uid]);
 
   const update = (id: string, patch: Partial<Row>) => setRows((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
@@ -130,7 +133,13 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
   const ownShare = outcome?.ok ? (outcome.result.shares.find((s) => s.userId === adminId)?.amountMinor ?? 0) : 0;
   const ready = Boolean(outcome?.ok) && title.trim().length > 0 && dueDate.length > 0 && collecting.length > 0;
   const methodHint = METHODS.find((m) => m.value === method)?.hint;
-  const blockerFor = (forStep: number) => stepBlocker(forStep, { title, includedCount: included.length });
+  const blockerFor = (forStep: number) => stepBlocker(forStep, { title, includedCount: included.length, method, totalText });
+  // The inline message waits until they leave the field, so it does not nag halfway through typing "1,500".
+  const totalError = totalTouched ? totalProblem(method, totalText) : null;
+  const dueLabel = (() => {
+    const date = endOfManilaDay(dueDate);
+    return date ? formatDate(date) : dueDate;
+  })();
   const next = () => setStep((current) => Math.min(LAST_STEP, current + 1));
   const back = () => setStep((current) => Math.max(0, current - 1));
 
@@ -145,7 +154,9 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
         <input type="hidden" name="split" value={"input" in draft ? JSON.stringify(draft.input) : "{}"} />
       </form>
 
-      <Stepper current={step} onGo={setStep} />
+      <div id={`${uid}-progress`} className="scroll-mt-20">
+        <Stepper current={step} onGo={setStep} />
+      </div>
 
       <section aria-labelledby={`${uid}-step-0`} hidden={step !== 0} className="sheet flex flex-col gap-5 p-5 sm:p-6">
         <h2 id={`${uid}-step-0`} tabIndex={-1} className="font-display text-title outline-none">
@@ -164,8 +175,24 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
           ) : (
             <div className="flex flex-col gap-2">
               <Label htmlFor={`${uid}-total`}>Total you paid (₱)</Label>
-              <Input id={`${uid}-total`} value={totalText} onChange={(e) => setTotalText(e.target.value)} inputMode="decimal" autoComplete="off" placeholder="1,500.00" />
-              <p className="text-sm text-muted-foreground">Splitting a receipt by items? Leave this blank: it adds up from the items.</p>
+              <Input
+                id={`${uid}-total`}
+                value={totalText}
+                onChange={(e) => setTotalText(e.target.value)}
+                onBlur={() => setTotalTouched(true)}
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="1,500.00"
+                aria-invalid={totalError ? true : undefined}
+                aria-describedby={totalError ? `${uid}-total-error` : undefined}
+              />
+              {totalError ? (
+                <p id={`${uid}-total-error`} role="alert" className="text-sm font-semibold text-destructive">
+                  {totalError}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Splitting a receipt by items? Leave this blank: it adds up from the items.</p>
+              )}
             </div>
           )}
           <div className="flex flex-col gap-2">
@@ -182,7 +209,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
             <Textarea id={`${uid}-note`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="Salamat sa lahat!" />
           </div>
         </details>
-        <StepNav onNext={next} blocker={blockerFor(0)} />
+        <StepNav onNext={next} blocker={blockerFor(0)} sticky={false} />
       </section>
 
       <section aria-labelledby={`${uid}-step-1`} hidden={step !== 1} className="sheet flex flex-col gap-4 p-5 sm:p-6">
@@ -221,7 +248,7 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
         </h2>
         <p className="text-sm text-muted-foreground">
           {title.trim()} · {outcome?.ok ? formatMinor(outcome.result.totalMinor, "PHP") : totalText.trim() ? `₱${totalText.trim()}` : "no total yet"} · {included.length}{" "}
-          {included.length === 1 ? "person" : "people"} · due {dueDate}
+          {included.length === 1 ? "person" : "people"} · due {dueLabel}
         </p>
         <fieldset className="flex flex-wrap gap-2">
           <legend className="sr-only">Split method</legend>
@@ -332,14 +359,14 @@ export function BillBuilder({ currentUserId, billId, defaultDueDate, people: ini
 }
 
 /** Back and Next at the foot of a step. When Next is not allowed yet, the reason is written next to it. */
-function StepNav({ onBack, onNext, blocker }: { onBack?: () => void; onNext: () => void; blocker: string | null }) {
+function StepNav({ onBack, onNext, blocker, sticky = true }: { onBack?: () => void; onNext: () => void; blocker: string | null; sticky?: boolean }) {
   return (
     // Sticks just above the dock, so Next is never lost below a long list.
-    <div className="sticky bottom-24 z-10 -mx-2 flex flex-col gap-2 rounded-3xl bg-card/95 p-2 backdrop-blur">
+    <div className={cn("-mx-2 flex flex-col gap-2 rounded-3xl p-2", sticky && "sticky bottom-24 z-10 bg-card/95 backdrop-blur")}>
       {blocker ? <p className="px-2 text-sm text-muted-foreground">{blocker}</p> : null}
       <div className="flex items-center gap-3">
         {onBack ? (
-          <Button type="button" variant="ghost" size="lg" onClick={onBack}>
+          <Button type="button" variant="outline" size="lg" onClick={onBack}>
             <ArrowLeft data-icon="inline-start" /> Back
           </Button>
         ) : null}

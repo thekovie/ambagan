@@ -1,6 +1,6 @@
 import { Download } from "lucide-react";
-import Image from "next/image";
 import { CopyField } from "@/components/copy-field";
+import { QrImage } from "@/components/qr-image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PaymentMethod } from "@/server/payments/methods";
@@ -44,15 +44,7 @@ export function PaymentMethodsList({ methods, qrPath = memberQrPath }: { methods
 
           {method.hasQr ? (
             <div className="flex flex-col items-start gap-3">
-              {/* White backing keeps the code scannable in dark mode. */}
-              <Image
-                src={qrPath(method.id)}
-                alt={`${method.label} payment QR code`}
-                width={288}
-                height={288}
-                unoptimized
-                className="size-72 max-w-full rounded-xl border border-border bg-white object-contain p-3"
-              />
+              <QrImage src={qrPath(method.id)} alt={`${method.label} payment QR code`} />
               <a href={`${qrPath(method.id)}?download=1`} download className={cn(buttonVariants({ variant: "outline" }))}>
                 <Download data-icon="inline-start" /> Save QR image
               </a>

@@ -1,27 +1,20 @@
 "use client";
 
-import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
-interface ConfirmButtonProps extends Omit<ComponentProps<typeof Button>, "type" | "onClick" | "onBlur"> {
+interface ConfirmButtonProps extends Omit<ComponentProps<typeof Button>, "type" | "onClick" | "onBlur" | "onKeyDown"> {
   /** Shown while armed, e.g. "Sure? Deactivate". Accepts nodes so callers can add a hidden per-item name. */
   confirmLabel: ReactNode;
 }
 
-const DISARM_AFTER_MS = 6000;
-
 /**
  * Two-step submit for consequential actions: the first press arms it ("Sure?"), the second submits.
- * It disarms after a few seconds or when focus leaves. Replaces a modal where no protected focus is needed.
+ * It disarms when focus leaves or on Escape (never on a timer, which would cancel it under a slow reader or typist).
+ * Replaces a modal where no protected focus is needed.
  */
 export function ConfirmButton({ children, confirmLabel, ...props }: ConfirmButtonProps) {
   const [armed, setArmed] = useState(false);
-
-  useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), DISARM_AFTER_MS);
-    return () => clearTimeout(timer);
-  }, [armed]);
 
   return (
     <>
@@ -29,6 +22,9 @@ export function ConfirmButton({ children, confirmLabel, ...props }: ConfirmButto
         {...props}
         type="submit"
         onBlur={() => setArmed(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setArmed(false);
+        }}
         onClick={(event) => {
           // First press only arms the button; cancelling the click stops the form from submitting.
           if (armed) return;

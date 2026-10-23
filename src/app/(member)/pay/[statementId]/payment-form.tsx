@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMinor, parsePesosToMinor } from "@/lib/money";
+import { useFocusFirstError } from "@/lib/use-focus-first-error";
 import { applyReceipt, detectedFields, type DetectedField } from "@/lib/ocr/apply";
 import type { ParsedReceipt } from "@/lib/ocr/parse";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function PaymentForm({ action: submit, statementId, currency, outstandingMinor, methods, defaultDate }: PaymentFormProps) {
   const [state, action, pending] = useActionState<PaymentFormState, FormData>(submit, {});
+  const formRef = useFocusFirstError(state);
   const uid = useId();
   const id = (field: string) => `${uid}-${field}`;
   const errors = state.errors ?? {};
@@ -86,7 +88,7 @@ export function PaymentForm({ action: submit, statementId, currency, outstanding
   const amountDiffers = typedMinor !== null && typedMinor !== outstandingMinor;
 
   return (
-    <form action={action} className="flex flex-col gap-7">
+    <form ref={formRef} action={action} className="flex flex-col gap-7">
       <input type="hidden" name="statementId" value={statementId} />
 
       <ReceiptScanner knownApps={APPS} onDetected={onDetected} />
@@ -129,6 +131,7 @@ export function PaymentForm({ action: submit, statementId, currency, outstanding
           <Input
             id={id("reference")}
             name="transactionRef"
+            required
             value={fields.reference}
             onChange={set("reference")}
             autoComplete="off"
@@ -184,6 +187,7 @@ export function PaymentForm({ action: submit, statementId, currency, outstanding
           <Input
             id={id("amount")}
             name="amountPesos"
+            required
             inputMode="decimal"
             autoComplete="off"
             value={fields.amount}

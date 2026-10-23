@@ -27,7 +27,7 @@ export function Stepper({ current, onGo }: { current: number; onGo: (step: numbe
                   !active && !done && "border-input text-muted-foreground",
                 )}
               >
-                <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-card/70 text-xs text-st-ink">
+                <span aria-hidden="true" className={cn("grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold", active || done ? "bg-white/70 text-st-ink" : "bg-muted text-foreground")}>
                   {done ? <Check className="size-3.5" /> : index + 1}
                 </span>
                 <span className="truncate">

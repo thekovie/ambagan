@@ -50,7 +50,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           {methods.map((method) => (
             // Switched-on methods are open; the others are one tidy row until you want to set them up.
             <section key={method.id} aria-labelledby={`method-${method.id}`} className="sheet">
-              <details open={method.isActive || method.id === added || undefined} className="group">
+              <details open={method.id === added || undefined} className="group">
                 <summary className="flex min-h-16 cursor-pointer items-center justify-between gap-3 p-5 sm:px-6">
                   <h3 id={`method-${method.id}`} className="font-display text-title">
                     {method.label}

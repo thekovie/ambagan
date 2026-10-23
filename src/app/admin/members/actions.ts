@@ -21,6 +21,8 @@ export interface InviteResult {
 
 export interface MemberActionState {
   error?: string;
+  /** Which field the error is about, so the form can flag that field and nothing else. */
+  errorField?: "name" | "email" | "plan";
   invite?: InviteResult;
   /** Submitted fields, echoed back on error so React's post-action form reset doesn't wipe them. */
   values?: { name: string; email: string; subscriptionId: string };
@@ -73,7 +75,11 @@ export async function addMemberAction(_prev: MemberActionState, formData: FormDa
     subscriptionId: String(formData.get("subscriptionId") ?? ""),
   };
   const parsed = addSchema.safeParse({ ...values, subscriptionId: values.subscriptionId || undefined });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form and try again.", values };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = issue?.path[0];
+    return { error: issue?.message ?? "Check the form and try again.", errorField: field === "name" || field === "email" ? field : undefined, values };
+  }
 
   const result = addMember(getDb(), {
     name: parsed.data.name,
@@ -81,7 +87,10 @@ export async function addMemberAction(_prev: MemberActionState, formData: FormDa
     subscriptionId: parsed.data.subscriptionId ?? null,
     invitedBy: admin.id,
   });
-  if (!result.ok) return { error: ERRORS[result.error], values };
+  if (!result.ok) {
+    const errorField = result.error === "EMAIL_TAKEN" ? "email" : result.error === "SUBSCRIPTION_NOT_FOUND" || result.error === "SUBSCRIPTION_INACTIVE" ? "plan" : undefined;
+    return { error: ERRORS[result.error], errorField, values };
+  }
 
   const invite = await deliverInvite(result.user, result.invitation.token);
   revalidatePath("/admin/members");

@@ -28,7 +28,7 @@ export default async function PayPage({ params }: PageProps<"/pay/[statementId]"
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <header>
-        <Link href={`/statements/${statement.id}`} className="text-sm font-semibold text-muted-foreground underline underline-offset-4">
+        <Link href={`/statements/${statement.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-muted-foreground underline underline-offset-4">
           Back to the statement
         </Link>
         <h1 className="font-display mt-2 text-display">Report your payment</h1>

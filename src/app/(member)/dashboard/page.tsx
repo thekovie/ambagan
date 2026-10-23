@@ -45,8 +45,6 @@ export default async function DashboardPage() {
         ) : null}
       </header>
 
-      <WelcomeCard className="-mt-6" />
-
       <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]">
         <div className="flex flex-col gap-12">
           {primary ? (
@@ -60,6 +58,9 @@ export default async function DashboardPage() {
               description="Your first statement or ambag shows up here as soon as it's issued, and we'll email you when it lands."
             />
           )}
+
+          {/* Below the main sticker, so the one thing to pay is never pushed down by a hint. */}
+          <WelcomeCard />
 
           {attention.length > 0 ? (
             <section aria-labelledby="attention" className="flex flex-col gap-4">
@@ -124,7 +125,7 @@ export default async function DashboardPage() {
                   <li key={`${item.kind}-${item.statementId}-${item.at.getTime()}`} className="py-3">
                     <Link
                       href={`/statements/${item.statementId}`}
-                      className="inline-block py-1.5 font-bold underline-offset-4 hover:underline"
+                      className="inline-flex min-h-11 items-center font-bold underline-offset-4 hover:underline"
                     >
                       {item.label}
                     </Link>
@@ -142,7 +143,7 @@ export default async function DashboardPage() {
             <p className="text-muted-foreground">
               We email <strong className="text-foreground">{user.email}</strong> when a statement is issued, the day before
               it&apos;s due, on the due date, and if it becomes overdue.{" "}
-              <Link href="/settings" className="font-semibold text-foreground underline underline-offset-4">
+              <Link href="/settings" className="inline-flex min-h-11 items-center font-semibold text-foreground underline underline-offset-4">
                 Account settings
               </Link>
             </p>

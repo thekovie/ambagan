@@ -33,7 +33,7 @@ export function AppShell({ variant, user, pendingCount, children }: AppShellProp
 
       <header className="sticky top-0 z-20 bg-background print:hidden">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
-          <Link href={HOME[variant]} aria-label="ambagan home" className="rounded-full">
+          <Link href={HOME[variant]} aria-label="ambagan home" className="inline-flex min-h-11 items-center rounded-full">
             <Wordmark />
           </Link>
           <AvatarMenu name={user.name} email={user.email} />

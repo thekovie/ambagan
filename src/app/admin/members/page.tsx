@@ -39,7 +39,7 @@ export default async function MembersPage() {
         <AddMemberForm plans={plans} />
         <p className="text-sm text-muted-foreground">
           Friend doesn&apos;t need to sign in?{" "}
-          <a href="#guests" className="font-semibold text-foreground underline underline-offset-4">
+          <a href="#guests" className="inline-flex min-h-11 items-center font-semibold text-foreground underline underline-offset-4">
             Add them with just a name
           </a>
           , and they pay through a private link.

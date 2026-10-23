@@ -43,7 +43,7 @@ export const MEMBER_GUIDE: GuideSection[] = [
       },
       {
         title: "Or scan the receipt",
-        body: "Choose Scan receipt and pick a screenshot. It's read on your phone, nothing is uploaded, and it fills in what it can. Always check each field before you send.",
+        body: "Under \"Scan your receipt\", tap Choose screenshot and pick one. It's read on your phone, nothing is uploaded, and it fills in what it can. Always check each field before you send.",
       },
     ],
   },
