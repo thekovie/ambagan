@@ -41,9 +41,12 @@ describe("generateReference", () => {
     expect(REFERENCE_ALPHABET).not.toMatch(/[01OIL]/);
   });
 
-  it("does not repeat across many draws", () => {
-    const seen = new Set(Array.from({ length: 2000 }, () => generateReference("SPOT", "2026-10")));
-    expect(seen.size).toBe(2000);
+  it("does not repeat across a batch of draws", () => {
+    // 31^6 (about 887 million) suffixes: by chance, 2000 draws collide about 1 run in 500 (and the database, with a
+    // retry, handles a real collision), so this stays small enough not to flake while still catching a generator that
+    // repeats or returns a constant.
+    const seen = new Set(Array.from({ length: 100 }, () => generateReference("SPOT", "2026-10")));
+    expect(seen.size).toBe(100);
   });
 });
 
