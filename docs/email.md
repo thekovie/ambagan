@@ -53,7 +53,7 @@ These carry one-time links, so they are **not** put in the queue (the database w
 
 ## Templates
 
-Notification emails are React Email components (`src/server/email/notification-email.tsx`) driven by one copy table (`notification-copy.ts`), rendered to HTML and plain text. All values are escaped by React. Sign-in and invitation mail use small hand-written HTML (`auth-templates.ts`) because they predate the queue and need nothing dynamic. Styling is inline with hex colours, since email clients ignore external CSS.
+Every email, queued notifications and the sign-in and invitation mail alike, is drawn by one frame (`src/server/email/email-frame.ts`) in the app's sticker-book look: the coin logo, a pastel band and sticker badge per kind of message (`notification-email.ts` picks the colour), pastel fact stickers, a candy button and a plain-text twin. The words come from one copy table (`notification-copy.ts`) and `auth-templates.ts`. The frame escapes every value, so member-supplied text cannot inject markup. Styling is inline with hex colours and table layout, since email clients ignore external CSS; rounded corners and the offset shadow fall back to square where unsupported. The logo is a PNG embedded in the code (`logo-png.ts`) and attached inline to each message, so nothing is fetched from this server when a message is opened.
 
 ## Known limits
 

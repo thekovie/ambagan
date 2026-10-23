@@ -1,6 +1,8 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { getEnv } from "@/env";
+import { LOGO_CID } from "./email-frame";
+import { LOGO_PNG_BASE64 } from "./logo-png";
 
 export interface OutgoingMail {
   to: string;
@@ -47,5 +49,9 @@ export async function sendMail(mail: OutgoingMail): Promise<void> {
     subject: mail.subject,
     text: mail.text,
     html: mail.html,
+    // The coin travels inside the message, so there is no remote image to block (or to reveal who opened it).
+    attachments: mail.html.includes(`cid:${LOGO_CID}`)
+      ? [{ filename: "ambagan.png", content: Buffer.from(LOGO_PNG_BASE64, "base64"), contentType: "image/png", cid: LOGO_CID, contentDisposition: "inline" }]
+      : [],
   });
 }
