@@ -722,3 +722,10 @@ Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can 
 
 - **Bug (reported from a live deployment):** the sign-in link and the invitation acceptance both sent people to `/dashboard`, so an admin who followed their link saw the member pages and no way to the admin area, even though typing `/admin/dashboard` worked. Authorization was correct; only the landing page was wrong.
 - **Fix:** both now sign in to `/`, which already sends admins to `/admin/dashboard` and members to `/dashboard`. A small test fails if either goes back to a fixed page.
+
+## 2026-10-23 — Payment methods are added by the admin, not hard-coded (feat/custom-payment-methods)
+
+- **Requested:** "I also want to add the payment methods myself, not hard coded." Until now the app seeded exactly GCash, Maya and MariBank (a fixed list in the code, one row each); the admin could only edit those three.
+- **Now:** Settings has an "Add a payment method" box (type any name, or tap a suggestion), a new method opens ready to set up, and a method nobody has paid to yet can be deleted (two taps; its QR image goes too). A method that past payments point to can only be switched off, because those payments still need to show where they went. Names are unique ignoring case. Fresh installs start with none, so the first-run checklist now says "Add GCash, Maya, a bank account…". Installs that already have the three keep them and can edit or delete them.
+- **Database:** migration 0003 only drops the unique index on `payment_method.kind`; the column stays as a legacy tag ("CUSTOM" for new ones) and nothing reads it. Written by hand as a single `DROP INDEX` instead of the table rebuild the generator produced, because a rebuild drops a table that payments point to and the migration runner cannot turn foreign keys off inside its transaction. The existing "no later migration rebuilds a table" test already guards this. The old enum is gone from `enums.ts`.
+- **Tests:** add (cleaned name, ordering, duplicates, blank), delete (unused, in use, missing, QR file handed back), used-method lookup, and the 0003 upgrade; the end-to-end journey now adds GCash itself.

@@ -1,6 +1,6 @@
 # ambagan
 
-*Split it, settle it.* A small self-hosted payment portal for a shared subscription (Spotify first) among friends. Everyone gets a monthly **statement of account**; members **pay outside the app** (GCash, Maya or MariBank), **report the payment** (optionally by scanning the receipt in their browser), and the admin **verifies it against the receiving account** before the statement is marked paid. Reminders go out by email. No payment is ever processed here and no receipt image is ever uploaded or stored.
+*Split it, settle it.* A small self-hosted payment portal for a shared subscription (Spotify first) among friends. Everyone gets a monthly **statement of account**; members **pay outside the app** (to the methods you add: GCash, Maya, a bank…), **report the payment** (optionally by scanning the receipt in their browser), and the admin **verifies it against the receiving account** before the statement is marked paid. Reminders go out by email. No payment is ever processed here and no receipt image is ever uploaded or stored.
 
 Stack: Next.js 16 (App Router), TypeScript, Tailwind, shadcn/ui, SQLite + Drizzle, Auth.js (passwordless email links), Nodemailer + React Email, Tesseract.js, Docker Compose.
 
@@ -8,7 +8,7 @@ Stack: Next.js 16 (App Router), TypeScript, Tailwind, shadcn/ui, SQLite + Drizzl
 
 1. The admin **invites** members by email (invitation-only; sign-in is a one-time emailed link, no passwords).
 2. Each month (Asia/Manila), from the plan's issue day (default the 1st), every active member gets a **statement** (default PHP 50.00, due on the 10th) and an email. Someone who joins after the due day starts next month.
-3. The member opens the statement, taps **Submit payment**, pays the admin's GCash/Maya/MariBank account in their own app, then reports it: reference number, amount, time, and which app they paid from. **Scan receipt** reads these from a screenshot *inside the browser*; the member checks every field and only those fields are sent.
+3. The member opens the statement, taps **Submit payment**, pays one of the admin's payment methods in their own app, then reports it: reference number, amount, time, and which app they paid from. **Scan receipt** reads these from a screenshot *inside the browser*; the member checks every field and only those fields are sent.
 4. The statement shows **Waiting for check**. The admin sees what was owed against what was claimed, finds the transaction in their own account, and **approves or declines** (a decline needs a reason; the member can report again). Only an admin's approval marks a statement paid.
 5. Everyone is emailed at each step, and reminders (the day before, the day of, weekly once overdue) go only to people who still owe.
 

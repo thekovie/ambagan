@@ -12,7 +12,6 @@ import {
   EMAIL_STATUSES,
   EMAIL_TYPES,
   JOB_STATUSES,
-  PAYMENT_METHOD_KINDS,
   PAYMENT_STATUSES,
   ROLES,
   STATEMENT_STATUSES,
@@ -187,7 +186,8 @@ export const statements = sqliteTable(
 
 export const paymentMethods = sqliteTable("payment_method", {
   id: id(),
-  kind: text("kind", { enum: PAYMENT_METHOD_KINDS }).notNull().unique(),
+  /** Legacy tag: older installs seeded GCASH/MAYA/MARIBANK. Methods the admin adds are "CUSTOM"; nothing depends on it. */
+  kind: text("kind").notNull().default("CUSTOM"),
   label: text("label").notNull(),
   accountName: text("account_name"),
   accountNumber: text("account_number"),

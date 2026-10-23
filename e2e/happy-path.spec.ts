@@ -101,10 +101,11 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
 
   await test.step("the admin switches on a payment method members can pay", async () => {
     await admin.goto("/admin/settings");
+    // Nothing is pre-made: the admin adds the method themselves, and it opens ready to set up.
+    await admin.getByLabel("Add a payment method").fill("GCash");
+    await admin.getByRole("button", { name: "Add", exact: true }).click();
     const gcash = admin.getByRole("region", { name: "GCash" });
-    // Methods that are off start as a single tidy row; opening it shows the form.
-    await expect(admin.getByRole("region", { name: "Maya" }).getByLabel("Account holder")).toBeHidden();
-    await gcash.getByText("Off · set up").click();
+    await expect(gcash.getByLabel("Account holder")).toBeVisible();
     await gcash.getByLabel("Account holder").fill("Kovie D.");
     await gcash.getByLabel("Account number or identifier").fill("09171234567");
     await gcash.getByLabel("Show this to members").check();

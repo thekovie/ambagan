@@ -1,25 +1,51 @@
 import { cleanFreeText } from "@/lib/names";
-import { asc, eq } from "drizzle-orm";
-import type { PaymentMethodKind } from "@/lib/enums";
+import { asc, eq, max } from "drizzle-orm";
 import { recordAudit } from "@/server/audit";
 import { notifyPaymentDetailsChanged } from "@/server/email/notify";
 import type { Db } from "@/server/db/client";
-import { paymentMethods } from "@/server/db/schema";
+import { paymentMethods, payments } from "@/server/db/schema";
 
 export type PaymentMethod = typeof paymentMethods.$inferSelect;
 
 const asDb = (tx: unknown) => tx as Db;
 
-const DEFAULTS: { kind: PaymentMethodKind; label: string }[] = [
-  { kind: "GCASH", label: "GCash" },
-  { kind: "MAYA", label: "Maya" },
-  { kind: "MARIBANK", label: "MariBank QR Ph" },
-];
+// Labels and instructions reach email subjects ("payment details changed"), so hidden characters are removed like anywhere else.
+const clean = (value: string | null | undefined): string | null => (value ? cleanFreeText(value) : "") || null;
 
-/** First run: the three supported destinations, switched off until the admin fills them in. */
-export function seedPaymentMethods(db: Db): void {
-  DEFAULTS.forEach((method, index) => {
-    db.insert(paymentMethods).values({ ...method, isActive: false, sortOrder: index + 1 }).onConflictDoNothing().run();
+/** Adds an empty, switched-off method for the admin to fill in. Names are compared ignoring case so the member picker never shows two of the same. */
+export function addPaymentMethod(db: Db, label: string, actorId: string): { ok: true; id: string } | { ok: false; error: "NO_NAME" | "DUPLICATE" } {
+  const name = clean(label);
+  if (!name) return { ok: false, error: "NO_NAME" };
+  return db.transaction((tx) => {
+    const t = asDb(tx);
+    const taken = t.select({ label: paymentMethods.label }).from(paymentMethods).all();
+    if (taken.some((m) => m.label.toLowerCase() === name.toLowerCase())) return { ok: false, error: "DUPLICATE" } as const;
+    const last = t.select({ n: max(paymentMethods.sortOrder) }).from(paymentMethods).get()?.n ?? 0;
+    const created = t.insert(paymentMethods).values({ label: name, isActive: false, sortOrder: last + 1 }).returning().get();
+    recordAudit(t, { actorId, action: "payment_method.added", entityType: "payment_method", entityId: created.id });
+    return { ok: true, id: created.id } as const;
+  });
+}
+
+/** Ids of methods that past payments point to: those can only be switched off, never deleted. */
+export function usedMethodIds(db: Db): Set<string> {
+  return new Set(db.selectDistinct({ id: payments.destinationMethodId }).from(payments).all().map((row) => row.id));
+}
+
+export type DeleteMethodResult =
+  /** `previous` is the QR image file no longer referenced: the caller deletes it after this commit. */
+  | { ok: true; previous: string | null }
+  | { ok: false; error: "NOT_FOUND" | "IN_USE" };
+
+export function deletePaymentMethod(db: Db, id: string, actorId: string): DeleteMethodResult {
+  return db.transaction((tx): DeleteMethodResult => {
+    const t = asDb(tx);
+    const current = t.select().from(paymentMethods).where(eq(paymentMethods.id, id)).get();
+    if (!current) return { ok: false, error: "NOT_FOUND" };
+    if (t.select({ id: payments.id }).from(payments).where(eq(payments.destinationMethodId, id)).limit(1).get()) return { ok: false, error: "IN_USE" };
+    t.delete(paymentMethods).where(eq(paymentMethods.id, id)).run();
+    recordAudit(t, { actorId, action: "payment_method.deleted", entityType: "payment_method", entityId: id, metadata: { label: current.label } });
+    return { ok: true, previous: current.qrFile };
   });
 }
 
@@ -32,8 +58,6 @@ export function listPaymentMethods(db: Db, options: { activeOnly?: boolean }): P
     .all();
 }
 
-// Labels and instructions reach email subjects ("payment details changed"), so hidden characters are removed like anywhere else.
-const clean = (value: string | null | undefined): string | null => (value ? cleanFreeText(value) : "") || null;
 
 /** A method members can actually pay to needs a recipient and either an account number or a QR. */
 const isPayable = (m: { accountName: string | null; accountNumber: string | null; qrFile: string | null }) =>
