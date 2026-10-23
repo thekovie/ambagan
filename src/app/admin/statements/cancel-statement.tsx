@@ -13,7 +13,7 @@ export function CancelStatement({ statementId, reference }: { statementId: strin
 
   return (
     <details className="group">
-      <summary className="cursor-pointer text-sm font-semibold text-muted-foreground underline underline-offset-4 marker:hidden">
+      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-muted-foreground underline underline-offset-4 marker:hidden">
         Cancel <span className="sr-only">{reference}</span>
       </summary>
       <form action={action} className="mt-3 flex max-w-md flex-col gap-3 rounded-xl bg-secondary p-4">

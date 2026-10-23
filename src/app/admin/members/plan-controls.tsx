@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -47,7 +47,7 @@ function PlanRow({ userId, display, plan, joined }: { userId: string; display: s
           <form action={join}>
             <input type="hidden" name="userId" value={userId} />
             <input type="hidden" name="subscriptionId" value={plan.id} />
-            <Button type="submit" variant="secondary" size="sm" disabled={joining || !plan.isActive}>
+            <Button type="submit" variant="outline" size="sm" disabled={joining || !plan.isActive}>
               <Plus data-icon="inline-start" />
               {joining ? "Adding…" : "Add"}
               <span className="sr-only"> {display} to {plan.name}</span>
@@ -71,15 +71,16 @@ function PlanRow({ userId, display, plan, joined }: { userId: string; display: s
 export function PlanControls({ userId, display, joinedIds, plans }: { userId: string; display: string; joinedIds: string[]; plans: PlanOption[] }) {
   const none = joinedIds.length === 0;
   return (
-    <details className="group w-full">
+    <details className="group">
       <summary
         className={cn(
-          "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm font-bold marker:hidden",
+          "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm font-bold marker:hidden",
           none ? "border-st-ink bg-st-butter text-st-ink" : "border-border text-muted-foreground",
         )}
       >
         {none ? "Add to a plan" : "Change plans"}
         <span className="sr-only"> for {display}</span>
+        <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
       </summary>
       <div className="mt-3 flex max-w-md flex-col gap-3 rounded-xl bg-secondary p-4">
         {plans.length === 0 ? (

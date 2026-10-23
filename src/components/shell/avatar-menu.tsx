@@ -26,7 +26,7 @@ export function AvatarMenu({ name, email }: AvatarMenuProps) {
       <form id="ambagan-sign-out" action={signOutAction} hidden />
       <Menu.Root>
         <Menu.Trigger
-          aria-label="Account menu"
+          aria-label={`${initials(name, email)} account menu`}
           className={cn(
             "grid size-11 place-items-center rounded-full text-sm font-bold outline-none transition-transform active:scale-95",
             "ring-2 ring-[var(--sticker-edge)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",

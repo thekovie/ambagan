@@ -66,18 +66,18 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
           {display.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
+          <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold">
             <span className="truncate">{display}</span>
             {member.role === "ADMIN" ? (
               <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-bold text-background">Admin</span>
             ) : null}
-            {member.isGuest ? <span className="rounded-full bg-st-butter px-2 py-0.5 text-xs font-bold text-st-ink">Guest</span> : null}
+            {member.isGuest ? <span className="rounded-full bg-st-lilac px-2 py-0.5 text-xs font-bold text-st-ink">Guest</span> : null}
             {member.isActive ? null : (
               <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-input px-2 py-0.5 text-xs font-bold text-muted-foreground">
                 <Ban className="size-3" aria-hidden="true" /> Deactivated
               </span>
             )}
-          </p>
+          </h3>
           <p className="truncate text-sm text-muted-foreground">{member.hasRealEmail ? member.email : "No email"}</p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             {member.isGuest ? (
@@ -111,7 +111,7 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
           <form action={promote.action} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="userId" value={member.id} />
             {member.hasRealEmail ? null : (
-              <Input name="email" type="email" inputMode="email" autoComplete="off" required placeholder="Their email" aria-label={`Email for ${display}`} className="h-10 w-56" />
+              <Input name="email" type="email" inputMode="email" autoComplete="off" required placeholder="Their email" aria-label={`Email for ${display}`} className="h-11 w-56" />
             )}
             {member.hasRealEmail ? null : (
               <Button type="submit" formAction={saveEmailAction} variant="outline" size="sm">
@@ -132,7 +132,7 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
         ) : null}
 
         {member.isSelf ? null : (
-          <form action={toggleAction}>
+          <form action={toggleAction} className="ml-auto">
             <input type="hidden" name="userId" value={member.id} />
             <input type="hidden" name="active" value={member.isActive ? "false" : "true"} />
             {member.isActive ? (
@@ -163,7 +163,7 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
           <p className="text-sm font-semibold text-muted-foreground sm:pl-16">Personal data removed. Their payments stay in your records as &ldquo;Former member&rdquo;.</p>
         ) : (
           <details className="group sm:pl-16">
-            <summary className="cursor-pointer text-sm font-semibold text-muted-foreground underline underline-offset-4 marker:hidden">
+            <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-muted-foreground underline underline-offset-4 marker:hidden">
               Remove personal data<span className="sr-only"> of {display}</span>
             </summary>
             <form action={eraseAction} className="mt-3 flex max-w-md flex-col gap-3 rounded-xl bg-secondary p-4">

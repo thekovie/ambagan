@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { startBillingThisMonth } from "./db";
+import { makeStatementLate, startBillingThisMonth } from "./db";
 import { linkIn, waitForMail } from "./mail";
 
 const BASE_URL = "http://localhost:3100";
@@ -371,6 +371,72 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(admin.getByText(/Payment approved/).first()).toBeVisible();
     // The totals tile for failed messages reads 0 (every message was accepted by the SMTP sink).
     await expect(admin.locator("dl > div").filter({ hasText: "Failed" }).locator("dd")).toHaveText("0");
+  });
+
+  const FRIEND = "ben@e2e.test";
+  // The card for the friend, wherever they are on the page (the plan list inside it has rows too, hence first()).
+  const friendCard = () => admin.getByRole("listitem").filter({ hasText: /Ben Cruz|Former member/ }).first();
+
+  await test.step("a friend added without a plan can be put in one afterwards", async () => {
+    await admin.goto("/admin/members");
+    const addMember = admin.getByRole("region", { name: "Add a friend" });
+    await addMember.getByLabel("Name").fill("Ben Cruz");
+    await addMember.getByLabel("Email").fill(FRIEND);
+    await addMember.getByLabel("Plan").selectOption({ label: "No plan yet" });
+    await addMember.getByRole("button", { name: "Add and send invite" }).click();
+    await expect(admin.getByText(`Invitation emailed to ${FRIEND}.`)).toBeVisible();
+
+    await friendCard().getByText("Add to a plan").click();
+    await friendCard().getByRole("button", { name: "Add Ben Cruz to Spotify" }).click();
+    await expect(friendCard().getByText("In this plan")).toBeVisible();
+  });
+
+  await test.step("a late penalty is set on the plan, builds up through the daily run, and the admin can waive it", async () => {
+    // Set the rule on the plan form: ₱10 for every 2 days late. The sentence under it says what will happen.
+    await admin.goto("/admin/subscriptions");
+    const spotify = admin.getByRole("region", { name: "Spotify" });
+    await spotify.getByLabel("Penalty (₱)").fill("10");
+    await spotify.getByLabel("Charged every (days late)").fill("2");
+    await expect(spotify.getByText(/₱10\.00 every 2 days late/)).toBeVisible();
+    await spotify.getByRole("button", { name: "Save changes" }).click();
+    await expect(spotify.getByText(/^Saved\./)).toBeVisible();
+
+    // The friend gets this month's statement, which is then 10 days late (the app has no back-dating).
+    startBillingThisMonth(FRIEND);
+    await admin.goto("/admin/statements");
+    await admin.getByRole("button", { name: "Generate missing statements" }).click();
+    await expect(admin.getByText(/Created 1 statement/)).toBeVisible();
+    makeStatementLate(FRIEND, 10);
+
+    // The daily run works out the penalty: 10 days late at ₱10 per 2 days is ₱50.
+    await admin.getByRole("button", { name: "Run it now" }).click();
+    await expect(admin.getByText(/Done\./)).toBeVisible();
+    await admin.reload();
+    const fees = admin.getByRole("region", { name: /Late fees building up/ });
+    // (Moving the penalty's start back for the test also makes Ana's own late-paid statement count, so aim at Ben's row.)
+    const bensFee = fees.getByRole("listitem").filter({ hasText: "Ben Cruz" });
+    await expect(bensFee.getByText("₱50.00")).toBeVisible();
+
+    // Waiving takes two presses, and that fee is gone for good.
+    await bensFee.getByRole("button", { name: /^Waive/ }).click();
+    await bensFee.getByRole("button", { name: /Sure\? Waive it/ }).click();
+    await expect(fees.getByText("Ben Cruz", { exact: true })).toHaveCount(0);
+  });
+
+  await test.step("when a friend leaves and asks, their personal data can be removed", async () => {
+    await admin.goto("/admin/members");
+    // Removal is only offered for someone who has been deactivated.
+    await expect(friendCard().getByText("Remove personal data")).toHaveCount(0);
+    await friendCard().getByRole("button", { name: /^Deactivate/ }).click();
+    await friendCard().getByRole("button", { name: /Sure\? Deactivate/ }).click();
+    await expect(friendCard().getByText("Deactivated")).toBeVisible();
+
+    await friendCard().getByText("Remove personal data").first().click();
+    await friendCard().getByRole("button", { name: /^Remove personal data/ }).click();
+    await friendCard().getByRole("button", { name: /Sure\? Remove their data/ }).click();
+    await expect(friendCard().getByText(/Personal data removed/)).toBeVisible();
+    await expect(friendCard().getByText("Former member").first()).toBeVisible();
+    await expect(admin.getByText(FRIEND)).toHaveCount(0);
   });
 
   await test.step("an address that doesn't exist, or isn't theirs, gets the friendly 404 with a real 404 status", async () => {

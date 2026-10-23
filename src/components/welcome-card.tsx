@@ -47,8 +47,8 @@ export function WelcomeCard({ className }: { className?: string }) {
   if (hidden) return null;
 
   return (
-    <section aria-label="Welcome" className={cn("flex max-w-2xl items-start gap-3 rounded-2xl border border-border bg-st-butter p-4 text-st-ink", className)}>
-      <Sparkles className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+    <section aria-label="Welcome" className={cn("sheet flex max-w-2xl items-start gap-3 p-4", className)}>
+      <Sparkles className="mt-0.5 size-5 shrink-0 text-candy" aria-hidden="true" />
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <p className="font-semibold">New here? Take a one-minute look at how ambagan works.</p>
         <div>
@@ -61,7 +61,7 @@ export function WelcomeCard({ className }: { className?: string }) {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss welcome"
-        className="-mr-1 -mt-1 grid size-11 shrink-0 place-items-center rounded-full outline-none hover:bg-black/5 focus-visible:outline-3 focus-visible:outline-ring"
+        className="-mr-1 -mt-1 grid size-11 shrink-0 place-items-center rounded-full outline-none hover:bg-muted focus-visible:outline-3 focus-visible:outline-ring"
       >
         <X className="size-5" aria-hidden="true" />
       </button>

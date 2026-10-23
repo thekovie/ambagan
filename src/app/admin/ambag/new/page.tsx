@@ -23,7 +23,7 @@ export default async function NewAmbagPage() {
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <Link href="/admin/ambag" className="text-sm font-semibold text-muted-foreground underline underline-offset-4">
+        <Link href="/admin/ambag" className="inline-flex min-h-11 items-center text-sm font-semibold text-muted-foreground underline underline-offset-4">
           All ambag
         </Link>
         <h1 className="font-display text-display mt-2">New ambag</h1>

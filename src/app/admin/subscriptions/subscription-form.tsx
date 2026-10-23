@@ -4,6 +4,8 @@ import { Save } from "lucide-react";
 import { useActionState, useId, useState } from "react";
 import { parsePesosToMinor } from "@/lib/money";
 import { describePenalty } from "@/lib/penalty";
+import { useFocusFirstError } from "@/lib/use-focus-first-error";
+import { formatMinor } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,11 +65,16 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
   const [cap, setCap] = useState(() => value("penaltyCapPesos", pesos(subscription?.penaltyCapMinor)));
   const rule = { amountMinor: parsePesosToMinor(penalty) ?? 0, everyDays: Number(every) || 1, capMinor: parsePesosToMinor(cap) };
   const summary = describePenalty(rule);
+  // Say so when what is typed can't work, instead of reading it as "no penalty" or showing a limit below one charge.
+  const penaltyBad = penalty.trim() !== "" && parsePesosToMinor(penalty) === null;
+  const capBad = cap.trim() !== "" && parsePesosToMinor(cap) === null;
+  const capTooSmall = !penaltyBad && !capBad && rule.amountMinor > 0 && rule.capMinor !== null && rule.capMinor < rule.amountMinor;
+  const formRef = useFocusFirstError(state);
 
   return (
     // React clears uncontrolled fields after a successful action and restores `defaultValue`s,
     // so echoing `typed` on error keeps the admin's input and success returns to the saved values.
-    <form action={action} className="flex flex-col gap-5">
+    <form ref={formRef} action={action} className="flex flex-col gap-5">
       {subscription ? <input type="hidden" name="id" value={subscription.id} /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -77,7 +84,7 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
             name="name"
             required
             defaultValue={value("name", subscription?.name)}
-            placeholder="Spotify"
+            placeholder="Netflix"
             aria-invalid={bad("name")}
             aria-describedby={describe("name")}
           />
@@ -92,14 +99,15 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
               name="refPrefix"
               required
               maxLength={6}
+              autoCapitalize="characters"
               defaultValue={value("refPrefix")}
-              placeholder="SPOT"
+              placeholder="NFLX"
               className="uppercase"
               aria-invalid={bad("refPrefix")}
               aria-describedby={[describe("refPrefix"), id("refPrefix-hint")].filter(Boolean).join(" ")}
             />
             <p id={id("refPrefix-hint")} className="text-sm text-muted-foreground">
-              Statements read like SPOT-202610-A1B2C3. It can&apos;t change later.
+              Statements read like NFLX-202610-A1B2C3. It can&apos;t change later.
             </p>
             <FieldError id={`${id("refPrefix")}-error`} message={errors.refPrefix} />
           </div>
@@ -114,7 +122,7 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
             inputMode="decimal"
             autoComplete="off"
             defaultValue={value("feePesos", subscription ? (subscription.feeMinor / 100).toFixed(2) : null)}
-            placeholder="50.00"
+            placeholder="120.00"
             aria-invalid={bad("feePesos")}
             aria-describedby={describe("feePesos")}
           />
@@ -175,7 +183,7 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
                 value={penalty}
                 onChange={(event) => setPenalty(event.target.value)}
                 placeholder="None"
-                aria-invalid={bad("penaltyPesos")}
+                aria-invalid={bad("penaltyPesos") ?? (penaltyBad ? true : undefined)}
                 aria-describedby={describe("penaltyPesos")}
               />
               <FieldError id={`${id("penaltyPesos")}-error`} message={errors.penaltyPesos} />
@@ -209,14 +217,22 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
                 value={cap}
                 onChange={(event) => setCap(event.target.value)}
                 placeholder="No limit"
-                aria-invalid={bad("penaltyCapPesos")}
+                aria-invalid={bad("penaltyCapPesos") ?? (capBad || capTooSmall ? true : undefined)}
                 aria-describedby={describe("penaltyCapPesos")}
               />
               <FieldError id={`${id("penaltyCapPesos")}-error`} message={errors.penaltyCapPesos} />
             </div>
           </div>
           <p role="status" aria-live="polite" className="text-sm font-semibold">
-            {summary ? `${summary}. Added to the next monthly statement.` : "No penalty: late payments cost nothing extra."}
+            {penaltyBad
+              ? "That penalty isn't an amount yet. Use pesos, like 10 or 12.50."
+              : capBad
+                ? "That limit isn't an amount yet. Use pesos, or leave it blank for no limit."
+                : capTooSmall
+                  ? `The most per late statement (${formatMinor(rule.capMinor ?? 0, "PHP")}) is less than one penalty (${formatMinor(rule.amountMinor, "PHP")}). Raise it, or leave it blank for no limit.`
+                  : summary
+                    ? `${summary}. Added to the next monthly statement.`
+                    : "No penalty: late payments cost nothing extra."}
           </p>
         </fieldset>
 
@@ -233,7 +249,7 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
           <FieldError id={`${id("paymentInstructions")}-error`} message={errors.paymentInstructions} />
         </div>
 
-        <label className="flex items-center gap-3 text-sm font-semibold sm:col-span-2">
+        <label className="flex min-h-11 items-center gap-3 text-sm font-semibold sm:col-span-2">
           <input
             type="checkbox"
             name="isActive"

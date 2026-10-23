@@ -2,12 +2,16 @@
 
 import { Save } from "lucide-react";
 import Image from "next/image";
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useFocusFirstError } from "@/lib/use-focus-first-error";
 import { savePaymentMethodAction, type MethodFormState } from "./actions";
+
+/** Same limit the server enforces (src/server/assets/store.ts); checked here first so the choice is not lost. */
+const MAX_QR_BYTES = 1_500_000;
 
 export interface PaymentMethodView {
   id: string;
@@ -30,6 +34,11 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
   const [state, action, pending] = useActionState<MethodFormState, FormData>(savePaymentMethodAction, {});
   const uid = useId();
+  const formRef = useFocusFirstError(state);
+  // The image limit is known here, so a too-big file is turned away on the spot instead of after the upload (which
+  // would also wipe the chosen file, since a file input cannot be refilled after a server error).
+  const [qrTooBig, setQrTooBig] = useState(false);
+  const [qrName, setQrName] = useState("");
   const typed = state.values;
   const errors = state.errors ?? {};
   const id = (field: string) => `${uid}-${field}`;
@@ -37,7 +46,7 @@ export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
   const value = (field: string, saved: string | null) => typed?.[field] ?? saved ?? "";
 
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form ref={formRef} action={action} className="flex flex-col gap-5">
       <input type="hidden" name="id" value={method.id} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -67,13 +76,37 @@ export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
             <div className="flex items-start gap-4">
               {/* Served by an authorised route, not a static asset, so Next's image optimizer is skipped. */}
               <Image src={`/api/payment-methods/${method.id}/qr`} alt={`Current ${method.label} QR code`} width={160} height={160} unoptimized className="size-40 shrink-0 rounded-xl border border-border bg-white object-contain p-2" />
-              <label className="flex items-center gap-2 text-sm font-semibold">
+              <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
                 <input type="checkbox" name="removeQr" className="size-5 rounded accent-candy" />
                 Remove this QR
               </label>
             </div>
           ) : null}
-          <Input id={id("qr")} name="qr" type="file" accept="image/png,image/jpeg,image/webp" className="h-auto py-3" aria-invalid={errors.qr ? true : undefined} aria-describedby={[describe("qr"), id("qr-hint")].filter(Boolean).join(" ")} />
+          <Input
+            id={id("qr")}
+            name="qr"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="h-auto py-3"
+            aria-invalid={errors.qr || qrTooBig ? true : undefined}
+            aria-describedby={[describe("qr"), qrTooBig ? id("qr-big") : undefined, id("qr-hint")].filter(Boolean).join(" ")}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              const tooBig = Boolean(file && file.size > MAX_QR_BYTES);
+              setQrTooBig(tooBig);
+              setQrName(file && !tooBig ? file.name : "");
+              if (tooBig) event.target.value = "";
+            }}
+          />
+          {qrTooBig ? (
+            <p id={id("qr-big")} role="alert" className="text-sm font-semibold text-destructive">
+              That image is over 1.5 MB. Pick a smaller one, or a screenshot of the QR instead of the original photo.
+            </p>
+          ) : qrName ? (
+            <p role="status" className="text-sm font-semibold">
+              Ready to upload: {qrName}
+            </p>
+          ) : null}
           <p id={id("qr-hint")} className="text-sm text-muted-foreground">
             PNG, JPG or WebP, up to 1.5 MB. Members can view and download it. Choosing a file replaces the current one.
           </p>
@@ -81,7 +114,7 @@ export function PaymentMethodForm({ method }: { method: PaymentMethodView }) {
         </div>
 
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <label className="flex items-center gap-3 text-sm font-semibold">
+          <label className="flex min-h-11 items-center gap-3 text-sm font-semibold">
             <input type="checkbox" name="isActive" defaultChecked={typed ? typed.isActive === "on" : method.isActive} className="size-5 rounded accent-candy" aria-describedby={describe("isActive")} />
             Show this to members
           </label>

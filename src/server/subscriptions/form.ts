@@ -71,14 +71,14 @@ const createSchema = z
   .refine(dueAfterIssue, dueAfterIssueError)
   .refine(penaltyOk, { path: ["penaltyPesos"], message: PESOS_ERROR })
   .refine(capOk, { path: ["penaltyCapPesos"], message: PESOS_ERROR })
-  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "The limit should be at least one penalty charge" });
+  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "Most per late statement must be at least the penalty amount" });
 
 const updateSchema = z
   .object(fields)
   .refine(dueAfterIssue, dueAfterIssueError)
   .refine(penaltyOk, { path: ["penaltyPesos"], message: PESOS_ERROR })
   .refine(capOk, { path: ["penaltyCapPesos"], message: PESOS_ERROR })
-  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "The limit should be at least one penalty charge" });
+  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "Most per late statement must be at least the penalty amount" });
 
 export type FormErrors = Record<string, string>;
 

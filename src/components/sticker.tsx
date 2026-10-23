@@ -65,7 +65,7 @@ export function Sticker({
         </p>
         <p className="mt-2 text-sm font-semibold">
           {dateLabel}
-          <span className="mx-2 opacity-60" aria-hidden="true">
+          <span className="mx-2 opacity-80" aria-hidden="true">
             /
           </span>
           <span className="font-mono text-[0.8rem] tracking-tight">{reference}</span>
