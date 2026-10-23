@@ -4,7 +4,7 @@ import { findInvitation } from "@/server/auth/invitations";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import { updateOwnName } from "@/server/members/profile";
-import { addMember, listMembers, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
+import { addMember, joinPlan, leavePlan, listMembers, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
 import { createTestDb } from "./helpers/db";
 
 let db: Db;
@@ -240,3 +240,74 @@ describe("member management is for admins, even if a caller forgets to check", (
   });
 });
 
+
+describe("joinPlan and leavePlan (changing a plan after the friend was added)", () => {
+  function friend(email = "ana@example.com") {
+    const res = addMember(db, { name: "Ana", email, subscriptionId: null, invitedBy: admin.id, now: NOW });
+    if (!res.ok) throw new Error("setup");
+    return res.user;
+  }
+  const enrolments = (userId: string) => db.select().from(s.memberships).where(eq(s.memberships.userId, userId)).all();
+
+  it("puts a friend who had no plan into one, billed from this month while the due day hasn't passed", () => {
+    const ana = friend();
+    expect(joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id, now: NOW })).toEqual({ ok: true, changed: true });
+    expect(enrolments(ana.id)).toMatchObject([{ subscriptionId: spotify.id, isActive: true, startPeriod: "2026-10" }]);
+    expect(listMembers(db, NOW).find((m) => m.id === ana.id)).toMatchObject({ plans: ["Spotify"], planIds: [spotify.id] });
+    expect(db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "member.plan_joined")).all()).toHaveLength(1);
+  });
+
+  it("starts next month when the due day has already passed, so the first statement is not born overdue", () => {
+    const ana = friend();
+    joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id, now: new Date("2026-10-20T04:00:00Z") });
+    expect(enrolments(ana.id)[0].startPeriod).toBe("2026-11");
+  });
+
+  it("joining twice changes nothing the second time", () => {
+    const ana = friend();
+    joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id, now: NOW });
+    expect(joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id, now: NOW })).toEqual({ ok: true, changed: false });
+    expect(enrolments(ana.id)).toHaveLength(1);
+  });
+
+  it("refuses a plan that is switched off, a missing plan, the hidden ambag plan, a guest and a deactivated friend", () => {
+    const ana = friend();
+    const off = db.insert(s.subscriptions).values({ name: "Netflix", refPrefix: "NFLX", feeMinor: 100, isActive: false }).returning().get();
+    const oneOff = db.insert(s.subscriptions).values({ name: "Ambag", refPrefix: "AMBG", feeMinor: 0, kind: "ONE_OFF" }).returning().get();
+    const guest = db.insert(s.users).values({ email: "guest-1@guests.invalid", isGuest: true }).returning().get();
+    const join = (userId: string, subscriptionId: string) => joinPlan(db, { userId, subscriptionId, actorId: admin.id, now: NOW });
+
+    expect(join(ana.id, off.id)).toEqual({ ok: false, error: "PLAN_INACTIVE" });
+    expect(join(ana.id, "nope")).toEqual({ ok: false, error: "PLAN_NOT_FOUND" });
+    expect(join(ana.id, oneOff.id)).toEqual({ ok: false, error: "PLAN_NOT_FOUND" });
+    expect(join(guest.id, spotify.id)).toEqual({ ok: false, error: "GUEST" });
+    expect(join("nope", spotify.id)).toEqual({ ok: false, error: "NOT_FOUND" });
+    setMemberActive(db, { userId: ana.id, active: false, actorId: admin.id, now: NOW });
+    expect(join(ana.id, spotify.id)).toEqual({ ok: false, error: "INACTIVE" });
+    expect(db.select().from(s.memberships).all()).toEqual([]);
+  });
+
+  it("only an active admin can change plans", () => {
+    const ana = friend();
+    const other = friend("ben@example.com");
+    expect(joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: other.id, now: NOW })).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(leavePlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: other.id })).toEqual({ ok: false, error: "FORBIDDEN" });
+  });
+
+  it("removing stops the plan but keeps statements already issued, and a later reactivation does not bring it back", () => {
+    const ana = friend();
+    joinPlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id, now: NOW });
+    db.insert(s.statements)
+      .values({ reference: "SPOT-202610-AAAAAA", userId: ana.id, subscriptionId: spotify.id, period: "2026-10", subscriptionName: "Spotify", amountMinor: 5000, outstandingMinor: 5000, currency: "PHP", issuedAt: NOW, dueAt: NOW })
+      .run();
+
+    expect(leavePlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id })).toEqual({ ok: true, changed: true });
+    expect(enrolments(ana.id)).toEqual([]);
+    expect(db.select().from(s.statements).all()).toHaveLength(1);
+    expect(leavePlan(db, { userId: ana.id, subscriptionId: spotify.id, actorId: admin.id })).toEqual({ ok: true, changed: false });
+
+    setMemberActive(db, { userId: ana.id, active: false, actorId: admin.id, now: NOW });
+    setMemberActive(db, { userId: ana.id, active: true, actorId: admin.id, now: NOW });
+    expect(enrolments(ana.id)).toEqual([]);
+  });
+});

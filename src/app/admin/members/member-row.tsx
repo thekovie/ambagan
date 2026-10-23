@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { avatarClass } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 import { resendInviteAction, setActiveAction, setGuestEmailAction, type MemberActionState } from "./actions";
+import { PlanControls, type PlanOption } from "./plan-controls";
 
 export interface MemberView {
   id: string;
@@ -22,6 +23,7 @@ export interface MemberView {
   hasRealEmail: boolean;
   hasSignedIn: boolean;
   plans: string[];
+  planIds: string[];
   invite: "none" | "pending" | "expired" | "accepted";
   isSelf: boolean;
 }
@@ -38,9 +40,11 @@ interface MemberRowProps {
   member: MemberView;
   /** For guests: "Invite to join", owned by the guests section so its result survives the row moving to Members. */
   promote?: { action: (formData: FormData) => void; pending: boolean };
+  /** Every monthly plan, so a member can be added to or removed from one after the fact. Not shown for guests. */
+  plans?: PlanOption[];
 }
 
-export function MemberRow({ member, promote }: MemberRowProps) {
+export function MemberRow({ member, promote, plans }: MemberRowProps) {
   const [resend, resendAction, resending] = useActionState<MemberActionState, FormData>(resendInviteAction, {});
   const [toggle, toggleAction] = useActionState<MemberActionState, FormData>(setActiveAction, {});
   const [emailState, saveEmailAction] = useActionState<MemberActionState, FormData>(setGuestEmailAction, {});
@@ -118,6 +122,10 @@ export function MemberRow({ member, promote }: MemberRowProps) {
               <span className="sr-only"> {display}</span>
             </Button>
           </form>
+        ) : null}
+
+        {plans && !member.isGuest && member.isActive ? (
+          <PlanControls userId={member.id} display={display} joinedIds={member.planIds} plans={plans} />
         ) : null}
 
         {member.isSelf ? null : (

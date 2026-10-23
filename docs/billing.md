@@ -22,6 +22,8 @@ Monthly statements of account (SOAs). One statement per member, plan and billing
 
 Deactivating a member pauses their membership; reactivating moves `start_period` up to the current period, so months spent paused are never billed retroactively.
 
+**Joining a plan later:** each person on Members has "Add to a plan" (or "Change plans"), which adds or removes them from any monthly plan at any time (`joinPlan` / `leavePlan` in `src/server/members/service.ts`). Joining starts billing from the first month that isn't already late (the same rule as when a friend is added with a plan); the next daily run, or "Generate missing" on Statements, issues the first statement. Removing stops new statements and leaves issued ones untouched. Guests are never in a plan (they pay through private links), and a plan that is switched off can't be joined.
+
 ## References
 
 `SPOT-202610-K4M2Q8`: plan prefix, `YYYYMM`, and six characters from a 31-character alphabet without `0 O 1 I L` (`crypto.randomInt`, about 887 million values per prefix and month). Uniqueness is enforced by the database.
