@@ -404,6 +404,37 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(member).toHaveURL(/\/dashboard$/);
   });
 
+  await test.step("the guide adapts to who is reading, and the welcome card goes away once dismissed", async () => {
+    // A member: how to pay and report, nothing about running the group; reachable from the account menu.
+    await member.goto("/dashboard");
+    await expect(member.getByRole("region", { name: "Welcome" })).toBeVisible();
+    await member.getByRole("button", { name: "Account menu" }).click();
+    await member.getByRole("menuitem", { name: "How it works" }).click();
+    await expect(member).toHaveURL(/\/guide$/);
+    await expect(member.getByRole("heading", { level: 1, name: "How ambagan works" })).toBeVisible();
+    await expect(member.getByRole("heading", { name: "Paying" })).toBeVisible();
+    await expect(member.getByRole("heading", { name: "Set up in three steps" })).toHaveCount(0);
+
+    // An admin: setup and the monthly routine first, then what friends see.
+    await admin.goto("/guide");
+    await expect(admin.getByRole("heading", { name: "Set up in three steps" })).toBeVisible();
+    await expect(admin.getByRole("heading", { name: "What your friends see" })).toBeVisible();
+
+    // Dismissing the welcome card sticks across a reload.
+    await member.goto("/dashboard");
+    await member.getByRole("button", { name: "Dismiss welcome" }).click();
+    await expect(member.getByRole("region", { name: "Welcome" })).toBeHidden();
+    await member.reload();
+    await expect(member.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(member.getByRole("region", { name: "Welcome" })).toHaveCount(0);
+
+    // Signed out, the guide is not available: it leads to sign-in.
+    const stranger = await newPage(browser, violations);
+    await stranger.goto("/guide");
+    await expect(stranger).toHaveURL(/\/login/);
+    await stranger.context().close();
+  });
+
   await test.step("the privacy policy is public, reachable from sign-in, and names who to contact", async () => {
     const stranger = await newPage(browser, violations);
     await stranger.goto("/login");
