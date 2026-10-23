@@ -35,6 +35,19 @@ export default async function SettingsPage() {
         </p>
       </section>
 
+      <section aria-labelledby="privacy" className="sheet flex flex-col gap-3 p-5 sm:p-6">
+        <h2 id="privacy" className="font-display text-title">
+          Your information
+        </h2>
+        <p className="text-muted-foreground">
+          We keep your name, email, bills and the payments you report, only to run the group&apos;s shared bills.{" "}
+          <a href="/privacy" className="font-semibold text-foreground underline underline-offset-4">
+            Read the privacy policy
+          </a>{" "}
+          to see who can see it, how long it is kept, and how to ask for a copy, a correction or removal.
+        </p>
+      </section>
+
       <section aria-labelledby="session" className="flex flex-col gap-3 px-1">
         <h2 id="session" className="font-display text-title">
           Sign out

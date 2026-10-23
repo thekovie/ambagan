@@ -8,6 +8,7 @@ import { getDb } from "@/server/db/client";
 import { invitationEmail } from "@/server/email/auth-templates";
 import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
+import { erasePersonalData } from "@/server/members/erase";
 import { promoteGuest, setGuestEmail } from "@/server/members/guests";
 import { addMember, joinPlan, leavePlan, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
 
@@ -35,6 +36,7 @@ const ERRORS = {
   GUEST: "This friend is a guest. Use Invite to join to make them a member.",
   SELF: "You can't deactivate your own account.",
   LAST_ADMIN: "There must always be at least one active admin.",
+  ERASED: "This person's personal data was removed, so they can't be reactivated. Add them again as a new friend if they return.",
 } as const;
 
 async function deliverInvite(user: { email: string; name: string | null }, token: string): Promise<InviteResult> {
@@ -195,6 +197,22 @@ export async function leavePlanAction(_prev: MemberActionState, formData: FormDa
     actorId: admin.id,
   });
   if (!result.ok) return { error: PLAN_ERRORS[result.error] };
+  revalidatePath("/admin/members");
+  return {};
+}
+
+const ERASE_ERRORS = {
+  FORBIDDEN: "Only an admin can do that.",
+  NOT_FOUND: "That member no longer exists.",
+  SELF: "You can't remove your own personal data here.",
+  STILL_ACTIVE: "Deactivate this person first. Removing personal data is only for people who have left.",
+} as const;
+
+/** Removes a deactivated person's name, email and logged details at their request. Statements and payments stay, anonymised. */
+export async function erasePersonAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {
+  const admin = await requireAdmin();
+  const result = erasePersonalData(getDb(), { userId: String(formData.get("userId") ?? ""), actorId: admin.id });
+  if (!result.ok) return { error: ERASE_ERRORS[result.error] };
   revalidatePath("/admin/members");
   return {};
 }

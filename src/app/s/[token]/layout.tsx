@@ -20,9 +20,15 @@ export default function ShareLayout({ children }: { children: ReactNode }) {
       <header className="mx-auto flex h-16 max-w-xl items-center px-4 sm:px-6">
         <Wordmark />
       </header>
-      <main id="main" className="mx-auto w-full max-w-xl px-4 pb-16 pt-3 sm:px-6">
+      <main id="main" className="mx-auto w-full max-w-xl px-4 pb-6 pt-3 sm:px-6">
         {children}
       </main>
+      <footer className="mx-auto w-full max-w-xl px-4 pb-16 text-sm text-muted-foreground sm:px-6">
+        {/* A plain link with noreferrer: this page's address is a credential, so it must not reach our own logs as a Referer. */}
+        <a href="/privacy" rel="noreferrer" className="font-semibold underline underline-offset-4">
+          Privacy policy
+        </a>
+      </footer>
     </div>
   );
 }

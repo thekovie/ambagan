@@ -8,6 +8,18 @@ export function placeholderEmail(userId: string): string {
   return `guest-${userId}@${GUEST_EMAIL_DOMAIN}`;
 }
 
+/**
+ * What a person's address becomes when they ask for their data to be removed: still unique, still a row the statements
+ * can point to, and on the same never-delivers domain, so nobody is ever emailed and the UI shows "No email".
+ */
+export function erasedEmail(userId: string): string {
+  return `removed-${userId}@${GUEST_EMAIL_DOMAIN}`;
+}
+
+export function isErasedEmail(email: string): boolean {
+  return email.trim().toLowerCase().startsWith("removed-") && isPlaceholderEmail(email);
+}
+
 /** What to show where an email would go: a real address as is, and "No email" for a guest's placeholder. */
 export function displayEmail(email: string): string {
   return isPlaceholderEmail(email) ? "No email" : email;

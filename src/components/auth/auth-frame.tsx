@@ -17,6 +17,11 @@ export function AuthFrame({ children }: { children: ReactNode }) {
           <p className="max-w-[34ch] text-sm text-muted-foreground">Ambagan is friends chipping in together for something they share.</p>
         </div>
         <div className="sheet p-6 sm:p-8">{children}</div>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          <a href="/privacy" rel="noreferrer" className="font-semibold underline underline-offset-4">
+            Privacy policy
+          </a>
+        </p>
       </div>
     </main>
   );

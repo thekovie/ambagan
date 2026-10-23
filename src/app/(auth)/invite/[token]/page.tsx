@@ -27,10 +27,18 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
             <strong className="text-foreground">{lookup.user.email}</strong>.
           </p>
         </div>
-        <form action={acceptInvite.bind(null, token)}>
+        <form action={acceptInvite.bind(null, token)} className="flex flex-col gap-3">
           <Button type="submit" variant="candy" size="lg" className="w-full">
             Accept and email me a link
           </Button>
+          {/* Consent notice at the moment someone first gives us their details. noreferrer: this address is a credential. */}
+          <p className="text-sm text-muted-foreground">
+            By accepting, you agree to how your name, email and payments are handled, as described in the{" "}
+            <a href="/privacy" rel="noreferrer" className="font-semibold text-foreground underline underline-offset-4">
+              privacy policy
+            </a>
+            .
+          </p>
         </form>
       </div>
     );
