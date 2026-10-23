@@ -404,6 +404,18 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(member).toHaveURL(/\/dashboard$/);
   });
 
+  await test.step("the privacy policy is public, reachable from sign-in, and names who to contact", async () => {
+    const stranger = await newPage(browser, violations);
+    await stranger.goto("/login");
+    await stranger.getByRole("link", { name: "Privacy policy" }).click();
+    await expect(stranger).toHaveURL(/\/privacy$/);
+    await expect(stranger.getByRole("heading", { level: 1, name: "Privacy policy" })).toBeVisible();
+    await expect(stranger.getByRole("heading", { name: "Your rights" })).toBeVisible();
+    await expect(stranger.getByText(/Republic Act No\. 10173/)).toBeVisible();
+    await expect(stranger.getByRole("link", { name: ADMIN }).first()).toBeVisible();
+    await stranger.context().close();
+  });
+
   await test.step("signing out from the account menu ends the session", async () => {
     await member.getByRole("button", { name: "Account menu" }).click();
     await member.getByRole("menuitem", { name: "Sign out" }).click();

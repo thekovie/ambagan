@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { avatarClass } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
-import { resendInviteAction, setActiveAction, setGuestEmailAction, type MemberActionState } from "./actions";
+import { erasePersonAction, resendInviteAction, setActiveAction, setGuestEmailAction, type MemberActionState } from "./actions";
 import { PlanControls, type PlanOption } from "./plan-controls";
 
 export interface MemberView {
@@ -24,6 +24,8 @@ export interface MemberView {
   hasSignedIn: boolean;
   plans: string[];
   planIds: string[];
+  /** Their personal data was removed at their request. */
+  isErased: boolean;
   invite: "none" | "pending" | "expired" | "accepted";
   isSelf: boolean;
 }
@@ -48,9 +50,10 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
   const [resend, resendAction, resending] = useActionState<MemberActionState, FormData>(resendInviteAction, {});
   const [toggle, toggleAction] = useActionState<MemberActionState, FormData>(setActiveAction, {});
   const [emailState, saveEmailAction] = useActionState<MemberActionState, FormData>(setGuestEmailAction, {});
+  const [eraseState, eraseAction] = useActionState<MemberActionState, FormData>(erasePersonAction, {});
   const display = member.name || member.email;
   const needsInvite = member.isActive && !member.hasSignedIn && !member.isGuest;
-  const error = resend.error ?? toggle.error ?? emailState.error;
+  const error = resend.error ?? toggle.error ?? emailState.error ?? eraseState.error;
   const invite = resend.invite;
 
   return (
@@ -144,7 +147,7 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
               >
                 Deactivate<span className="sr-only"> {display}</span>
               </ConfirmButton>
-            ) : (
+            ) : member.isErased ? null : (
               <Button type="submit" variant="ghost" size="sm">
                 <RotateCcw data-icon="inline-start" /> Reactivate
                 <span className="sr-only"> {display}</span>
@@ -153,6 +156,32 @@ export function MemberRow({ member, promote, plans }: MemberRowProps) {
           </form>
         )}
       </div>
+
+      {/* Privacy: only for someone who has left. Their statements and payments stay, but stop saying who it was. */}
+      {!member.isActive && !member.isSelf ? (
+        member.isErased ? (
+          <p className="text-sm font-semibold text-muted-foreground sm:pl-16">Personal data removed. Their payments stay in your records as &ldquo;Former member&rdquo;.</p>
+        ) : (
+          <details className="group sm:pl-16">
+            <summary className="cursor-pointer text-sm font-semibold text-muted-foreground underline underline-offset-4 marker:hidden">
+              Remove personal data<span className="sr-only"> of {display}</span>
+            </summary>
+            <form action={eraseAction} className="mt-3 flex max-w-md flex-col gap-3 rounded-xl bg-secondary p-4">
+              <input type="hidden" name="userId" value={member.id} />
+              <p className="text-sm">
+                For when {display} asks for their data to be deleted. Their name and email are removed, along with their sign-in links and any
+                notes they typed. Their statements and payments stay in your records, shown as &ldquo;Former member&rdquo;. This can&apos;t be
+                undone, and backups still hold the old details until they roll off.
+              </p>
+              <div>
+                <ConfirmButton variant="destructive" size="sm" confirmLabel="Sure? Remove their data">
+                  Remove personal data<span className="sr-only"> of {display}</span>
+                </ConfirmButton>
+              </div>
+            </form>
+          </details>
+        )
+      ) : null}
 
       {error ? (
         <p role="alert" className="text-sm font-semibold text-destructive sm:pl-16">

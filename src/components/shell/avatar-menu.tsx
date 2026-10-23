@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Moon, ShieldCheck, Sun } from "lucide-react";
 import { signOutAction } from "@/app/actions/sign-out";
 import { useDarkMode } from "@/components/theme-toggle";
 import { avatarClass, initials } from "@/lib/avatar";
@@ -55,6 +55,10 @@ export function AvatarMenu({ name, email }: AvatarMenuProps) {
                   {dark ? "On" : "Off"}
                 </span>
               </Menu.CheckboxItem>
+              <Menu.Item render={<a href="/privacy" />} className={ITEM}>
+                <ShieldCheck className="size-4" aria-hidden="true" />
+                Privacy policy
+              </Menu.Item>
               <Menu.Item nativeButton render={<button type="submit" form="ambagan-sign-out" />} className={ITEM}>
                 <LogOut className="size-4" aria-hidden="true" />
                 Sign out

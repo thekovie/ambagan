@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, ne } from "drizzle-orm";
-import { isPlaceholderEmail } from "@/lib/guest";
+import { isErasedEmail, isPlaceholderEmail } from "@/lib/guest";
 import { cleanDisplayName } from "@/lib/names";
 import { recordAudit } from "@/server/audit";
 import { normalizeEmail } from "@/server/auth/access";
@@ -65,7 +65,7 @@ export function addMember(db: Db, input: AddMemberInput): AddMemberResult {
   });
 }
 
-export type SetActiveResult = { ok: true } | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "SELF" | "LAST_ADMIN" };
+export type SetActiveResult = { ok: true } | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "SELF" | "LAST_ADMIN" | "ERASED" };
 
 /**
  * Deactivating revokes sessions immediately and pauses billing (memberships inactive).
@@ -83,6 +83,8 @@ export function setMemberActive(
     const t = asDb(tx);
     const target = t.select().from(users).where(eq(users.id, userId)).get();
     if (!target) return { ok: false, error: "NOT_FOUND" };
+    // Someone whose personal data was removed has no address left to sign in with: they would only be an empty shell.
+    if (active && isErasedEmail(target.email)) return { ok: false, error: "ERASED" };
 
     if (!active) {
       if (userId === actorId) return { ok: false, error: "SELF" };
@@ -213,6 +215,8 @@ export interface MemberRow {
   plans: string[];
   /** The same plans by id, for the "change plans" control. */
   planIds: string[];
+  /** Their personal data was removed at their request ("Former member"). */
+  isErased: boolean;
   invite: "none" | "pending" | "expired" | "accepted";
 }
 
@@ -250,6 +254,7 @@ export function listMembers(db: Db, now = new Date()): MemberRow[] {
     hasSignedIn: p.emailVerified !== null,
     plans: plansByUser.get(p.id) ?? [],
     planIds: planIdsByUser.get(p.id) ?? [],
+    isErased: isErasedEmail(p.email),
     invite: inviteByUser.get(p.id) ?? "none",
   }));
 }
