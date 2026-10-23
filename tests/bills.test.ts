@@ -249,11 +249,11 @@ describe("the hidden one-off plan", () => {
     expect(plans[0]).toMatchObject({ refPrefix: "AMBAG", isActive: false, feeMinor: 0 });
 
     expect(listSubscriptions(db).map((p) => p.name)).toEqual(["Spotify"]);
-    expect(updateSubscription(db, plans[0].id, { name: "x", feeMinor: 1, issueDay: 1, dueDay: 1, paymentInstructions: null, isActive: true }, admin.id)).toEqual({
+    expect(updateSubscription(db, plans[0].id, { name: "x", feeMinor: 1, issueDay: 1, dueDay: 1, paymentInstructions: null, isActive: true, penaltyMinor: 0, penaltyEveryDays: 1, penaltyCapMinor: null }, admin.id)).toEqual({
       ok: false,
       error: "NOT_FOUND",
     });
-    expect(createSubscription(db, { name: "Mine", refPrefix: "AMBAG", feeMinor: 100, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true }, admin.id)).toEqual({
+    expect(createSubscription(db, { name: "Mine", refPrefix: "AMBAG", feeMinor: 100, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true, penaltyMinor: 0, penaltyEveryDays: 1, penaltyCapMinor: null }, admin.id)).toEqual({
       ok: false,
       error: "PREFIX_TAKEN",
     });

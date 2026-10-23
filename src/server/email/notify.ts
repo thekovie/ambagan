@@ -55,6 +55,8 @@ function statementPayload(statement: Statement, amountMinor: number) {
     period: statement.billId ? "" : periodLabel(statement.period),
     ...(statement.billId ? { isBill: "1" } : {}),
     amount: formatMinor(amountMinor, statement.currency),
+    // Late fees carried from earlier months are named, so the total is never a surprise.
+    ...(statement.penaltyMinor > 0 ? { penalty: formatMinor(statement.penaltyMinor, statement.currency) } : {}),
     dueDate: formatDate(statement.dueAt),
     reference: statement.reference,
   };

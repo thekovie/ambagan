@@ -42,6 +42,9 @@ export default async function SubscriptionsPage() {
                 dueDay: plan.dueDay,
                 paymentInstructions: plan.paymentInstructions,
                 isActive: plan.isActive,
+                penaltyMinor: plan.penaltyMinor,
+                penaltyEveryDays: plan.penaltyEveryDays,
+                penaltyCapMinor: plan.penaltyCapMinor,
               }}
             />
           </section>

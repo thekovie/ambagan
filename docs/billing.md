@@ -42,6 +42,16 @@ The admin list's status filters follow the same rule (an unpaid statement past i
 
 Only `UNPAID` or `OVERDUE` statements can be cancelled; a reason (3 to 200 characters) is required and stays admin-only (members just see "Cancelled by admin"); the admin UI uses a two-step confirm. The amount is kept, the balance becomes zero, `cancelled_at` / `cancel_reason` are stored, and an audit entry records who, why and the previous status. The cycle stays used, so it can never be regenerated. The status check is repeated inside the UPDATE so two admins cannot both succeed.
 
+## Late penalties (`src/server/billing/penalty.ts`)
+
+Each plan can charge a penalty for late payment: an amount for every N days late (N is the admin's choice: 1 = daily, 2 = every other day, 7 = weekly), with an optional limit per late statement. It applies to monthly plans only (ambag bills have no plan to hold a rule) and only to statements due after the penalty was switched on (`subscription.penalty_since`), never retroactively.
+
+- **Counting:** whole Manila days after the due day. `floor(days late / N) x amount`, capped. "Every 2 days" therefore charges nothing on day 1, one charge on day 2, two on day 4. Counting stops the day the member reports paying (a report that stands: waiting or approved); days a report spent waiting before the admin declined it are not counted against the member, and counting then resumes. A cancelled statement is never late.
+- **Building up:** the daily job (`accruePenalties`) keeps one `penalty` row per late statement up to date. The admin sees them under "Late fees building up" on the Statements page and can waive any.
+- **Carrying:** when the member's next monthly statement on the same plan is issued, the penalties still building up are added to it (`statement.penalty_minor` is that part of `amount_minor`) and frozen (`applied_to_statement_id`), even if the old statement is still unpaid. Members see "Plan fee" and "Late fees from earlier months" separately, and the statement email names the late fees.
+- **Waiving:** before it lands, a penalty can be waived. Once on an unpaid statement the admin can remove the late fees from that statement. After a payment is waiting or approved the amount no longer changes.
+- **Limits:** the daily job re-checks every statement due after the penalty began (fine for a friend group; add an index or a "settled" flag if that ever grows large). Only the carried amount is announced by email; reminder emails do not yet mention the rule.
+
 ## Ambag: one-off split bills (`src/server/bills`, `src/lib/split`)
 
 Besides the monthly plans, the admin can split a one-off bill (dinner, the internet, a gift) between friends: **Admin → More → Ambag → New ambag**. The admin fronted the money; each friend gets their own statement to pay the admin back, using the same pay, report and verify flow as everything else.

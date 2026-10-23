@@ -11,6 +11,11 @@ export interface SubscriptionInput {
   dueDay: number;
   paymentInstructions: string | null;
   isActive: boolean;
+  /** Late penalty in centavos for every `penaltyEveryDays` days a statement is late; 0 = none. */
+  penaltyMinor: number;
+  penaltyEveryDays: number;
+  /** The most one late statement can be penalised; null = no limit. */
+  penaltyCapMinor: number | null;
 }
 
 export type SubscriptionUpdate = Omit<SubscriptionInput, "refPrefix">;
@@ -31,10 +36,28 @@ const fields = {
   dueDay: day,
   paymentInstructions: z.string().trim().max(1000, "Keep instructions under 1000 characters").optional(),
   isActive: z.string().optional(),
+  // Blank means "no penalty" / "no limit".
+  penaltyPesos: z.string().trim().optional(),
+  penaltyEveryDays: z.coerce.number().int().min(1, "Pick 1 to 31 days").max(31, "Pick 1 to 31 days").default(1),
+  penaltyCapPesos: z.string().trim().optional(),
 };
+
+/** Blank is "not set"; anything else must be a real amount of pesos. */
+const optionalPesos = (v: string | undefined) => !v || (parsePesosToMinor(v) !== null && parsePesosToMinor(v)! <= MAX_FEE_MINOR);
+const PESOS_ERROR = "Enter an amount in pesos with at most 2 decimals, or leave it blank";
 
 const dueAfterIssue = (v: { issueDay: number; dueDay: number }) => v.dueDay >= v.issueDay;
 const dueAfterIssueError = { path: ["dueDay"], message: "The due day can't be before the issue day" };
+
+const minorOf = (v: string | undefined): number | null => (v ? parsePesosToMinor(v) : null);
+const penaltyOk = (v: { penaltyPesos?: string; penaltyCapPesos?: string }) => optionalPesos(v.penaltyPesos);
+const capOk = (v: { penaltyCapPesos?: string }) => optionalPesos(v.penaltyCapPesos);
+/** A limit smaller than one penalty charge would stop the penalty from ever working as written. */
+const capCoversOneCharge = (v: { penaltyPesos?: string; penaltyCapPesos?: string }) => {
+  const charge = minorOf(v.penaltyPesos);
+  const cap = minorOf(v.penaltyCapPesos);
+  return !charge || !cap || cap >= charge;
+};
 
 const createSchema = z
   .object({
@@ -45,9 +68,17 @@ const createSchema = z
       .toUpperCase()
       .regex(/^[A-Z]{3,6}$/, "Use 3 to 6 letters, like SPOT"),
   })
-  .refine(dueAfterIssue, dueAfterIssueError);
+  .refine(dueAfterIssue, dueAfterIssueError)
+  .refine(penaltyOk, { path: ["penaltyPesos"], message: PESOS_ERROR })
+  .refine(capOk, { path: ["penaltyCapPesos"], message: PESOS_ERROR })
+  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "The limit should be at least one penalty charge" });
 
-const updateSchema = z.object(fields).refine(dueAfterIssue, dueAfterIssueError);
+const updateSchema = z
+  .object(fields)
+  .refine(dueAfterIssue, dueAfterIssueError)
+  .refine(penaltyOk, { path: ["penaltyPesos"], message: PESOS_ERROR })
+  .refine(capOk, { path: ["penaltyCapPesos"], message: PESOS_ERROR })
+  .refine(capCoversOneCharge, { path: ["penaltyCapPesos"], message: "The limit should be at least one penalty charge" });
 
 export type FormErrors = Record<string, string>;
 
@@ -67,6 +98,10 @@ function toUpdate(v: Fields): SubscriptionUpdate {
     dueDay: v.dueDay,
     paymentInstructions: v.paymentInstructions || null,
     isActive: v.isActive === "on" || v.isActive === "true",
+    penaltyMinor: minorOf(v.penaltyPesos) ?? 0,
+    penaltyEveryDays: v.penaltyEveryDays,
+    // A limit only means something next to a penalty.
+    penaltyCapMinor: minorOf(v.penaltyPesos) ? minorOf(v.penaltyCapPesos) || null : null,
   };
 }
 

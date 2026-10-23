@@ -28,6 +28,8 @@ export interface NotificationPayload {
   isBill?: string;
   /** "₱75.50" */
   amount?: string;
+  /** "₱20.00": the part of the amount that is late fees carried over from earlier months. */
+  penalty?: string;
   dueDate?: string;
   /** Statement reference. */
   reference?: string;
@@ -70,6 +72,7 @@ function factsOf(p: NotificationPayload): [string, string][] {
   const rows: [string, string | undefined][] = [
     [p.isBill ? "Ambag" : "Plan", p.subscription],
     ["Month", p.period],
+    ["Late fees (earlier months)", p.penalty],
     ["Amount", p.amount],
     ["Due", p.dueDate],
     ["Statement", p.reference],

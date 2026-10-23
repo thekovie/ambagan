@@ -3,6 +3,7 @@ import { recordAudit } from "@/server/audit";
 import type { Db } from "@/server/db/client";
 import { memberships, statements, subscriptions, users } from "@/server/db/schema";
 import { dueDateOf } from "./dates";
+import { applyPenalties, collectPenalties } from "./penalty";
 import { generateReference, isReferenceCollision, referenceSuffix } from "./reference";
 
 type Plan = typeof subscriptions.$inferSelect;
@@ -46,6 +47,9 @@ function insertStatement(t: Db, plan: Plan, userId: string, input: GenerateInput
     .get();
   if (already) return "existing";
 
+  // Late penalties from this member's earlier statements on this plan ride along on the new one, as a separate part of the total.
+  const carried = collectPenalties(t, plan, userId, input.period, now);
+
   for (let attempt = 0; attempt < MAX_REFERENCE_ATTEMPTS; attempt++) {
     try {
       const row = t
@@ -57,14 +61,16 @@ function insertStatement(t: Db, plan: Plan, userId: string, input: GenerateInput
           period: input.period,
           // Snapshot: later fee or name changes never touch an issued statement.
           subscriptionName: plan.name,
-          amountMinor: plan.feeMinor,
-          outstandingMinor: plan.feeMinor,
+          amountMinor: plan.feeMinor + carried.totalMinor,
+          penaltyMinor: carried.totalMinor,
+          outstandingMinor: plan.feeMinor + carried.totalMinor,
           currency: plan.currency,
           issuedAt: now,
           dueAt: dueDateOf(input.period, plan.dueDay),
         })
         .returning({ id: statements.id })
         .get();
+      if (row) applyPenalties(t, carried, row.id, input.actorId, now);
       return row ? "created" : "existing";
     } catch (error) {
       // A random reference collided with an existing one: draw again. Anything else is a real failure.

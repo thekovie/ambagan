@@ -105,6 +105,13 @@ export const subscriptions = sqliteTable("subscription", {
   issueDay: integer("issue_day").notNull().default(1),
   dueDay: integer("due_day").notNull().default(10),
   paymentInstructions: text("payment_instructions"),
+  /** Late penalty: this many centavos for every `penaltyEveryDays` days a statement is late. 0 = no penalty. */
+  penaltyMinor: integer("penalty_minor").notNull().default(0),
+  penaltyEveryDays: integer("penalty_every_days").notNull().default(1),
+  /** The most one late statement can be penalised, in centavos; null = no limit. */
+  penaltyCapMinor: integer("penalty_cap_minor"),
+  /** When the penalty was switched on: only statements due after this can be penalised (nothing is charged retroactively). */
+  penaltySince: integer("penalty_since", { mode: "timestamp_ms" }),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   /** The one hidden ONE_OFF plan holds every ambag bill's statements; it never has members and is never generated for. */
   kind: text("kind", { enum: SUBSCRIPTION_KINDS }).notNull().default("RECURRING"),
@@ -158,7 +165,10 @@ export const statements = sqliteTable(
     period: text("period").notNull(),
     /** Snapshots: later fee/name changes never alter issued statements. */
     subscriptionName: text("subscription_name").notNull(),
+    /** The total to pay: the plan's fee plus `penaltyMinor`. */
     amountMinor: integer("amount_minor").notNull(),
+    /** The part of `amountMinor` that is late penalties carried over from earlier statements. */
+    penaltyMinor: integer("penalty_minor").notNull().default(0),
     outstandingMinor: integer("outstanding_minor").notNull(),
     currency: text("currency").notNull(),
     issuedAt: integer("issued_at", { mode: "timestamp_ms" }).notNull(),
@@ -180,6 +190,32 @@ export const statements = sqliteTable(
     index("statement_status_due_idx").on(t.status, t.dueAt),
     index("statement_user_idx").on(t.userId, t.period),
   ],
+);
+
+/**
+ * The late penalty of one monthly statement. It builds up while the statement is late; when the member's next
+ * monthly statement is issued it is carried onto it (`appliedToStatementId`), after which its amount is frozen.
+ * The admin can waive it (`waivedAt`) instead.
+ */
+export const penalties = sqliteTable(
+  "penalty",
+  {
+    id: id(),
+    /** The late statement it comes from: at most one penalty per statement. */
+    statementId: text("statement_id").notNull().unique().references(() => statements.id, { onDelete: "restrict" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    /** How many days were counted as late (days spent waiting on a declined report are not). */
+    lateDays: integer("late_days").notNull(),
+    /** The statement that carries it now; null while it is still building up. */
+    appliedToStatementId: text("applied_to_statement_id").references(() => statements.id, { onDelete: "restrict" }),
+    waivedAt: integer("waived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [index("penalty_user_idx").on(t.userId)],
 );
 
 // ---- Payments ----
