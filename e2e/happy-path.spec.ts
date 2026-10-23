@@ -412,7 +412,7 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(stranger.getByRole("heading", { level: 1, name: "Privacy policy" })).toBeVisible();
     await expect(stranger.getByRole("heading", { name: "Your rights" })).toBeVisible();
     await expect(stranger.getByText(/Republic Act No\. 10173/)).toBeVisible();
-    await expect(stranger.getByRole("link", { name: ADMIN }).first()).toBeVisible();
+    await expect(stranger.getByRole("link", { name: "ambagan.privacy@thekovie.com" }).first()).toBeVisible();
     await stranger.context().close();
   });
 

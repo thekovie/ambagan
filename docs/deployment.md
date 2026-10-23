@@ -21,6 +21,7 @@ Open the app, enter the `ADMIN_EMAIL` address on the sign-in page, and use the e
 | `AUTH_SECRET` | `openssl rand -base64 32`. Keep it; changing it signs everyone out. |
 | `ADMIN_EMAIL` | The first administrator. |
 | `SMTP_*` | Required in production. See [email.md](email.md). |
+| `PRIVACY_EMAIL` | Optional: the address the privacy policy tells people to write to (default `ambagan.privacy@thekovie.com`). |
 | `BACKUP_DIR`, `BACKUP_KEEP` | Optional: where daily backups go (default `/data/backups`) and how many to keep (default 14). See [backup-restore.md](backup-restore.md). |
 
 `DATABASE_PATH` and `ASSETS_DIR` are fixed to the `/data` volume by `compose.yaml`.

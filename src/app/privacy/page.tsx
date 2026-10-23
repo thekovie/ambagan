@@ -30,7 +30,7 @@ const List = ({ children }: { children: ReactNode }) => <ul className="flex list
  */
 export default function PrivacyPage() {
   const env = getEnv();
-  const contact = env.smtp?.replyTo ?? env.ADMIN_EMAIL;
+  const contact = env.PRIVACY_EMAIL;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-10 px-5 py-8 sm:px-6">

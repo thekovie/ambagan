@@ -12,6 +12,8 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 characters"),
   APP_URL: z.url(),
   ADMIN_EMAIL: z.email(),
+  /** Where people write about their personal data (shown on the privacy policy). */
+  PRIVACY_EMAIL: z.email().default("ambagan.privacy@thekovie.com"),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z.enum(["true", "false"]).default("false"),
