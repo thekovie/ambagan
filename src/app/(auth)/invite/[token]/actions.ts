@@ -19,5 +19,5 @@ export async function acceptInvite(token: string) {
     redirect(`/invite/${encodeURIComponent(token)}`);
   }
 
-  await signIn("nodemailer", { email: result.user.email, redirectTo: "/dashboard" });
+  await signIn("nodemailer", { email: result.user.email, redirectTo: "/" });
 }

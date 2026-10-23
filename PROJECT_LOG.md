@@ -717,3 +717,8 @@ Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can 
 - **Supply chain (Low):** GitHub Actions pinned to commit SHAs, Dependabot for npm, Docker and Actions (so a security release of the pinned Auth.js beta is noticed), a weekly `pnpm audit` workflow, and the e2e run now trusts only its own SMTP test certificate (which names 127.0.0.1) instead of switching TLS checking off. `pnpm audit --prod`: clean.
 - **Docs:** deployment guide now says to keep invitation and sign-in callback URLs out of access logs, cap request bodies at about 64 KB except admin settings, and that stacking proxies makes visitors share rate-limit buckets.
 - **Left alone on purpose** (reasons in the plan): the Auth.js beta pin (watched by Dependabot), first reporter wins on a payment reference, 30-day sessions, no "forget this person" yet. Not done: pinning the Docker base image by digest (Dependabot tracks the tag) and a `packageManager` hash.
+
+## 2026-10-23 — Admins landed on the member dashboard after signing in (fix/sign-in-landing-by-role)
+
+- **Bug (reported from a live deployment):** the sign-in link and the invitation acceptance both sent people to `/dashboard`, so an admin who followed their link saw the member pages and no way to the admin area, even though typing `/admin/dashboard` worked. Authorization was correct; only the landing page was wrong.
+- **Fix:** both now sign in to `/`, which already sends admins to `/admin/dashboard` and members to `/dashboard`. A small test fails if either goes back to a fixed page.
