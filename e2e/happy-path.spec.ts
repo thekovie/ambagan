@@ -373,6 +373,37 @@ test("a member is invited, pays with a scanned receipt, and the admin verifies i
     await expect(admin.locator("dl > div").filter({ hasText: "Failed" }).locator("dd")).toHaveText("0");
   });
 
+  await test.step("an address that doesn't exist, or isn't theirs, gets the friendly 404 with a real 404 status", async () => {
+    const heading = (page: Page) => page.getByRole("heading", { name: "That slice went missing" });
+
+    // A member: a missing statement, and an admin page they may not see, look the same, inside the app (menu still there).
+    // (Signed-in pages stream behind the loading screen, so a missing statement is shown with the 404 page but a 200
+    // status; that is harmless behind sign-in. The admin check runs in the layout above it, so that one is a real 404.)
+    await member.goto("/statements/not-a-real-statement");
+    await expect(heading(member)).toBeVisible();
+    await expect(member.getByRole("button", { name: "Account menu" })).toBeVisible();
+    const adminOnly = await member.goto("/admin/dashboard");
+    expect(adminOnly?.status()).toBe(404);
+    await expect(heading(member)).toBeVisible();
+    // An admin: same for a page that isn't there.
+    await admin.goto("/admin/not-a-page");
+    await expect(heading(admin)).toBeVisible();
+    await expect(admin.getByRole("button", { name: "Account menu" })).toBeVisible();
+
+    // Someone signed out: a full page, and "Take me home" leads on to sign-in.
+    const stranger = await newPage(browser, violations);
+    const lost = await stranger.goto("/no-such-page");
+    expect(lost?.status()).toBe(404);
+    await expect(heading(stranger)).toBeVisible();
+    await stranger.getByRole("link", { name: "Take me home" }).click();
+    await expect(stranger).toHaveURL(/\/login/);
+    await stranger.context().close();
+
+    // The member's full-page 404 above has no menu: "Take me home" is the way back, and it lands on their own home.
+    await member.getByRole("link", { name: "Take me home" }).click();
+    await expect(member).toHaveURL(/\/dashboard$/);
+  });
+
   await test.step("signing out from the account menu ends the session", async () => {
     await member.getByRole("button", { name: "Account menu" }).click();
     await member.getByRole("menuitem", { name: "Sign out" }).click();
