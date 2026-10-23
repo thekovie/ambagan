@@ -29,6 +29,7 @@ export async function requestLoginLink(_prev: LoginState, formData: FormData): P
 
   // Redirects to /login/sent on success. Unknown or deactivated addresses get the same page
   // (no email is sent) so the form can't be used to discover who is in the group.
-  await signIn("nodemailer", { email, redirectTo: "/dashboard" });
+  // "/" sends each person to their own home (admins to /admin/dashboard, members to /dashboard): see src/app/page.tsx.
+  await signIn("nodemailer", { email, redirectTo: "/" });
   return {};
 }
