@@ -1,7 +1,9 @@
 "use client";
 
 import { Save } from "lucide-react";
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
+import { parsePesosToMinor } from "@/lib/money";
+import { describePenalty } from "@/lib/penalty";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +20,12 @@ export interface SubscriptionView {
   dueDay: number;
   paymentInstructions: string | null;
   isActive: boolean;
+  penaltyMinor: number;
+  penaltyEveryDays: number;
+  penaltyCapMinor: number | null;
 }
+
+const pesos = (minor: number | null | undefined) => (minor ? (minor / 100).toFixed(2) : "");
 
 const DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
@@ -49,6 +56,13 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
   const describe = (field: string) => (errors[field] ? `${id(field)}-error` : undefined);
   // After a failed submit the typed values come back from the server; otherwise show the saved plan.
   const value = (field: string, saved?: string | number | null) => typed?.[field] ?? (saved == null ? "" : String(saved));
+
+  // The penalty fields are controlled so the sentence under them always says what will happen.
+  const [penalty, setPenalty] = useState(() => value("penaltyPesos", pesos(subscription?.penaltyMinor)));
+  const [every, setEvery] = useState(() => value("penaltyEveryDays", subscription?.penaltyEveryDays ?? 1));
+  const [cap, setCap] = useState(() => value("penaltyCapPesos", pesos(subscription?.penaltyCapMinor)));
+  const rule = { amountMinor: parsePesosToMinor(penalty) ?? 0, everyDays: Number(every) || 1, capMinor: parsePesosToMinor(cap) };
+  const summary = describePenalty(rule);
 
   return (
     // React clears uncontrolled fields after a successful action and restores `defaultValue`s,
@@ -143,6 +157,68 @@ export function SubscriptionForm({ subscription }: { subscription?: Subscription
             <FieldError id={`${id("dueDay")}-error`} message={errors.dueDay} />
           </div>
         </div>
+
+        <fieldset className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/40 p-4 sm:col-span-2">
+          <legend className="px-2 font-display text-lg font-bold">Late penalty (optional)</legend>
+          <p className="text-sm text-muted-foreground">
+            Charge friends who pay late. What a late statement collects is added to their next monthly statement. It only applies to
+            statements due after you switch it on, and you can waive any of it.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={id("penalty")}>Penalty (₱)</Label>
+              <Input
+                id={id("penalty")}
+                name="penaltyPesos"
+                inputMode="decimal"
+                autoComplete="off"
+                value={penalty}
+                onChange={(event) => setPenalty(event.target.value)}
+                placeholder="None"
+                aria-invalid={bad("penaltyPesos")}
+                aria-describedby={describe("penaltyPesos")}
+              />
+              <FieldError id={`${id("penaltyPesos")}-error`} message={errors.penaltyPesos} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={id("every")}>Charged every (days late)</Label>
+              <Input
+                id={id("every")}
+                name="penaltyEveryDays"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={31}
+                value={every}
+                onChange={(event) => setEvery(event.target.value)}
+                aria-invalid={bad("penaltyEveryDays")}
+                aria-describedby={[describe("penaltyEveryDays"), id("every-hint")].filter(Boolean).join(" ")}
+              />
+              <p id={id("every-hint")} className="text-sm text-muted-foreground">
+                1 = daily, 2 = every other day, 7 = weekly.
+              </p>
+              <FieldError id={`${id("penaltyEveryDays")}-error`} message={errors.penaltyEveryDays} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={id("cap")}>Most per late statement (₱)</Label>
+              <Input
+                id={id("cap")}
+                name="penaltyCapPesos"
+                inputMode="decimal"
+                autoComplete="off"
+                value={cap}
+                onChange={(event) => setCap(event.target.value)}
+                placeholder="No limit"
+                aria-invalid={bad("penaltyCapPesos")}
+                aria-describedby={describe("penaltyCapPesos")}
+              />
+              <FieldError id={`${id("penaltyCapPesos")}-error`} message={errors.penaltyCapPesos} />
+            </div>
+          </div>
+          <p role="status" aria-live="polite" className="text-sm font-semibold">
+            {summary ? `${summary}. Added to the next monthly statement.` : "No penalty: late payments cost nothing extra."}
+          </p>
+        </fieldset>
 
         <div className="flex flex-col gap-2 sm:col-span-2">
           <Label htmlFor={id("instructions")}>Payment instructions (optional)</Label>

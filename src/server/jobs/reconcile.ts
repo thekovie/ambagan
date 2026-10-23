@@ -1,6 +1,7 @@
 import { and, eq, inArray, lte } from "drizzle-orm";
 import { generateStatements } from "@/server/billing/generate";
 import { daysBetween, manilaDateKey, previousPeriod } from "@/server/billing/period";
+import { accruePenalties } from "@/server/billing/penalty";
 import { markOverdue } from "@/server/billing/statements";
 import type { Db } from "@/server/db/client";
 import { statements, subscriptions } from "@/server/db/schema";
@@ -22,6 +23,8 @@ export interface ReconcileSummary {
   period: string;
   created: number;
   markedOverdue: number;
+  /** Late penalties that were started or brought up to date. */
+  penaltiesUpdated: number;
   /** New-statement and reminder emails newly queued by this run. */
   queued: number;
   prunedEmails: number;
@@ -45,7 +48,7 @@ function reminderFor(dueAt: Date, today: string): { type: "DUE_TOMORROW" | "DUE_
 /**
  * The daily job. Every step is idempotent, so it is safe to run twice, to run late, or to run by hand:
  * 1. issue this month's statements for plans whose issue day has come (catching up after downtime),
- * 2. mark statements overdue once their due day has ended in Manila,
+ * 2. mark statements overdue once their due day has ended in Manila, and bring late penalties up to date,
  * 3. queue "new statement" and due/overdue reminders, only for statements that still need paying
  *    (never paid, under verification or cancelled ones),
  * 4. prune old email log and job history rows, and expired sessions and sign-in links.
@@ -62,6 +65,7 @@ export function reconcile(db: Db, now: Date): ReconcileSummary {
   }
 
   const markedOverdue = markOverdue(db, now);
+  const penaltiesUpdated = accruePenalties(db, now);
 
   let queued = 0;
   const owing = db.select().from(statements).where(inArray(statements.status, ["UNPAID", "OVERDUE"])).all();
@@ -80,6 +84,7 @@ export function reconcile(db: Db, now: Date): ReconcileSummary {
     period,
     created,
     markedOverdue,
+    penaltiesUpdated,
     queued,
     prunedEmails: pruneEmails(db, now, EMAIL_RETENTION_DAYS),
     prunedJobRuns: pruneJobRuns(db, now, JOB_RETENTION_DAYS),

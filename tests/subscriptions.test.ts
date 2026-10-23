@@ -24,6 +24,8 @@ const valid = {
   isActive: "on",
 };
 
+const NO_PENALTY = { penaltyMinor: 0, penaltyEveryDays: 1, penaltyCapMinor: null };
+
 beforeEach(() => {
   db = createTestDb();
   admin = db.insert(s.users).values({ email: "boss@example.com", role: "ADMIN" }).returning().get();
@@ -66,8 +68,32 @@ describe("parseSubscriptionForm", () => {
         dueDay: 10,
         paymentInstructions: null,
         isActive: true,
+        ...NO_PENALTY,
       },
     });
+  });
+
+  it("reads a late penalty: pesos, how often, and an optional limit", () => {
+    const res = parseSubscriptionForm({ ...valid, penaltyPesos: "10", penaltyEveryDays: "2", penaltyCapPesos: "50" });
+    expect(res.ok && res.value).toMatchObject({ penaltyMinor: 1000, penaltyEveryDays: 2, penaltyCapMinor: 5000 });
+  });
+
+  it("blank penalty fields mean no penalty and no limit, and a limit without a penalty is dropped", () => {
+    expect(parseSubscriptionForm({ ...valid, penaltyPesos: "", penaltyCapPesos: "" }).ok && "ok").toBe("ok");
+    const res = parseSubscriptionForm({ ...valid, penaltyPesos: "", penaltyEveryDays: "3", penaltyCapPesos: "80" });
+    expect(res.ok && res.value).toMatchObject({ penaltyMinor: 0, penaltyEveryDays: 3, penaltyCapMinor: null });
+  });
+
+  it.each([
+    [{ penaltyPesos: "abc" }, "penaltyPesos"],
+    [{ penaltyPesos: "-5" }, "penaltyPesos"],
+    [{ penaltyPesos: "10", penaltyEveryDays: "0" }, "penaltyEveryDays"],
+    [{ penaltyPesos: "10", penaltyEveryDays: "45" }, "penaltyEveryDays"],
+    [{ penaltyPesos: "10", penaltyCapPesos: "abc" }, "penaltyCapPesos"],
+    [{ penaltyPesos: "10", penaltyCapPesos: "5" }, "penaltyCapPesos"],
+  ])("rejects a bad penalty %j on %s", (over, field) => {
+    const res = parseSubscriptionForm({ ...valid, ...over });
+    expect(!res.ok && Object.keys(res.errors)).toContain(field);
   });
 
   it("treats a missing checkbox as inactive", () => {
@@ -124,6 +150,22 @@ describe("createSubscription", () => {
 });
 
 describe("updateSubscription", () => {
+  it("starts a penalty's clock when it is switched on, and keeps it through later edits", () => {
+    seedDefaultSubscription(db);
+    const sub = db.select().from(s.subscriptions).get()!;
+    const same = { name: sub.name, feeMinor: sub.feeMinor, issueDay: sub.issueDay, dueDay: sub.dueDay, paymentInstructions: null, isActive: true };
+    expect(sub.penaltySince).toBeNull();
+
+    updateSubscription(db, sub.id, { ...same, penaltyMinor: 1000, penaltyEveryDays: 2, penaltyCapMinor: 5000 }, admin.id);
+    const on = db.select().from(s.subscriptions).get()!;
+    expect(on).toMatchObject({ penaltyMinor: 1000, penaltyEveryDays: 2, penaltyCapMinor: 5000 });
+    expect(on.penaltySince).toBeInstanceOf(Date);
+
+    // Changing the amount later is not "switching it on" again: statements already counted keep their start date.
+    updateSubscription(db, sub.id, { ...same, penaltyMinor: 2000, penaltyEveryDays: 2, penaltyCapMinor: 5000 }, admin.id);
+    expect(db.select().from(s.subscriptions).get()!.penaltySince).toEqual(on.penaltySince);
+  });
+
   function setup() {
     seedDefaultSubscription(db);
     const sub = db.select().from(s.subscriptions).get()!;
@@ -150,7 +192,7 @@ describe("updateSubscription", () => {
     const res = updateSubscription(
       db,
       sub.id,
-      { name: "Spotify Family", feeMinor: 7500, issueDay: 1, dueDay: 12, paymentInstructions: "Pay by the 12th", isActive: true },
+      { name: "Spotify Family", feeMinor: 7500, issueDay: 1, dueDay: 12, paymentInstructions: "Pay by the 12th", isActive: true, ...NO_PENALTY },
       admin.id,
     );
     expect(res).toEqual({ ok: true });
@@ -160,21 +202,21 @@ describe("updateSubscription", () => {
 
   it("audits what changed (before and after)", () => {
     const sub = setup();
-    updateSubscription(db, sub.id, { name: "Spotify", feeMinor: 6000, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true }, admin.id);
+    updateSubscription(db, sub.id, { name: "Spotify", feeMinor: 6000, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true, ...NO_PENALTY }, admin.id);
     const log = db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "subscription.updated")).get()!;
     expect(JSON.parse(log.metadata)).toMatchObject({ changes: { feeMinor: { from: 5000, to: 6000 } } });
   });
 
   it("ignores a refPrefix smuggled into the update (references stay consistent)", () => {
     const sub = setup();
-    const sneaky = { name: "Spotify", feeMinor: 5000, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true, refPrefix: "HACK" };
+    const sneaky = { name: "Spotify", feeMinor: 5000, issueDay: 1, dueDay: 10, paymentInstructions: null, isActive: true, refPrefix: "HACK", ...NO_PENALTY };
     updateSubscription(db, sub.id, sneaky, admin.id);
     expect(db.select().from(s.subscriptions).get()?.refPrefix).toBe("SPOT");
   });
 
   it("reports unknown subscriptions", () => {
     expect(
-      updateSubscription(db, "nope", { name: "x", feeMinor: 1, issueDay: 1, dueDay: 2, paymentInstructions: null, isActive: true }, admin.id),
+      updateSubscription(db, "nope", { name: "x", feeMinor: 1, issueDay: 1, dueDay: 2, paymentInstructions: null, isActive: true, ...NO_PENALTY }, admin.id),
     ).toEqual({ ok: false, error: "NOT_FOUND" });
   });
 });

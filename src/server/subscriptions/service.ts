@@ -33,7 +33,11 @@ export function createSubscription(db: Db, input: SubscriptionInput, actorId: st
     if (t.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.refPrefix, input.refPrefix)).get()) {
       return { ok: false, error: "PREFIX_TAKEN" };
     }
-    const subscription = t.insert(subscriptions).values({ ...input, name: cleanDisplayName(input.name) }).returning().get();
+    const subscription = t
+      .insert(subscriptions)
+      .values({ ...input, name: cleanDisplayName(input.name), penaltySince: input.penaltyMinor > 0 ? new Date() : null })
+      .returning()
+      .get();
     recordAudit(t, {
       actorId,
       action: "subscription.created",
@@ -47,7 +51,7 @@ export function createSubscription(db: Db, input: SubscriptionInput, actorId: st
 
 export type UpdateSubscriptionResult = { ok: true } | { ok: false; error: "NOT_FOUND" };
 
-const EDITABLE = ["name", "feeMinor", "issueDay", "dueDay", "paymentInstructions", "isActive"] as const;
+const EDITABLE = ["name", "feeMinor", "issueDay", "dueDay", "paymentInstructions", "isActive", "penaltyMinor", "penaltyEveryDays", "penaltyCapMinor"] as const;
 
 /**
  * Edits the plan. Issued statements carry their own snapshot of name, amount and currency,
@@ -78,6 +82,12 @@ export function updateSubscription(
         dueDay: input.dueDay,
         paymentInstructions: input.paymentInstructions,
         isActive: input.isActive,
+        penaltyMinor: input.penaltyMinor,
+        penaltyEveryDays: input.penaltyEveryDays,
+        penaltyCapMinor: input.penaltyCapMinor,
+        // Switching a penalty on starts its clock now: statements already due are never penalised retroactively.
+        // Switching it off leaves the date, so a quick off-and-on does not forgive the gap.
+        ...(input.penaltyMinor > 0 && current.penaltyMinor === 0 ? { penaltySince: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.id, id))

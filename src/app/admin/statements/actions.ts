@@ -5,6 +5,7 @@ import { z } from "zod";
 import { recordAudit } from "@/server/audit";
 import { requireAdmin } from "@/server/auth/session";
 import { generateStatements } from "@/server/billing/generate";
+import { removeLateFee, waivePenalty } from "@/server/billing/penalty";
 import { RECENT_PERIOD_COUNT, recentPeriods } from "@/server/billing/period";
 import { cancelStatement, markOverdue } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
@@ -76,6 +77,37 @@ export async function cancelStatementAction(_prev: CancelState, formData: FormDa
     reason: String(formData.get("reason") ?? ""),
   });
   if (!result.ok) return { error: CANCEL_ERRORS[result.error] };
+  revalidatePath("/admin/statements");
+  return {};
+}
+
+export interface PenaltyState {
+  error?: string;
+}
+
+/** Excuses a late fee that is still building up, so it never lands on the next statement. */
+export async function waivePenaltyAction(_prev: PenaltyState, formData: FormData): Promise<PenaltyState> {
+  const admin = await requireAdmin();
+  const result = waivePenalty(getDb(), { penaltyId: String(formData.get("penaltyId") ?? ""), actorId: admin.id });
+  if (!result.ok) {
+    return { error: result.error === "ALREADY_ON_STATEMENT" ? "That late fee is already on a statement. Remove it from the statement instead." : "That late fee no longer exists." };
+  }
+  revalidatePath("/admin/statements");
+  return {};
+}
+
+/** Takes the late fees off an unpaid statement and excuses them. */
+export async function removeLateFeeAction(_prev: PenaltyState, formData: FormData): Promise<PenaltyState> {
+  const admin = await requireAdmin();
+  const result = removeLateFee(getDb(), { statementId: String(formData.get("statementId") ?? ""), actorId: admin.id });
+  if (!result.ok) {
+    const errors = {
+      NOT_FOUND: "That statement no longer exists.",
+      NO_LATE_FEE: "There are no late fees on that statement.",
+      NOT_EDITABLE: "A payment has already been reported for this statement, so its amount can't change. Resolve the payment first.",
+    } as const;
+    return { error: errors[result.error] };
+  }
   revalidatePath("/admin/statements");
   return {};
 }

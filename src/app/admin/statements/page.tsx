@@ -11,6 +11,7 @@ import { formatMinor } from "@/lib/money";
 import { STATUS_META } from "@/lib/status";
 import { effectiveStatus } from "@/lib/statement-view";
 import { requireAdmin } from "@/server/auth/session";
+import { listPendingPenalties } from "@/server/billing/penalty";
 import { periodLabel, RECENT_PERIOD_COUNT, recentPeriods } from "@/server/billing/period";
 import { listStatements } from "@/server/billing/statements";
 import { getDb } from "@/server/db/client";
@@ -20,6 +21,7 @@ import { listSubscriptions } from "@/server/subscriptions/service";
 import { CancelStatement } from "./cancel-statement";
 import { DailyRunPanel } from "./daily-run-panel";
 import { GenerateForm } from "./generate-form";
+import { RemoveLateFee, WaivePenalty } from "./penalty-controls";
 
 export const metadata: Metadata = { title: "Statements" };
 
@@ -35,6 +37,7 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
   const status = STATEMENT_STATUSES.find((s) => s === params.status);
 
   const rows = listStatements(db, { period, status, now });
+  const pending = listPendingPenalties(db);
   const plans = listSubscriptions(db)
     .filter((p) => p.isActive)
     .map((p) => ({ value: p.id, label: p.name }));
@@ -50,6 +53,35 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
       </header>
 
       <DailyRunPanel runs={listJobRuns(db, DAILY_JOB, 5)} />
+
+      {pending.length > 0 ? (
+        <section aria-labelledby="late-fees" className="sheet flex max-w-3xl flex-col gap-4 p-5 sm:p-6">
+          <div>
+            <h2 id="late-fees" className="font-display text-title">
+              Late fees building up ({pending.length})
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              These will be added to each friend&apos;s next monthly statement. Waive one if you&apos;d rather let it go.
+            </p>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {pending.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-4 rounded-xl bg-muted/60 p-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold">{p.memberName || p.memberEmail}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {periodLabel(p.period)} · {p.planName} · {p.lateDays} {p.lateDays === 1 ? "day" : "days"} late{p.stillLate ? ", still unpaid" : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-4">
+                  <p className="font-display text-lg font-bold">{formatMinor(p.amountMinor, "PHP")}</p>
+                  <WaivePenalty penaltyId={p.id} who={p.memberName || p.memberEmail} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="generate" className="sheet p-5 sm:p-6 flex max-w-2xl flex-col gap-4">
         <h2 id="generate" className="font-display text-title">
@@ -126,6 +158,12 @@ export default async function AdminStatementsPage({ searchParams }: PageProps<"/
                     </div>
                     <StatusPill status={shown} />
                   </div>
+                  {row.penaltyMinor > 0 ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-sm font-semibold">Includes {formatMinor(row.penaltyMinor, row.currency)} in late fees from earlier months</p>
+                      {row.status === "UNPAID" || row.status === "OVERDUE" ? <RemoveLateFee statementId={row.id} reference={row.reference} /> : null}
+                    </div>
+                  ) : null}
                   {row.status === "UNPAID" || row.status === "OVERDUE" ? (
                     <CancelStatement statementId={row.id} reference={row.reference} />
                   ) : null}

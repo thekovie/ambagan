@@ -25,9 +25,10 @@ SQLite (via `better-sqlite3`) with Drizzle ORM, one file on the `/data` volume. 
 
 **Billing**
 
-- `subscription` (a plan): `name`, `ref_prefix` (unique), `fee_minor`, `currency`, `issue_day`, `due_day`, `payment_instructions`, `is_active`. Seeded with Spotify, PHP 50.00, issue day 1, due day 10.
+- `subscription` (a plan): `name`, `ref_prefix` (unique), `fee_minor`, `currency`, `issue_day`, `due_day`, `payment_instructions`, `is_active`, and the late-penalty rule (`penalty_minor`, `penalty_every_days`, `penalty_cap_minor`, `penalty_since`). Seeded with Spotify, PHP 50.00, issue day 1, due day 10.
 - `membership`: member in a plan, `start_period`, `is_active`. Unique per member and plan.
-- `statement`: one per member, plan and period. Snapshots `subscription_name`, `amount_minor`, `currency`; `outstanding_minor`, `issued_at`, `due_at`, `status` (`UNPAID`, `UNDER_VERIFICATION`, `PAID`, `OVERDUE`, `CANCELLED`), cancellation fields, and a unique `reference` such as `SPOT-202610-K4M2Q8`.
+- `statement`: one per member, plan and period. Snapshots `subscription_name`, `amount_minor`, `currency`; `penalty_minor` (the part of `amount_minor` that is late fees carried over), `outstanding_minor`, `issued_at`, `due_at`, `status` (`UNPAID`, `UNDER_VERIFICATION`, `PAID`, `OVERDUE`, `CANCELLED`), cancellation fields, and a unique `reference` such as `SPOT-202610-K4M2Q8`.
+- `penalty`: the late penalty of one monthly statement (unique `statement_id`): `amount_minor`, `late_days`, `applied_to_statement_id` (the later statement that carries it; null while it is still building up), `waived_at`. See [billing.md](billing.md).
 
 **Payments**
 

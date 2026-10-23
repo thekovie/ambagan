@@ -14,6 +14,7 @@ import { STATUS_META } from "@/lib/status";
 import { effectiveStatus, stickerProps } from "@/lib/statement-view";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/server/auth/session";
+import { buildingPenaltyFor } from "@/server/billing/penalty";
 import { periodLabel } from "@/server/billing/period";
 import { getShareForStatement } from "@/server/bills";
 import { getStatementForUser } from "@/server/billing/statements";
@@ -37,6 +38,7 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
   const shown = effectiveStatus(statement);
   const payable = shown === "UNPAID" || shown === "OVERDUE";
   const methods = payable ? listPaymentMethods(db, { activeOnly: true }) : [];
+  const building = buildingPenaltyFor(db, statement.id);
 
   const details: [string, string][] = [
     ["Reference", statement.reference],
@@ -45,6 +47,13 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
       : ([["Subscription", statement.subscriptionName], ["Billing period", periodLabel(statement.period)]] as [string, string][])),
     ["Issued", formatLongDate(statement.issuedAt)],
     ["Due", formatLongDate(statement.dueAt)],
+    // Late fees from earlier months are shown apart from the plan's fee, so the total is never a mystery.
+    ...(statement.penaltyMinor > 0
+      ? ([
+          ["Plan fee", formatMinor(statement.amountMinor - statement.penaltyMinor, statement.currency)],
+          ["Late fees from earlier months", formatMinor(statement.penaltyMinor, statement.currency)],
+        ] as [string, string][])
+      : []),
     ["Amount", formatMinor(statement.amountMinor, statement.currency)],
     ["Outstanding balance", formatMinor(statement.outstandingMinor, statement.currency)],
     ["Status", STATUS_META[shown].label],
@@ -70,6 +79,13 @@ export default async function StatementPage({ params }: PageProps<"/statements/[
       <Sticker className="max-w-2xl print:hidden" {...stickerProps(statement)}>
         <StatementAction statement={statement} omitView />
       </Sticker>
+
+      {building && payable ? (
+        <p role="note" className="max-w-2xl rounded-2xl border border-border bg-st-butter p-4 font-semibold text-st-ink print:hidden">
+          Late fees are building up: {formatMinor(building, statement.currency)} so far. Pay or report your payment to stop the clock;
+          whatever has built up is added to your next monthly statement.
+        </p>
+      ) : null}
 
       {share ? (
         <div className="max-w-2xl print:hidden">
