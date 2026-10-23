@@ -768,3 +768,9 @@ Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can 
 - **Stays uniform:** the same page for a missing address, a missing statement, a non-admin opening an admin page, and a wrong private link, so it reveals nothing.
 - **Gotcha recorded (found by the end-to-end test):** pages behind sign-in stream behind the loading screen, so a missing statement or admin typo shows the 404 page with an HTTP 200 status. That is harmless behind sign-in and leaks nothing; the places where a true 404 matters still have it (private links have no loader, and the admin-only check runs in the layout above the loader). A non-admin on an admin address gets the full-page 404 (the admin layout rejects them before its own 404 boundary), with "Take me home".
 - **Tests:** the journey now checks the friendly 404 for a missing statement, an admin page opened by a member (real 404 status, "Take me home" lands on their own Home), an admin typo, and a signed-out stranger (real 404 status, leads to sign-in).
+
+## 2026-10-24 — Member Home no longer cramped (fix/home-columns)
+
+- **Reported:** the right side of the dashboard (coming up, recent activity, reminders) was too cramped.
+- **Cause:** the member shell was `max-w-3xl` (about 720px of content) but the Home grid reserved 544px plus a 48px gap for its left column, which left roughly 128px for the right one on laptops and desktops, so dates and labels wrapped word by word.
+- **Fix:** the member shell is now `max-w-4xl`, the same width as the admin shell (one width for both roles). The right column is about 256px; below the `lg` breakpoint the page still stacks into one column. Other member pages cap themselves at `max-w-2xl`, so they do not stretch. Checked in the browser at 1280 wide.

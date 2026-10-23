@@ -32,7 +32,7 @@ export function AppShell({ variant, user, pendingCount, children }: AppShellProp
       </a>
 
       <header className="sticky top-0 z-20 bg-background print:hidden">
-        <div className={cn("mx-auto flex h-16 items-center justify-between px-4 sm:px-6", variant === "admin" ? "max-w-4xl" : "max-w-3xl")}>
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
           <Link href={HOME[variant]} aria-label="ambagan home" className="rounded-full">
             <Wordmark />
           </Link>
@@ -43,8 +43,8 @@ export function AppShell({ variant, user, pendingCount, children }: AppShellProp
       <main
         id="main"
         className={cn(
-          "mx-auto w-full overflow-x-clip px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 print:max-w-none print:pb-0",
-          variant === "admin" ? "max-w-4xl" : "max-w-3xl",
+          // One width for both roles: the member Home has a second column that is cramped (about 128px) in a narrower page.
+          "mx-auto w-full max-w-4xl overflow-x-clip px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 print:max-w-none print:pb-0",
         )}
       >
         {children}
