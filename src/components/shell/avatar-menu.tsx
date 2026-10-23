@@ -1,7 +1,8 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { LogOut, Moon, ShieldCheck, Sun } from "lucide-react";
+import { CircleHelp, LogOut, Moon, ShieldCheck, Sun } from "lucide-react";
+import Link from "next/link";
 import { signOutAction } from "@/app/actions/sign-out";
 import { useDarkMode } from "@/components/theme-toggle";
 import { avatarClass, initials } from "@/lib/avatar";
@@ -55,6 +56,10 @@ export function AvatarMenu({ name, email }: AvatarMenuProps) {
                   {dark ? "On" : "Off"}
                 </span>
               </Menu.CheckboxItem>
+              <Menu.Item render={<Link href="/guide" />} className={ITEM}>
+                <CircleHelp className="size-4" aria-hidden="true" />
+                How it works
+              </Menu.Item>
               <Menu.Item render={<a href="/privacy" />} className={ITEM}>
                 <ShieldCheck className="size-4" aria-hidden="true" />
                 Privacy policy

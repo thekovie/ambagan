@@ -13,6 +13,7 @@ import { periodLabel } from "@/server/billing/period";
 import { getAdminOverview } from "@/server/billing/overview";
 import { getDb } from "@/server/db/client";
 import { SetupChecklist } from "@/components/setup-checklist";
+import { WelcomeCard } from "@/components/welcome-card";
 import { getSetupProgress } from "@/server/setup/progress";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -52,6 +53,8 @@ export default async function AdminDashboardPage() {
         <h1 className="font-display text-display">Overview</h1>
         <p className="mt-3 text-muted-foreground">{month}</p>
       </header>
+
+      <WelcomeCard />
 
       <SetupChecklist progress={setup} />
 

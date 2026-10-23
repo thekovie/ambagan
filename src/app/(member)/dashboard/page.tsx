@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { Sticker } from "@/components/sticker";
 import { StatementAction } from "@/components/statement-action";
+import { WelcomeCard } from "@/components/welcome-card";
 import { formatDate, formatDateTime, greeting } from "@/lib/dates";
 import { formatMinor } from "@/lib/money";
 import { stickerProps } from "@/lib/statement-view";
@@ -43,6 +44,8 @@ export default async function DashboardPage() {
           </p>
         ) : null}
       </header>
+
+      <WelcomeCard className="-mt-6" />
 
       <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]">
         <div className="flex flex-col gap-12">
