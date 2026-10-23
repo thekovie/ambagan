@@ -24,7 +24,7 @@ export function buildSetupSteps(counts: SetupCounts): SetupStep[] {
     {
       id: "methods",
       title: "Add how friends pay you",
-      hint: "Switch on GCash, Maya or MariBank and add your QR, so friends know where to send the money.",
+      hint: "Add GCash, Maya, a bank account, or whatever you use, with your QR, so friends know where to send the money.",
       href: "/admin/settings",
       cta: "Add a payment method",
       done: counts.activeMethods > 0,

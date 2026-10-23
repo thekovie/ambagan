@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import {
+  addPaymentMethod,
+  deletePaymentMethod,
   getQrForViewer,
   listPaymentMethods,
   savePaymentMethod,
-  seedPaymentMethods,
   updatePaymentMethod,
+  usedMethodIds,
   type QrChange,
 } from "@/server/payments/methods";
 import { createTestDb } from "./helpers/db";
@@ -30,18 +32,65 @@ const removeQr = (id: string, actorId: string) => withQr(id, { kind: "remove" },
 beforeEach(() => {
   db = createTestDb();
   admin = db.insert(s.users).values({ email: "boss@example.com", role: "ADMIN" }).returning().get();
-  seedPaymentMethods(db);
+  db.insert(s.paymentMethods).values({ kind: "GCASH", label: "GCash", isActive: false, sortOrder: 1 }).run();
 });
 
-describe("seedPaymentMethods", () => {
-  it("creates GCash, Maya and MariBank, switched off until configured, and never twice", () => {
-    seedPaymentMethods(db);
+describe("addPaymentMethod", () => {
+  it("adds a switched-off method after the others, with a cleaned name, and audits it", () => {
+    const res = addPaymentMethod(db, "  BPI \u200Bsavings ", admin.id);
+    expect(res.ok).toBe(true);
     const rows = listPaymentMethods(db, {});
-    expect(rows.map((r) => [r.kind, r.label, r.isActive])).toEqual([
-      ["GCASH", "GCash", false],
-      ["MAYA", "Maya", false],
-      ["MARIBANK", "MariBank QR Ph", false],
-    ]);
+    expect(rows.map((r) => [r.label, r.isActive])).toEqual([["GCash", false], ["BPI savings", false]]);
+    expect(rows[1].sortOrder).toBeGreaterThan(rows[0].sortOrder);
+    expect(db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "payment_method.added")).all()).toHaveLength(1);
+  });
+
+  it("allows several added methods (the old one-per-kind limit is gone)", () => {
+    expect(addPaymentMethod(db, "Maya", admin.id).ok).toBe(true);
+    expect(addPaymentMethod(db, "PayPal", admin.id).ok).toBe(true);
+    expect(listPaymentMethods(db, {})).toHaveLength(3);
+  });
+
+  it("refuses a blank name and a name that already exists, ignoring case", () => {
+    expect(addPaymentMethod(db, "   ", admin.id)).toEqual({ ok: false, error: "NO_NAME" });
+    expect(addPaymentMethod(db, "gcash", admin.id)).toEqual({ ok: false, error: "DUPLICATE" });
+    expect(listPaymentMethods(db, {})).toHaveLength(1);
+  });
+
+  it("can then be set up and switched on like any other", () => {
+    const added = addPaymentMethod(db, "BPI", admin.id);
+    if (!added.ok) throw new Error("not added");
+    expect(updatePaymentMethod(db, added.id, { ...complete, label: "BPI" }, admin.id)).toEqual({ ok: true });
+    expect(listPaymentMethods(db, { activeOnly: true }).map((r) => r.label)).toEqual(["BPI"]);
+  });
+});
+
+describe("deletePaymentMethod", () => {
+  it("deletes an unused method, hands back its QR file to remove, and audits it", () => {
+    replaceQr(gcash().id, { file: "abc.png", mime: "image/png" }, admin.id);
+    expect(deletePaymentMethod(db, gcash().id, admin.id)).toEqual({ ok: true, previous: "abc.png" });
+    expect(listPaymentMethods(db, {})).toEqual([]);
+    expect(db.select().from(s.auditLogs).where(eq(s.auditLogs.action, "payment_method.deleted")).all()).toHaveLength(1);
+  });
+
+  it("refuses to delete a method past payments point to, which can only be switched off", () => {
+    const user = db.insert(s.users).values({ email: "ana@example.com" }).returning().get();
+    const plan = db.insert(s.subscriptions).values({ name: "Spotify", refPrefix: "SPOT", feeMinor: 7550 }).returning().get();
+    const statement = db
+      .insert(s.statements)
+      .values({ reference: "SPOT-202610-AAAAAA", userId: user.id, subscriptionId: plan.id, period: "2026-10", subscriptionName: "Spotify", amountMinor: 7550, outstandingMinor: 7550, currency: "PHP", issuedAt: new Date(), dueAt: new Date(), status: "UNPAID" })
+      .returning()
+      .get();
+    db.insert(s.payments)
+      .values({ statementId: statement.id, userId: user.id, destinationMethodId: gcash().id, sendingApp: "GCash", amountMinor: 7550, transactionRef: "REF1", transactionRefNorm: "REF1", transactionDate: new Date(), status: "PENDING", submittedAt: new Date() })
+      .run();
+    expect(usedMethodIds(db)).toEqual(new Set([gcash().id]));
+    expect(deletePaymentMethod(db, gcash().id, admin.id)).toEqual({ ok: false, error: "IN_USE" });
+    expect(listPaymentMethods(db, {})).toHaveLength(1);
+  });
+
+  it("says so when the method is already gone", () => {
+    expect(deletePaymentMethod(db, "nope", admin.id)).toEqual({ ok: false, error: "NOT_FOUND" });
   });
 });
 
@@ -134,7 +183,7 @@ describe("listPaymentMethods", () => {
   it("members only see methods that are active", () => {
     updatePaymentMethod(db, gcash().id, complete, admin.id);
     expect(listPaymentMethods(db, { activeOnly: true }).map((r) => r.kind)).toEqual(["GCASH"]);
-    expect(listPaymentMethods(db, {})).toHaveLength(3);
+    expect(listPaymentMethods(db, {})).toHaveLength(1);
   });
 });
 
@@ -162,7 +211,7 @@ describe("getQrForViewer", () => {
     expect(getQrForViewer(db, { role: "ADMIN", isActive: false }, gcash().id)).toBeNull();
     expect(getQrForViewer(db, null, gcash().id)).toBeNull();
     expect(getQrForViewer(db, member, "nope")).toBeNull();
-    const maya = db.select().from(s.paymentMethods).where(eq(s.paymentMethods.kind, "MAYA")).get()!;
+    const maya = db.insert(s.paymentMethods).values({ kind: "MAYA", label: "Maya", isActive: false }).returning().get();
     expect(getQrForViewer(db, adminViewer, maya.id)).toBeNull();
   });
 });

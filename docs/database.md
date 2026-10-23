@@ -31,7 +31,7 @@ SQLite (via `better-sqlite3`) with Drizzle ORM, one file on the `/data` volume. 
 
 **Payments**
 
-- `payment_method`: GCash, Maya, MariBank (unique `kind`): label, account holder and number, instructions, `qr_file`/`qr_mime` (a file name inside the assets folder, served only through an authorized route), `is_active`.
+- `payment_method`: whatever the admin adds (GCash, a bank, PayPal…); `kind` is a legacy tag ("CUSTOM" for new ones, nothing depends on it): label, account holder and number, instructions, `qr_file`/`qr_mime` (a file name inside the assets folder, served only through an authorized route), `is_active`.
 - `payment`: a member's report. `destination_method_id` (where the money went) and `sending_app` (where it came from) are separate; `amount_minor`, `transaction_ref` and `transaction_ref_norm` (uppercase letters and digits only, for duplicate detection), `transaction_date`, `notes`, `status` (`PENDING`/`APPROVED`/`DECLINED`), `submitted_at`, `reviewed_by`/`reviewed_at`, `decline_reason`, `adjustment_note`. Rows are never deleted: a decline keeps the original submission.
 
 **Operations**

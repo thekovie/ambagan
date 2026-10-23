@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { assetsDir, deleteImage, saveImage } from "@/server/assets/store";
 import { requireAdmin } from "@/server/auth/session";
@@ -9,7 +10,7 @@ import { MANUAL_BACKUP_COOLDOWN_MS, backupDirFor, backupTooRecent, listBackups }
 import { runBackupJob } from "@/server/backup/run";
 import { recordAudit } from "@/server/audit";
 import { getDb } from "@/server/db/client";
-import { savePaymentMethod, type QrChange } from "@/server/payments/methods";
+import { addPaymentMethod, deletePaymentMethod, savePaymentMethod, type QrChange } from "@/server/payments/methods";
 
 export interface MethodFormState {
   errors?: Record<string, string>;
@@ -109,6 +110,39 @@ export async function savePaymentMethodAction(_prev: MethodFormState, formData: 
   if (result.previous) deleteImage(dir, result.previous);
   revalidatePath("/admin/settings");
   return { saved: true };
+}
+
+export interface AddMethodState {
+  error?: string;
+}
+
+/** Creates an empty, switched-off method and opens the settings page with it ready to fill in. */
+export async function addPaymentMethodAction(_prev: AddMethodState, formData: FormData): Promise<AddMethodState> {
+  const admin = await requireAdmin();
+  const parsed = z.string().trim().min(1, "Give it a name").max(40, "Keep the name under 40 characters").safeParse(formData.get("label"));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Give it a name" };
+  const result = addPaymentMethod(getDb(), parsed.data, admin.id);
+  if (!result.ok) return { error: result.error === "DUPLICATE" ? "You already have a payment method with that name." : "Give it a name" };
+  revalidatePath("/admin/settings");
+  redirect(`/admin/settings?added=${result.id}`);
+}
+
+export interface DeleteMethodState {
+  error?: string;
+}
+
+/** Deletes a method nobody has paid to yet (its QR image goes too). Used methods can only be switched off. */
+export async function deletePaymentMethodAction(_prev: DeleteMethodState, formData: FormData): Promise<DeleteMethodState> {
+  const admin = await requireAdmin();
+  const id = z.string().min(1).safeParse(formData.get("id"));
+  if (!id.success) return { error: "That payment method no longer exists." };
+  const result = deletePaymentMethod(getDb(), id.data, admin.id);
+  if (!result.ok) {
+    return { error: result.error === "IN_USE" ? "Payments have been made to this, so it can't be deleted. Switch it off instead." : "That payment method no longer exists." };
+  }
+  if (result.previous) deleteImage(assetsDir(), result.previous);
+  revalidatePath("/admin/settings");
+  return {};
 }
 
 export interface BackupState {

@@ -1,10 +1,10 @@
 # Payments
 
-Members pay **outside** the app (GCash, Maya, MariBank QR Ph), then *report* the payment. An administrator checks the receiving account and approves or declines. No money moves through this application, no banking API is used, and no receipt image is ever kept.
+Members pay **outside** the app (to whichever payment methods the admin has added: GCash, Maya, a bank account, anything), then *report* the payment. An administrator checks the receiving account and approves or declines. No money moves through this application, no banking API is used, and no receipt image is ever kept.
 
 ## Payment methods
 
-Admin-configured destinations (`/admin/settings`): display name, account holder, account number, instructions, QR image, on/off. A method can only be switched on when it is payable (a recipient plus a number or a QR). QR images live in `ASSETS_DIR` (never `public/`), are validated by signature (PNG/JPEG/WebP; SVG refused, 1.5 MB cap) and served by an authorised route: signed-out visitors get 401, members only see active methods. See PROJECT_LOG.md for the review notes.
+Admin-added destinations (`/admin/settings`: add any name, delete one nobody has paid to yet; one that past payments point to can only be switched off): display name, account holder, account number, instructions, QR image, on/off. A method can only be switched on when it is payable (a recipient plus a number or a QR). QR images live in `ASSETS_DIR` (never `public/`), are validated by signature (PNG/JPEG/WebP; SVG refused, 1.5 MB cap) and served by an authorised route: signed-out visitors get 401, members only see active methods. See PROJECT_LOG.md for the review notes.
 
 ## Reporting a payment (`submitPayment`)
 

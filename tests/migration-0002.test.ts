@@ -140,3 +140,21 @@ describe("migration 0002 (ambag bills)", () => {
     }
   });
 });
+
+describe("migration 0003 (admin-defined payment methods)", () => {
+  it("lets the admin add several methods of the same kind, and keeps the ones already there", () => {
+    const db = openDb(":memory:");
+    migrateDb(db, foldersUpTo(3));
+    run(db, "insert into payment_method (id, kind, label) values ('gcash', 'GCASH', 'GCash')");
+    expect(() => run(db, "insert into payment_method (id, kind, label) values ('gcash2', 'GCASH', 'GCash 2')")).toThrow(/UNIQUE/);
+
+    migrateDb(db);
+    // (The app fills in "CUSTOM" itself; the old column has no SQL default and the migration deliberately does not rebuild the table.)
+    run(db, "insert into payment_method (id, kind, label) values ('a', 'CUSTOM', 'BPI'), ('b', 'CUSTOM', 'PayPal')");
+    expect(all(db, "select id, kind from payment_method order by id")).toEqual([
+      { id: "a", kind: "CUSTOM" },
+      { id: "b", kind: "CUSTOM" },
+      { id: "gcash", kind: "GCASH" },
+    ]);
+  });
+});

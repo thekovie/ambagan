@@ -59,7 +59,7 @@ One timer (`unref`'d, started from `instrumentation-node.ts` on the Node runtime
 
 ## Process lifecycle
 
-At startup `instrumentation-node.ts` validates the environment and opens the database (applying migrations and seeding the default plan and payment methods); on failure it logs the reason and exits with code 1. On shutdown Next drains requests and an exit hook folds the WAL into the database file.
+At startup `instrumentation-node.ts` validates the environment and opens the database (applying migrations and seeding the default plan; payment methods are added by the admin); on failure it logs the reason and exits with code 1. On shutdown Next drains requests and an exit hook folds the WAL into the database file.
 
 ## Why these choices
 
