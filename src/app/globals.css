@@ -528,6 +528,69 @@
   }
 }
 
+/* ---- Preloaders: shimmering placeholder blocks, and the coin whose slices pop in turn ---- */
+
+.skeleton {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background: linear-gradient(100deg, var(--muted) 30%, color-mix(in oklab, var(--muted) 45%, var(--background)) 50%, var(--muted) 70%);
+  background-size: 250% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: skeleton-sweep 1.5s ease-in-out infinite;
+  }
+  @keyframes skeleton-sweep {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+  .coin-slice {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: slice-pop 1.4s var(--ease-out-expo) infinite;
+  }
+  .coin-slice[data-slice="right"] {
+    animation-delay: 0.12s;
+  }
+  .coin-slice[data-slice="left"] {
+    animation-delay: 0.24s;
+  }
+  .coin-slice[data-slice="top"] {
+    animation-delay: 0.36s;
+  }
+  /* The slice that is "taken" hops a little higher than the rest. */
+  .coin-slice[data-slice="share"] {
+    animation-name: slice-hop;
+  }
+  @keyframes slice-pop {
+    0%,
+    55%,
+    100% {
+      scale: 1;
+    }
+    25% {
+      scale: 1.16;
+    }
+  }
+  @keyframes slice-hop {
+    0%,
+    55%,
+    100% {
+      translate: 0 0;
+      rotate: 0deg;
+    }
+    25% {
+      translate: 0.5px -2.4px;
+      rotate: 8deg;
+    }
+  }
+}
+
 @media print {
   .sticker {
     transform: none;
