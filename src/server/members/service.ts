@@ -127,6 +127,59 @@ export function setMemberActive(
   });
 }
 
+export type PlanChangeResult =
+  | { ok: true; changed: boolean }
+  | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "GUEST" | "INACTIVE" | "PLAN_NOT_FOUND" | "PLAN_INACTIVE" };
+
+/**
+ * Puts a person in a monthly plan, at any time. Billing starts from the first month that isn't already late (see
+ * `firstBillablePeriod`), and the daily run issues their statement. Guests pay through links and are never in a plan.
+ */
+export function joinPlan(db: Db, input: { userId: string; subscriptionId: string; actorId: string; now?: Date }): PlanChangeResult {
+  if (!isActiveAdmin(db, input.actorId)) return { ok: false, error: "FORBIDDEN" };
+  const now = input.now ?? new Date();
+
+  return db.transaction((tx): PlanChangeResult => {
+    const t = asDb(tx);
+    const person = t.select().from(users).where(eq(users.id, input.userId)).get();
+    if (!person) return { ok: false, error: "NOT_FOUND" };
+    if (person.isGuest) return { ok: false, error: "GUEST" };
+    if (!person.isActive) return { ok: false, error: "INACTIVE" };
+    const plan = t.select().from(subscriptions).where(and(eq(subscriptions.id, input.subscriptionId), eq(subscriptions.kind, "RECURRING"))).get();
+    if (!plan) return { ok: false, error: "PLAN_NOT_FOUND" };
+    if (!plan.isActive) return { ok: false, error: "PLAN_INACTIVE" };
+
+    const existing = t.select().from(memberships).where(and(eq(memberships.userId, person.id), eq(memberships.subscriptionId, plan.id))).get();
+    if (existing?.isActive) return { ok: true, changed: false };
+    const start = firstBillablePeriod(now, plan.dueDay);
+    if (existing) {
+      t.update(memberships).set({ isActive: true, startPeriod: existing.startPeriod > start ? existing.startPeriod : start }).where(eq(memberships.id, existing.id)).run();
+    } else {
+      t.insert(memberships).values({ userId: person.id, subscriptionId: plan.id, startPeriod: start }).run();
+    }
+    recordAudit(t, { actorId: input.actorId, action: "member.plan_joined", entityType: "user", entityId: person.id, metadata: { subscriptionId: plan.id } });
+    return { ok: true, changed: true };
+  });
+}
+
+/**
+ * Takes a person out of a plan: no new statements from now on. Statements already issued stay exactly as they are
+ * (they keep their own copy of the plan's name and amount, so nothing refers back to the enrolment).
+ */
+export function leavePlan(db: Db, input: { userId: string; subscriptionId: string; actorId: string }): PlanChangeResult {
+  if (!isActiveAdmin(db, input.actorId)) return { ok: false, error: "FORBIDDEN" };
+  return db.transaction((tx): PlanChangeResult => {
+    const t = asDb(tx);
+    const removed = t
+      .delete(memberships)
+      .where(and(eq(memberships.userId, input.userId), eq(memberships.subscriptionId, input.subscriptionId)))
+      .run().changes;
+    if (removed === 0) return { ok: true, changed: false };
+    recordAudit(t, { actorId: input.actorId, action: "member.plan_left", entityType: "user", entityId: input.userId, metadata: { subscriptionId: input.subscriptionId } });
+    return { ok: true, changed: true };
+  });
+}
+
 export type ResendResult =
   | { ok: true; user: UserRow; invitation: Invitation }
   | { ok: false; error: "FORBIDDEN" | "NOT_FOUND" | "INACTIVE" | "GUEST" };
@@ -158,6 +211,8 @@ export interface MemberRow {
   hasRealEmail: boolean;
   hasSignedIn: boolean;
   plans: string[];
+  /** The same plans by id, for the "change plans" control. */
+  planIds: string[];
   invite: "none" | "pending" | "expired" | "accepted";
 }
 
@@ -165,13 +220,17 @@ export function listMembers(db: Db, now = new Date()): MemberRow[] {
   const people = db.select().from(users).orderBy(asc(users.createdAt), asc(users.email)).all();
 
   const plansByUser = new Map<string, string[]>();
+  const planIdsByUser = new Map<string, string[]>();
   const enrolments = db
-    .select({ userId: memberships.userId, name: subscriptions.name })
+    .select({ userId: memberships.userId, name: subscriptions.name, subscriptionId: subscriptions.id })
     .from(memberships)
     .innerJoin(subscriptions, eq(subscriptions.id, memberships.subscriptionId))
     .where(eq(memberships.isActive, true))
     .all();
-  for (const { userId, name } of enrolments) plansByUser.set(userId, [...(plansByUser.get(userId) ?? []), name]);
+  for (const { userId, name, subscriptionId } of enrolments) {
+    plansByUser.set(userId, [...(plansByUser.get(userId) ?? []), name]);
+    planIdsByUser.set(userId, [...(planIdsByUser.get(userId) ?? []), subscriptionId]);
+  }
 
   // Newest invitation wins.
   const inviteByUser = new Map<string, MemberRow["invite"]>();
@@ -190,6 +249,7 @@ export function listMembers(db: Db, now = new Date()): MemberRow[] {
     hasRealEmail: !isPlaceholderEmail(p.email),
     hasSignedIn: p.emailVerified !== null,
     plans: plansByUser.get(p.id) ?? [],
+    planIds: planIdsByUser.get(p.id) ?? [],
     invite: inviteByUser.get(p.id) ?? "none",
   }));
 }

@@ -753,3 +753,10 @@ Residual, accepted: someone behind the same carrier-NAT address or IPv6 /64 can 
 - **Database:** migration 0004 is additive only (new `penalty` table and columns; no table rebuild).
 - **Tests:** the rule maths (interval, cap, none on the due day), late-day counting (report stops it, on-time report with a slow admin, declined report pause, cancelled), carrying and freezing, no double carry, no retroactive penalty, waive and remove, and form validation (including a cap below one charge).
 - **Not done:** reminder emails do not mention the rule; ambag bills have no penalties; the daily job re-checks every statement due since the penalty began (fine at this size).
+
+## 2026-10-23 — Add a friend to a plan after they were added (feat/assign-plans)
+
+- **Reported:** "after adding a friend without a plan I do not know where to add them after". Correct: a plan could only be chosen in the "Add a friend" form, and nowhere else. A friend added without one showed "No plan" with nothing to do about it.
+- **Now:** every member row on Members has a clear button, "Add to a plan" (highlighted when they have none) or "Change plans", opening each monthly plan with Add or Remove. Joining starts billing from the first month that isn't already late (the same rule as adding a friend with a plan), so no statement is born overdue; the next daily run or "Generate missing" issues it. Removing stops new statements and leaves issued ones alone. Plans that are switched off can't be joined; guests can't be in a plan.
+- **Why removing deletes the enrolment instead of switching it off:** a "switched off" enrolment would come back by itself the next time the person was deactivated and reactivated (that restores all of a person's enrolments). Nothing refers to an enrolment (statements keep their own copy of plan name and amount), so deleting loses no history; the audit log records who joined and left.
+- **Tests:** join, start month before and after the due day, joining twice, refusals (plan off, missing, the hidden ambag plan, guest, deactivated friend, non-admin), and that removing keeps issued statements and survives a deactivate/reactivate.

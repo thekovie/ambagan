@@ -9,7 +9,7 @@ import { invitationEmail } from "@/server/email/auth-templates";
 import { recordDirectEmail } from "@/server/email/queue";
 import { sendMail } from "@/server/email/transport";
 import { promoteGuest, setGuestEmail } from "@/server/members/guests";
-import { addMember, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
+import { addMember, joinPlan, leavePlan, listUninvited, resendInvitation, setMemberActive } from "@/server/members/service";
 
 export interface InviteResult {
   email: string;
@@ -160,6 +160,41 @@ export async function setGuestEmailAction(_prev: MemberActionState, formData: Fo
     actorId: admin.id,
   });
   if (!result.ok) return { error: EMAIL_ERRORS[result.error] };
+  revalidatePath("/admin/members");
+  return {};
+}
+
+const PLAN_ERRORS = {
+  FORBIDDEN: "Only an admin can do that.",
+  NOT_FOUND: "That member no longer exists.",
+  GUEST: "Guests pay through private links and can't be in a plan. Invite them to join first.",
+  INACTIVE: "Reactivate this member before putting them in a plan.",
+  PLAN_NOT_FOUND: "That plan no longer exists. Refresh and try again.",
+  PLAN_INACTIVE: "That plan is switched off. Turn it on in Plans first.",
+} as const;
+
+/** Puts a member in a plan after the fact. Their statement is issued by the next daily run (or "Generate missing"). */
+export async function joinPlanAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {
+  const admin = await requireAdmin();
+  const result = joinPlan(getDb(), {
+    userId: String(formData.get("userId") ?? ""),
+    subscriptionId: String(formData.get("subscriptionId") ?? ""),
+    actorId: admin.id,
+  });
+  if (!result.ok) return { error: PLAN_ERRORS[result.error] };
+  revalidatePath("/admin/members");
+  return {};
+}
+
+/** Takes a member out of a plan. Statements already issued are untouched. */
+export async function leavePlanAction(_prev: MemberActionState, formData: FormData): Promise<MemberActionState> {
+  const admin = await requireAdmin();
+  const result = leavePlan(getDb(), {
+    userId: String(formData.get("userId") ?? ""),
+    subscriptionId: String(formData.get("subscriptionId") ?? ""),
+    actorId: admin.id,
+  });
+  if (!result.ok) return { error: PLAN_ERRORS[result.error] };
   revalidatePath("/admin/members");
   return {};
 }

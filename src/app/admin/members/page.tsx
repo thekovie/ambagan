@@ -19,9 +19,8 @@ export default async function MembersPage() {
   const members = everyone.filter((m) => !m.isGuest);
   const guests = everyone.filter((m) => m.isGuest);
   const uninvited = listUninvited(db).length;
-  const plans = listSubscriptions(db)
-    .filter((p) => p.isActive)
-    .map((p) => ({ id: p.id, name: p.name }));
+  const allPlans = listSubscriptions(db).map((p) => ({ id: p.id, name: p.name, isActive: p.isActive }));
+  const plans = allPlans.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name }));
 
   return (
     <div className="flex flex-col gap-8">
@@ -57,7 +56,7 @@ export default async function MembersPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {members.map((member) => (
-              <MemberRow key={member.id} member={{ ...member, isSelf: member.id === admin.id }} />
+              <MemberRow key={member.id} member={{ ...member, isSelf: member.id === admin.id }} plans={allPlans} />
             ))}
           </ul>
         )}
