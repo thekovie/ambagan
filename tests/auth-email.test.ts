@@ -20,6 +20,13 @@ describe("auth email templates", () => {
     expect(mail.html).toContain('href="https://app.example.com/invite/tok"');
   });
 
+  it("names the person who invited them, in the subject and the body", () => {
+    const mail = invitationEmail({ name: "Ana", url: "https://app.example.com/invite/tok", invitedBy: "Kovie" });
+    expect(mail.subject).toBe("Kovie invited you to ambagan");
+    expect(mail.text).toContain("Kovie invited you to ambagan");
+    expect(mail.text).toContain("https://app.example.com/invite/tok");
+  });
+
   it("escapes HTML in names so a hostile display name cannot inject markup", () => {
     const mail = invitationEmail({ name: '<img src=x onerror="alert(1)">', url: "https://app.example.com/invite/tok" });
     expect(mail.html).not.toContain("<img src=x");

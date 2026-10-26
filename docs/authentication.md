@@ -57,7 +57,7 @@ An ambag bill gives every person their own statement, and every statement has a 
 
 ## Email delivery
 
-`sendMail()` (`src/server/email/transport.ts`) uses Nodemailer over SMTP with `requireTLS` unless implicit TLS is configured. In development without SMTP settings the message (including the link) is printed to the server console; with `NODE_ENV=production` it throws instead, and config validation refuses to start without SMTP settings (`src/env.ts`). Login and invitation emails use inline-styled HTML plus a plain-text twin (`auth-templates.ts`); they are sent directly rather than through the notification queue because the one-time link is a secret that must not be stored (see [email.md](email.md)); every other notification uses React Email and the queue.
+`sendMail()` (`src/server/email/transport.ts`) uses Nodemailer over SMTP with `requireTLS` unless implicit TLS is configured. In development without SMTP settings the message (including the link) is printed to the server console; with `NODE_ENV=production` it throws instead, and config validation refuses to start without SMTP settings (`src/env.ts`). Login and invitation emails use inline-styled HTML plus a plain-text twin (`auth-templates.ts`); they are sent directly rather than through the notification queue because the one-time link is a secret that must not be stored (see [email.md](email.md)); every other notification uses the hand-built layout in `email-frame.ts` and the queue.
 
 ## Environment
 

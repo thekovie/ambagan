@@ -15,6 +15,15 @@ Set these in the environment (see `.env.example`):
 
 In production `SMTP_HOST` and `SMTP_FROM_EMAIL` are required and the app refuses to start without them. In development without SMTP, messages are printed to the server console instead.
 
+### Staying out of spam
+
+The app cannot sign mail itself, so deliverability is set by DNS and by the sender's reputation:
+
+- **DNS:** the sending domain needs SPF, DKIM and DMARC for your SMTP provider. Check with a test email: in Gmail, Show original should say `PASS` for SPF, DKIM and DMARC.
+- **Sender name:** keep `SMTP_FROM_NAME` as `ambagan` so it matches the product and the invite copy.
+- **New domains start with no reputation.** Ask each friend to mark the first email "Not spam", add the sender to contacts and reply once. A few of these are usually enough.
+- If authentication passes and mail still lands in spam after a couple of weeks, move to a dedicated transactional sender. Only the `SMTP_*` settings and DNS change.
+
 After deploying, open **Admin → Emails** and press **Send me a test email**. It goes to your own address immediately and shows exactly what the mail server answered, so a wrong password or blocked port shows up there.
 
 ## What is sent
