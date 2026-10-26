@@ -19,16 +19,18 @@ export function loginEmail({ url }: { url: string }): MailContent {
   return { subject: "Your ambagan sign-in link", text, html };
 }
 
-export function invitationEmail({ name, url }: { name: string | null; url: string }): MailContent {
+export function invitationEmail({ name, url, invitedBy }: { name: string | null; url: string; invitedBy?: string | null }): MailContent {
+  // A named sender reads as a person writing to a friend, which spam filters (and people) trust more than an anonymous link.
+  const inviter = invitedBy?.trim();
   const { html, text } = renderEmail({
     preview: "You've been invited to split things with the group.",
     tone: "mint",
     badge: "💌 You're invited",
     heading: "You're on the list",
     greeting: `Hi ${name?.trim() || "there"},`,
-    paragraphs: ["You've been invited to ambagan, where the group tracks and settles shared subscriptions and bills."],
+    paragraphs: [`${inviter ? `${inviter} invited you to` : "You've been invited to"} ambagan, where the group tracks and settles shared subscriptions and bills.`],
     cta: { label: "Accept invitation", url },
-    footnote: "This invitation link expires in 7 days.",
+    footnote: "This invitation link expires in 7 days. Not expecting it? You can ignore this email.",
   });
-  return { subject: "You're invited to ambagan", text, html };
+  return { subject: inviter ? `${inviter} invited you to ambagan` : "You're invited to ambagan", text, html };
 }

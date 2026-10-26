@@ -19,7 +19,7 @@ const schema = z.object({
   SMTP_SECURE: z.enum(["true", "false"]).default("false"),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  SMTP_FROM_NAME: z.string().default("Shared Subscription Payments"),
+  SMTP_FROM_NAME: z.string().default("ambagan"),
   SMTP_FROM_EMAIL: z.email().optional(),
   SMTP_REPLY_TO: z.email().optional(),
 });

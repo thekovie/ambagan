@@ -41,9 +41,9 @@ const ERRORS = {
   ERASED: "This person's personal data was removed, so they can't be reactivated. Add them again as a new friend if they return.",
 } as const;
 
-async function deliverInvite(user: { email: string; name: string | null }, token: string): Promise<InviteResult> {
+async function deliverInvite(user: { email: string; name: string | null }, token: string, invitedBy: string | null | undefined): Promise<InviteResult> {
   const url = `${getEnv().APP_URL}/invite/${token}`;
-  const mail = invitationEmail({ name: user.name, url });
+  const mail = invitationEmail({ name: user.name, url, invitedBy });
   let error: string | undefined;
   try {
     await sendMail({ to: user.email, ...mail });
@@ -92,7 +92,7 @@ export async function addMemberAction(_prev: MemberActionState, formData: FormDa
     return { error: ERRORS[result.error], errorField, values };
   }
 
-  const invite = await deliverInvite(result.user, result.invitation.token);
+  const invite = await deliverInvite(result.user, result.invitation.token, admin.name);
   revalidatePath("/admin/members");
   return { invite };
 }
@@ -103,7 +103,7 @@ export async function resendInviteAction(_prev: MemberActionState, formData: For
   const result = resendInvitation(getDb(), { userId, actorId: admin.id });
   if (!result.ok) return { error: ERRORS[result.error] };
 
-  const invite = await deliverInvite(result.user, result.invitation.token);
+  const invite = await deliverInvite(result.user, result.invitation.token, admin.name);
   revalidatePath("/admin/members");
   return { invite };
 }
@@ -123,7 +123,7 @@ export async function inviteAllAction(): Promise<InviteAllState> {
   for (const person of listUninvited(db)) {
     const result = resendInvitation(db, { userId: person.id, actorId: admin.id });
     if (!result.ok) continue;
-    const invite = await deliverInvite(result.user, result.invitation.token);
+    const invite = await deliverInvite(result.user, result.invitation.token, admin.name);
     if (invite.emailSent) sent += 1;
     else failed.push(person.name || person.email);
   }
@@ -150,7 +150,7 @@ export async function promoteGuestAction(_prev: MemberActionState, formData: For
   });
   if (!result.ok) return { error: PROMOTE_ERRORS[result.error] };
 
-  const invite = await deliverInvite(result.user, result.invitation.token);
+  const invite = await deliverInvite(result.user, result.invitation.token, admin.name);
   revalidatePath("/admin/members");
   return { invite };
 }
